@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -46,7 +47,6 @@ func getApp() *app.App {
 	db, err := database.Connect(ctx, cfg)
 	if err != nil {
 		slog.Error("Vercel Serverless: Database connection failed", "error", err)
-		// Return app without DB so health endpoints and fallbacks still function
 		return app.Setup(cfg, nil)
 	}
 
@@ -55,28 +55,17 @@ func getApp() *app.App {
 }
 
 // Handler is the Vercel Serverless Function entrypoint.
-// Vercel routes all requests matching vercel.json rewrites to this function.
 func Handler(w http.ResponseWriter, r *http.Request) {
-	// When Vercel rewrites routes to /api/index, it supplies the original incoming path
-	// in the x-matched-path or x-forwarded-uri header.
-	// We restore r.URL.Path so Go 1.22's http.ServeMux matches the intended route pattern.
-	matchedPath := r.Header.Get("x-matched-path")
-	if matchedPath == "" {
-		matchedPath = r.Header.Get("X-Matched-Path")
-	}
-	if matchedPath == "" {
-		matchedPath = r.Header.Get("x-forwarded-uri")
-	}
-
-	if matchedPath != "" {
-		if parsed, err := url.Parse(matchedPath); err == nil && parsed.Path != "" {
+	// 1. Check deterministic __path rewrite query parameter from vercel.json
+	q := r.URL.Query()
+	if originalPath := q.Get("__path"); originalPath != "" {
+		cleanPath := "/" + strings.TrimPrefix(originalPath, "/")
+		r.URL.Path = cleanPath
+		q.Del("__path")
+		r.URL.RawQuery = q.Encode()
+	} else if forwardURI := r.Header.Get("x-forwarded-uri"); forwardURI != "" {
+		if parsed, err := url.Parse(forwardURI); err == nil && parsed.Path != "" {
 			r.URL.Path = parsed.Path
-			r.URL.RawPath = parsed.RawPath
-			if parsed.RawQuery != "" && r.URL.RawQuery == "" {
-				r.URL.RawQuery = parsed.RawQuery
-			}
-		} else {
-			r.URL.Path = matchedPath
 		}
 	}
 

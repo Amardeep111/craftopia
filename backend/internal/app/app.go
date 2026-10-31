@@ -50,14 +50,14 @@ func Setup(cfg *config.Config, db *database.DB) *App {
 		return auth(middleware.AdminRequired(h))
 	}
 
-	// 1. Cloud & Container Health Probes
+	// 1. Cloud & Container Health Probes (Exact matching where appropriate)
 	mux.HandleFunc("GET /health", healthHandler.Liveness)
 	mux.HandleFunc("GET /health/live", healthHandler.Liveness)
 	mux.HandleFunc("GET /health/ready", healthHandler.Readiness)
 	mux.HandleFunc("GET /api/health", healthHandler.Readiness)
 	mux.HandleFunc("GET /api/index", healthHandler.Readiness)
-	mux.HandleFunc("GET /api", healthHandler.Readiness)
-	mux.HandleFunc("GET /", healthHandler.Readiness)
+	mux.HandleFunc("GET /api/{$}", healthHandler.Readiness)
+	mux.HandleFunc("GET /{$}", healthHandler.Readiness)
 
 	// 2. Public Catalog
 	mux.HandleFunc("GET /api/categories", productHandler.ListCategories)
