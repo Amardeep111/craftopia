@@ -1,0 +1,50 @@
+{
+  "name": "Jamae's Craftopia",
+  "tagline": "Handmade with love, created especially for you.",
+  "location": "Siliguri, West Bengal, India",
+  "email": "hello@jamaescraftopia.com",
+  "phone": "+91 98XXX XXXXX",
+  "whatsapp": "https://wa.me/910000000000",
+  "social": {
+    "instagram": "https://instagram.com/jamaescraftopia",
+    "facebook": "https://facebook.com/jamaescraftopia"
+  },
+  "visibility": {
+    "location": true,
+    "email": true,
+    "phone": true,
+    "whatsapp": true,
+    "instagram": true,
+    "facebook": true
+  },
+  "images": {
+    "hero": {
+      "top": "",
+      "bottomLeft": "",
+      "bottomRight": ""
+    },
+    "brandStory": {
+      "left": "",
+      "topRight": "",
+      "bottomRight": ""
+    },
+    "customOrderCta": {
+      "banner": ""
+    },
+    "craftTable": [
+      { "id": 1, "image": "", "visual": "yarn", "tall": false },
+      { "id": 2, "image": "", "visual": "teddy", "tall": true },
+      { "id": 3, "image": "", "visual": "flower", "tall": false },
+      { "id": 4, "image": "", "visual": "bouquet", "tall": false },
+      { "id": 5, "image": "", "visual": "tote", "tall": true },
+      { "id": 6, "image": "", "visual": "blanket", "tall": false },
+      { "id": 7, "image": "", "visual": "gift", "tall": false },
+      { "id": 8, "image": "", "visual": "heart", "tall": false }
+    ],
+    "customOrdersPage": {
+      "card1": "",
+      "card2": "",
+      "card3": ""
+    }
+  }
+}

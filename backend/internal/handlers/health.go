@@ -1,0 +1,52 @@
+package handlers
+
+import (
+	"context"
+	"net/http"
+	"time"
+
+	"craftopia-backend/internal/database"
+	"craftopia-backend/internal/utils"
+)
+
+type HealthHandler struct {
+	db *database.DB
+}
+
+func NewHealthHandler(db *database.DB) *HealthHandler {
+	return &HealthHandler{db: db}
+}
+
+// Liveness probe (checks if container process is running)
+func (h *HealthHandler) Liveness(w http.ResponseWriter, r *http.Request) {
+	utils.JSON(w, http.StatusOK, map[string]any{
+		"status":    "UP",
+		"timestamp": time.Now().UTC().Format(time.RFC3339),
+	})
+}
+
+// Readiness probe (checks if database pool is alive & accepting queries)
+func (h *HealthHandler) Readiness(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
+	defer cancel()
+
+	if err := h.db.Pool.Ping(ctx); err != nil {
+		utils.JSON(w, http.StatusServiceUnavailable, map[string]any{
+			"status":   "DOWN",
+			"database": "UNREACHABLE",
+			"error":    err.Error(),
+		})
+		return
+	}
+
+	utils.JSON(w, http.StatusOK, map[string]any{
+		"status":   "READY",
+		"database": "CONNECTED",
+		"pool": map[string]any{
+			"total_conns": h.db.Pool.Stat().TotalConns(),
+			"idle_conns":  h.db.Pool.Stat().IdleConns(),
+		},
+		"timestamp": time.Now().UTC().Format(time.RFC3339),
+	})
+}
+

@@ -1,0 +1,179 @@
+-- ==============================================================================
+-- PostgreSQL Schema for Jamae's Craftopia Backend (Go Service)
+-- ==============================================================================
+
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+-- Enums
+DO $$ BEGIN
+    CREATE TYPE "OrderStatus" AS ENUM (
+        'PENDING', 'CONFIRMED', 'IN_PROGRESS', 'SHIPPED', 'DELIVERED',
+        'CANCELLED', 'RETURN_REQUESTED', 'RETURN_APPROVED', 'RETURN_IN_TRANSIT',
+        'RETURNED', 'REFUND_REQUESTED'
+    );
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
+
+DO $$ BEGIN
+    CREATE TYPE "PaymentStatus" AS ENUM (
+        'PENDING', 'AWAITING_VERIFICATION', 'PAID', 'COD_PENDING_COLLECTION',
+        'COD_COLLECTED', 'FAILED', 'CANCELLED', 'MANUAL_REVIEW', 'REFUNDED'
+    );
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
+
+DO $$ BEGIN
+    CREATE TYPE "RequestStatus" AS ENUM (
+        'NEW', 'REVIEWING', 'QUOTED', 'ACCEPTED', 'IN_PROGRESS', 'COMPLETED', 'DECLINED'
+    );
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
+
+-- Categories
+CREATE TABLE IF NOT EXISTS "Category" (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    slug TEXT UNIQUE NOT NULL,
+    description TEXT,
+    accent TEXT,
+    image TEXT,
+    published BOOLEAN DEFAULT true,
+    hidden BOOLEAN DEFAULT false,
+    "order" INT DEFAULT 0,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Products
+CREATE TABLE IF NOT EXISTS "Product" (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    slug TEXT UNIQUE NOT NULL,
+    "categoryId" TEXT NOT NULL REFERENCES "Category"(id) ON DELETE CASCADE,
+    price INT NOT NULL,
+    "discountPercent" INT DEFAULT 0,
+    "gstPercent" INT DEFAULT 0,
+    "codFee" INT DEFAULT 0,
+    "otherCharge" INT DEFAULT 0,
+    featured BOOLEAN DEFAULT false,
+    short TEXT NOT NULL,
+    description TEXT NOT NULL,
+    materials TEXT,
+    care TEXT,
+    customization TEXT,
+    visual TEXT,
+    palette JSONB,
+    images JSONB,
+    "imageUrl" TEXT,
+    "cloudinaryPublicId" TEXT,
+    stock INT NOT NULL DEFAULT 0,
+    published BOOLEAN DEFAULT true,
+    "availableForSale" BOOLEAN DEFAULT true,
+    "unavailableStates" TEXT[] DEFAULT ARRAY[]::TEXT[],
+    "unavailablePinCodes" TEXT[] DEFAULT ARRAY[]::TEXT[],
+    "allowedPaymentMethods" TEXT[] DEFAULT ARRAY['upi']::TEXT[],
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Users
+CREATE TABLE IF NOT EXISTS "User" (
+    id TEXT PRIMARY KEY,
+    email TEXT UNIQUE NOT NULL,
+    password TEXT NOT NULL,
+    name TEXT,
+    phone TEXT,
+    role TEXT DEFAULT 'CUSTOMER',
+    "adminActive" BOOLEAN DEFAULT false,
+    active BOOLEAN DEFAULT true,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Orders
+CREATE TABLE IF NOT EXISTS "Order" (
+    id TEXT PRIMARY KEY,
+    "orderNumber" TEXT UNIQUE NOT NULL,
+    "userId" TEXT REFERENCES "User"(id) ON DELETE SET NULL,
+    "customerName" TEXT NOT NULL,
+    "customerEmail" TEXT NOT NULL,
+    "customerPhone" TEXT,
+    "shippingAddress" JSONB,
+    status "OrderStatus" DEFAULT 'PENDING',
+    "paymentMethod" TEXT,
+    "paymentStatus" "PaymentStatus" DEFAULT 'PENDING',
+    "paymentReference" TEXT,
+    "totalAmount" INT NOT NULL,
+    subtotal INT NOT NULL,
+    discount INT DEFAULT 0,
+    shipping INT DEFAULT 0,
+    fee INT DEFAULT 0,
+    notes TEXT,
+    "trackingNumber" TEXT,
+    "shippingPartner" TEXT,
+    "estimatedDelivery" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Order Items
+CREATE TABLE IF NOT EXISTS "OrderItem" (
+    id TEXT PRIMARY KEY,
+    "orderId" TEXT NOT NULL REFERENCES "Order"(id) ON DELETE CASCADE,
+    "productId" TEXT NOT NULL REFERENCES "Product"(id) ON DELETE RESTRICT,
+    quantity INT NOT NULL,
+    "unitPrice" INT NOT NULL,
+    "gstPercent" INT DEFAULT 0,
+    "gstAmount" INT DEFAULT 0,
+    "codFee" INT DEFAULT 0,
+    "otherCharge" INT DEFAULT 0,
+    customization TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "unique_order_product" UNIQUE ("orderId", "productId")
+);
+
+-- Payment Logs
+CREATE TABLE IF NOT EXISTS "PaymentLog" (
+    id TEXT PRIMARY KEY,
+    "orderId" TEXT NOT NULL REFERENCES "Order"(id) ON DELETE CASCADE,
+    amount INT NOT NULL,
+    status "PaymentStatus" NOT NULL,
+    provider TEXT,
+    "providerReference" TEXT,
+    method TEXT,
+    utr TEXT,
+    "verifiedBy" TEXT,
+    "verifiedAt" TIMESTAMP(3),
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Custom Requests
+CREATE TABLE IF NOT EXISTS "CustomRequest" (
+    id TEXT PRIMARY KEY,
+    "userId" TEXT REFERENCES "User"(id) ON DELETE SET NULL,
+    name TEXT NOT NULL,
+    contact TEXT NOT NULL,
+    idea TEXT NOT NULL,
+    category TEXT,
+    colors TEXT,
+    budget TEXT,
+    occasion TEXT,
+    details TEXT NOT NULL,
+    "referenceImages" TEXT[] DEFAULT ARRAY[]::TEXT[],
+    "quotedPrice" INT,
+    status "RequestStatus" DEFAULT 'NEW',
+    "adminNotes" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Indexes for performance
+CREATE INDEX IF NOT EXISTS "idx_product_category" ON "Product"("categoryId");
+CREATE INDEX IF NOT EXISTS "idx_product_featured" ON "Product"(featured);
+CREATE INDEX IF NOT EXISTS "idx_order_email" ON "Order"("customerEmail");
+CREATE INDEX IF NOT EXISTS "idx_order_status" ON "Order"(status, "paymentStatus");
+CREATE INDEX IF NOT EXISTS "idx_payment_log_order" ON "PaymentLog"("orderId");
+

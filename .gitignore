@@ -1,0 +1,39 @@
+# OS & Editor
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# Environment variables (NEVER COMMIT SECRETS TO GITHUB)
+.env
+.env*.local
+.env.development
+.env.test
+.env.production
+*.env
+
+# Backend Go binaries & test artifacts
+backend/bin/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.out
+*.test
+coverage.txt
+backend/server
+
+# Frontend Next.js build & dependencies
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/build/
+.pnp
+.pnp.js
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Vercel
+.vercel

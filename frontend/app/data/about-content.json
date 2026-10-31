@@ -1,0 +1,80 @@
+{
+  "header": {
+    "eyebrow": "The people behind the yarn",
+    "title": "A home-grown craft table in Siliguri.",
+    "description": "Jamae's Craftopia is a handmade crochet and craft practice run by two sisters — creating soft things meant to be gifted, kept, and smiled at."
+  },
+  "story": {
+    "title": "Our story",
+    "description": "Tina and Papia — two sisters, one practice. A home-grown craft table in Siliguri, where handmade pieces carry stories, names, and care.",
+    "paragraph1": "Jamae's Craftopia began as a home-grown handmade business in Siliguri, India. Two sisters, a shared craft table, and a love of turning yarn into something someone can hold.",
+    "paragraph2": "The work is slow on purpose: amigurumi friends, flowers that do not wilt, initial keychains, hair pieces, and gifts that carry a name. Nothing here is meant to feel factory-made.",
+    "quote": "Jamae's Craftopia is a handmade crochet and craft practice run by two sisters — creating soft things meant to be gifted, kept, and smiled at. Tina brings a hardworking and caring spirit; Papia brings gentle thoughtfulness and attention to detail. Together they make each piece feel personal, meaningful, and truly special.",
+    "image": "",
+    "visual": "yarn",
+    "palette": [
+      "#D9CDE8",
+      "#5A3D4A"
+    ]
+  },
+  "makersHeading": {
+    "title": "Meet the makers",
+    "description": "Two sisters, one shared craft table. Handcrafting every piece with patience, warmth, and personal care."
+  },
+  "makers": [
+    {
+      "id": "urmi",
+      "name": "Urmi",
+      "role": "Maker",
+      "image": "",
+      "visual": "flower",
+      "palette": [
+        "#E8B4B8",
+        "#F7EFE6"
+      ],
+      "bio": "Tina brings a hardworking, warm, and caring spirit to everything she creates. Her eye for color and heartfelt dedication shine through in every stitch, making each creation feel personal and full of love."
+    },
+    {
+      "id": "papia",
+      "name": "Papia",
+      "role": "Maker",
+      "image": "",
+      "visual": "heart",
+      "palette": [
+        "#D9CDE8",
+        "#C96B7B"
+      ],
+      "bio": "Papia is thoughtful and gentle, pouring creative love and meticulous attention to detail into every piece. From delicate petals to little amigurumi smiles, she makes sure every small detail feels truly special."
+    }
+  ],
+  "values": [
+    {
+      "title": "Made with care",
+      "text": "We would rather make fewer pieces well than rush a shelf full of almosts."
+    },
+    {
+      "title": "Personal, not mass-made",
+      "text": "Names, colours, and tiny requests are welcomed — they are the point."
+    },
+    {
+      "title": "Home-grown",
+      "text": "A small practice in Siliguri, grown from a shared love of yarn and giving."
+    }
+  ],
+  "crafting": {
+    "title": "How a piece is made",
+    "image": "",
+    "visual": "bouquet",
+    "palette": [
+      "#F3C9B8",
+      "#E8B4B8",
+      "#C5D1C0"
+    ],
+    "step1Title": "1. Yarn and a quiet idea.",
+    "step1Text": "Colours are chosen to match a mood, a dress, or a memory.",
+    "step2Title": "2. Stitch by stitch.",
+    "step2Text": "Toys, petals, and letters take shape on the hook — never rushed.",
+    "step3Title": "3. The small finishing.",
+    "step3Text": "Embroidered faces, ribbons, wrapping, and a last look before it leaves the table."
+  }
+}

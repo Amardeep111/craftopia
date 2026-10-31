@@ -1,0 +1,16 @@
+# Caddyfile: Automatic HTTPS Reverse Proxy for Craftopia Go Backend
+# Usage: caddy run --config Caddyfile
+
+api.yourdomain.com {
+    # Reverse proxy to the local Go backend running on port 8080
+    reverse_proxy 127.0.0.1:8080
+
+    # Compression
+    encode gzip zstd
+
+    # Logging
+    log {
+        output file /var/log/caddy/craftopia_access.log
+    }
+}
+

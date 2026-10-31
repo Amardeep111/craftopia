@@ -1,0 +1,31 @@
+{
+  "ServiceName": "craftopia-backend-api",
+  "SourceConfiguration": {
+    "ImageRepository": {
+      "ImageIdentifier": "public.ecr.aws/your-account/craftopia-backend:latest",
+      "ImageConfiguration": {
+        "Port": "8080",
+        "RuntimeEnvironmentVariables": {
+          "PORT": "8080",
+          "ENVIRONMENT": "production",
+          "CORS_ORIGIN": "https://jamaescraftopia.com"
+        }
+      },
+      "ImageRepositoryType": "ECR"
+    },
+    "AutoDeploymentsEnabled": true
+  },
+  "InstanceConfiguration": {
+    "Cpu": "0.25 vCPU",
+    "Memory": "0.5 GB"
+  },
+  "HealthCheckConfiguration": {
+    "Protocol": "HTTP",
+    "Path": "/health/live",
+    "Interval": 10,
+    "Timeout": 5,
+    "HealthyThreshold": 1,
+    "UnhealthyThreshold": 5
+  }
+}
+

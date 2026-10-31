@@ -1,0 +1,27 @@
+[Unit]
+Description=Jamaes Craftopia Go Backend Service
+After=network.target postgresql.service
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/opt/craftopia-backend
+ExecStart=/opt/craftopia-backend/bin/craftopia-server
+Restart=always
+RestartSec=5s
+
+# Environment Configuration
+Environment="PORT=8080"
+Environment="ENVIRONMENT=production"
+EnvironmentFile=-/opt/craftopia-backend/.env
+
+# Security Sandbox
+ProtectSystem=full
+ProtectHome=true
+NoNewPrivileges=true
+LimitNOFILE=65535
+
+[Install]
+WantedBy=multi-user.target
+
