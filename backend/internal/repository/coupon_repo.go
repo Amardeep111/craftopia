@@ -92,3 +92,83 @@ func (r *CouponRepository) ValidateCoupon(ctx context.Context, code string, subt
 		FirstTimeOnly: c.FirstTimeOnly,
 	}, nil
 }
+
+// ListActiveCoupons returns active, unexpired coupons for customer display
+func (r *CouponRepository) ListActiveCoupons(ctx context.Context) ([]Coupon, error) {
+	query := `
+		SELECT id, code, label, "discountPercent", "minSubtotal", active, "expiresAt", "firstTimeOnly", "maxUses", "currentUses"
+		FROM "Coupon"
+		WHERE active = true AND ("expiresAt" IS NULL OR "expiresAt" > NOW())
+		ORDER BY "discountPercent" DESC;
+	`
+	rows, err := r.db.Pool.Query(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var list []Coupon
+	for rows.Next() {
+		var c Coupon
+		if err := rows.Scan(
+			&c.ID, &c.Code, &c.Label, &c.DiscountPercent, &c.MinSubtotal, &c.Active,
+			&c.ExpiresAt, &c.FirstTimeOnly, &c.MaxUses, &c.CurrentUses,
+		); err == nil {
+			list = append(list, c)
+		}
+	}
+	return list, nil
+}
+
+// ListAllCouponsAdmin returns all coupons for the admin dashboard
+func (r *CouponRepository) ListAllCouponsAdmin(ctx context.Context) ([]Coupon, error) {
+	query := `
+		SELECT id, code, label, "discountPercent", "minSubtotal", active, "expiresAt", "firstTimeOnly", "maxUses", "currentUses"
+		FROM "Coupon" ORDER BY "createdAt" DESC;
+	`
+	rows, err := r.db.Pool.Query(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var list []Coupon
+	for rows.Next() {
+		var c Coupon
+		if err := rows.Scan(
+			&c.ID, &c.Code, &c.Label, &c.DiscountPercent, &c.MinSubtotal, &c.Active,
+			&c.ExpiresAt, &c.FirstTimeOnly, &c.MaxUses, &c.CurrentUses,
+		); err == nil {
+			list = append(list, c)
+		}
+	}
+	return list, nil
+}
+
+// CreateCoupon inserts a new coupon
+func (r *CouponRepository) CreateCoupon(ctx context.Context, c *Coupon) (*Coupon, error) {
+	query := `
+		INSERT INTO "Coupon" (id, code, label, "discountPercent", "minSubtotal", active, "expiresAt", "firstTimeOnly", "maxUses", "currentUses", "createdAt", "updatedAt")
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), NOW())
+		RETURNING id;
+	`
+	err := r.db.Pool.QueryRow(ctx, query,
+		c.ID, c.Code, c.Label, c.DiscountPercent, c.MinSubtotal, c.Active, c.ExpiresAt, c.FirstTimeOnly, c.MaxUses, c.CurrentUses,
+	).Scan(&c.ID)
+	if err != nil {
+		return nil, err
+	}
+	return c, nil
+}
+
+// ToggleCoupon updates the active status of a coupon
+func (r *CouponRepository) ToggleCoupon(ctx context.Context, id string, active bool) error {
+	_, err := r.db.Pool.Exec(ctx, `UPDATE "Coupon" SET active = $1, "updatedAt" = NOW() WHERE id = $2;`, active, id)
+	return err
+}
+
+// DeleteCoupon deletes a coupon
+func (r *CouponRepository) DeleteCoupon(ctx context.Context, id string) error {
+	_, err := r.db.Pool.Exec(ctx, `DELETE FROM "Coupon" WHERE id = $1;`, id)
+	return err
+}

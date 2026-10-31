@@ -97,3 +97,38 @@ func (r *AddressRepository) DeleteAddress(ctx context.Context, userID, addressID
 	_, err := r.db.Pool.Exec(ctx, `DELETE FROM "Address" WHERE id = $1 AND "userId" = $2;`, addressID, userID)
 	return err
 }
+
+func (r *AddressRepository) UpdateAddress(ctx context.Context, userID string, addr *Address) error {
+	tx, err := r.db.Pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	if addr.IsDefault {
+		_, _ = tx.Exec(ctx, `UPDATE "Address" SET "isDefault" = false WHERE "userId" = $1;`, userID)
+	}
+
+	query := `
+		UPDATE "Address" SET
+			"fullName" = COALESCE(NULLIF($1, ''), "fullName"),
+			"mobileNumber" = COALESCE(NULLIF($2, ''), "mobileNumber"),
+			"houseFlatBuilding" = COALESCE(NULLIF($3, ''), "houseFlatBuilding"),
+			"areaStreet" = COALESCE(NULLIF($4, ''), "areaStreet"),
+			landmark = COALESCE($5, landmark),
+			city = COALESCE(NULLIF($6, ''), city),
+			state = COALESCE(NULLIF($7, ''), state),
+			"pinCode" = COALESCE(NULLIF($8, ''), "pinCode"),
+			"isDefault" = $9,
+			"updatedAt" = NOW()
+		WHERE id = $10 AND "userId" = $11;
+	`
+	_, err = tx.Exec(ctx, query,
+		addr.FullName, addr.MobileNumber, addr.HouseFlatBuilding, addr.AreaStreet,
+		addr.Landmark, addr.City, addr.State, addr.PinCode, addr.IsDefault, addr.ID, userID,
+	)
+	if err != nil {
+		return err
+	}
+	return tx.Commit(ctx)
+}

@@ -342,3 +342,107 @@ func (r *OrderRepository) VerifyUPIPayment(ctx context.Context, orderID string, 
 	return r.GetOrderByID(ctx, orderID)
 }
 
+
+// GetOrderByOrderNumber finds an order by its unique orderNumber string
+func (r *OrderRepository) GetOrderByOrderNumber(ctx context.Context, orderNumber string) (*models.Order, error) {
+	query := `
+		SELECT id, "orderNumber", "userId", "customerName", "customerEmail", "customerPhone",
+		       "shippingAddress", status, "paymentMethod", "paymentStatus", "paymentReference",
+		       "totalAmount", subtotal, discount, shipping, fee, notes, "trackingNumber",
+		       "shippingPartner", "estimatedDelivery", "createdAt", "updatedAt"
+		FROM "Order" WHERE "orderNumber" = $1;
+	`
+	var o models.Order
+	err := r.db.Pool.QueryRow(ctx, query, orderNumber).Scan(
+		&o.ID, &o.OrderNumber, &o.UserID, &o.CustomerName, &o.CustomerEmail, &o.CustomerPhone,
+		&o.ShippingAddress, &o.Status, &o.PaymentMethod, &o.PaymentStatus, &o.PaymentReference,
+		&o.TotalAmount, &o.Subtotal, &o.Discount, &o.Shipping, &o.Fee, &o.Notes, &o.TrackingNumber,
+		&o.ShippingPartner, &o.EstimatedDelivery, &o.CreatedAt, &o.UpdatedAt,
+	)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("failed to get order by orderNumber: %w", err)
+	}
+
+	// Fetch items
+	itemsRows, err := r.db.Pool.Query(ctx, `
+		SELECT oi.id, oi."orderId", oi."productId", oi.quantity, oi."unitPrice", oi."gstPercent",
+		       oi."gstAmount", oi."codFee", oi."otherCharge", oi.customization, oi."createdAt",
+		       p.name, p.slug
+		FROM "OrderItem" oi
+		LEFT JOIN "Product" p ON oi."productId" = p.id
+		WHERE oi."orderId" = $1;
+	`, o.ID)
+	if err == nil {
+		defer itemsRows.Close()
+		for itemsRows.Next() {
+			var it models.OrderItem
+			var p models.Product
+			if scanErr := itemsRows.Scan(
+				&it.ID, &it.OrderID, &it.ProductID, &it.Quantity, &it.UnitPrice, &it.GSTPercent,
+				&it.GSTAmount, &it.CODFee, &it.OtherCharge, &it.Customization, &it.CreatedAt,
+				&p.Name, &p.Slug,
+			); scanErr == nil {
+				it.Product = &p
+				o.Items = append(o.Items, it)
+			}
+		}
+	}
+	return &o, nil
+}
+
+// GetAllOrdersAdmin returns all orders with their items for the admin dashboard
+func (r *OrderRepository) GetAllOrdersAdmin(ctx context.Context) ([]models.Order, error) {
+	rows, err := r.db.Pool.Query(ctx, `
+		SELECT id, "orderNumber", "userId", "customerName", "customerEmail", "customerPhone",
+		       "shippingAddress", status, "paymentMethod", "paymentStatus", "paymentReference",
+		       "totalAmount", subtotal, discount, shipping, fee, notes, "trackingNumber",
+		       "shippingPartner", "estimatedDelivery", "createdAt", "updatedAt"
+		FROM "Order" ORDER BY "createdAt" DESC;
+	`)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query admin orders: %w", err)
+	}
+	defer rows.Close()
+
+	var orders []models.Order
+	for rows.Next() {
+		var o models.Order
+		if scanErr := rows.Scan(
+			&o.ID, &o.OrderNumber, &o.UserID, &o.CustomerName, &o.CustomerEmail, &o.CustomerPhone,
+			&o.ShippingAddress, &o.Status, &o.PaymentMethod, &o.PaymentStatus, &o.PaymentReference,
+			&o.TotalAmount, &o.Subtotal, &o.Discount, &o.Shipping, &o.Fee, &o.Notes, &o.TrackingNumber,
+			&o.ShippingPartner, &o.EstimatedDelivery, &o.CreatedAt, &o.UpdatedAt,
+		); scanErr == nil {
+			orders = append(orders, o)
+		}
+	}
+	return orders, nil
+}
+
+// UpdateOrderStatus updates order status and tracking fields
+func (r *OrderRepository) UpdateOrderStatus(ctx context.Context, orderID string, status string, trackingNumber, partner, estDelivery *string) error {
+	query := `
+		UPDATE "Order"
+		SET status = COALESCE(NULLIF($1, '')::"OrderStatus", status),
+		    "trackingNumber" = COALESCE($2, "trackingNumber"),
+		    "shippingPartner" = COALESCE($3, "shippingPartner"),
+		    "estimatedDelivery" = COALESCE($4, "estimatedDelivery"),
+		    "updatedAt" = NOW()
+		WHERE id = $5;
+	`
+	_, err := r.db.Pool.Exec(ctx, query, status, trackingNumber, partner, estDelivery, orderID)
+	return err
+}
+
+// GetDashboardStats aggregates total counts for admin dashboard
+func (r *OrderRepository) GetDashboardStats(ctx context.Context) (*models.AdminDashboardStats, error) {
+	var stats models.AdminDashboardStats
+	_ = r.db.Pool.QueryRow(ctx, `SELECT COUNT(*) FROM "Order"`).Scan(&stats.Orders)
+	_ = r.db.Pool.QueryRow(ctx, `SELECT COUNT(*) FROM "User" WHERE role = 'CUSTOMER'`).Scan(&stats.Users)
+	_ = r.db.Pool.QueryRow(ctx, `SELECT COUNT(*) FROM "Product" WHERE published = true`).Scan(&stats.Products)
+	_ = r.db.Pool.QueryRow(ctx, `SELECT COUNT(*) FROM "Order" WHERE status = 'PENDING'`).Scan(&stats.Pending)
+	return &stats, nil
+}

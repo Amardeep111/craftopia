@@ -46,12 +46,35 @@ func (h *OrderHandler) CreateOrder(w http.ResponseWriter, r *http.Request) {
 
 func (h *OrderHandler) GetOrder(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
+	orderNumber := r.URL.Query().Get("orderNumber")
+
+	if orderNumber != "" {
+		order, err := h.repo.GetOrderByOrderNumber(r.Context(), orderNumber)
+		if err != nil {
+			utils.Error(w, http.StatusInternalServerError, "Could not load order")
+			return
+		}
+		if order == nil {
+			utils.Error(w, http.StatusNotFound, "Order not found")
+			return
+		}
+		utils.JSON(w, http.StatusOK, order)
+		return
+	}
+
 	if id == "" {
-		utils.Error(w, http.StatusBadRequest, "Order ID is required")
+		utils.Error(w, http.StatusBadRequest, "Order ID or order number is required")
 		return
 	}
 
 	order, err := h.repo.GetOrderByID(r.Context(), id)
+	if err == nil && order != nil {
+		utils.JSON(w, http.StatusOK, order)
+		return
+	}
+
+	// Fallback to checking by order number
+	order, err = h.repo.GetOrderByOrderNumber(r.Context(), id)
 	if err != nil {
 		utils.Error(w, http.StatusInternalServerError, "Could not load order")
 		return
@@ -64,7 +87,22 @@ func (h *OrderHandler) GetOrder(w http.ResponseWriter, r *http.Request) {
 	utils.JSON(w, http.StatusOK, order)
 }
 
-func (h *OrderHandler) ListMyOrders(w http.ResponseWriter, r *http.Request) {
+func (h *OrderHandler) ListOrGetOrders(w http.ResponseWriter, r *http.Request) {
+	// If orderNumber query param is passed, allow guest lookup
+	if orderNumber := r.URL.Query().Get("orderNumber"); orderNumber != "" {
+		order, err := h.repo.GetOrderByOrderNumber(r.Context(), orderNumber)
+		if err != nil {
+			utils.Error(w, http.StatusInternalServerError, "Failed to load order")
+			return
+		}
+		if order == nil {
+			utils.Error(w, http.StatusNotFound, "Order not found")
+			return
+		}
+		utils.JSON(w, http.StatusOK, order)
+		return
+	}
+
 	claims, err := middleware.GetUserFromContext(r.Context())
 	if err != nil || claims == nil {
 		utils.Error(w, http.StatusUnauthorized, "Sign in to view your orders")
@@ -108,4 +146,3 @@ func (h *OrderHandler) VerifyUPIPayment(w http.ResponseWriter, r *http.Request) 
 
 	utils.Success(w, http.StatusOK, "Payment verified and order confirmed successfully", order)
 }
-

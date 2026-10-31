@@ -85,3 +85,24 @@ func (r *ContactRepository) SaveMessage(ctx context.Context, name, email, messag
 	err := r.db.Pool.QueryRow(ctx, query, id, name, email, message, now).Scan(&returnedID)
 	return returnedID, err
 }
+
+func (r *ReviewRepository) CreateReview(ctx context.Context, rev *Review) (*Review, error) {
+	id := generateID("rev")
+	now := time.Now()
+	query := `
+		INSERT INTO "Review" (
+			id, "productId", "userId", "productRating", "deliveryRating", "packagingRating",
+			title, comment, images, "createdAt"
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+		RETURNING id;
+	`
+	err := r.db.Pool.QueryRow(ctx, query,
+		id, rev.ProductID, rev.UserID, rev.ProductRating, rev.DeliveryRating, rev.PackagingRating,
+		rev.Title, rev.Comment, rev.Images, now,
+	).Scan(&rev.ID)
+	if err != nil {
+		return nil, err
+	}
+	rev.CreatedAt = now
+	return rev, nil
+}

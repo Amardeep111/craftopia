@@ -177,3 +177,74 @@ CREATE INDEX IF NOT EXISTS "idx_order_email" ON "Order"("customerEmail");
 CREATE INDEX IF NOT EXISTS "idx_order_status" ON "Order"(status, "paymentStatus");
 CREATE INDEX IF NOT EXISTS "idx_payment_log_order" ON "PaymentLog"("orderId");
 
+
+-- Sessions (for stateful AES-256-GCM authenticated cookie auth)
+CREATE TABLE IF NOT EXISTS "Session" (
+    id TEXT PRIMARY KEY,
+    "userId" TEXT NOT NULL REFERENCES "User"(id) ON DELETE CASCADE,
+    token TEXT UNIQUE NOT NULL,
+    "expiresAt" TIMESTAMP(3) NOT NULL,
+    "revokedAt" TIMESTAMP(3),
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS "idx_session_token" ON "Session"(token);
+CREATE INDEX IF NOT EXISTS "idx_session_user_revoked" ON "Session"("userId", "revokedAt");
+
+-- Store Settings
+CREATE TABLE IF NOT EXISTS "StoreSetting" (
+    id TEXT PRIMARY KEY DEFAULT 'main',
+    "merchantVpa" TEXT,
+    "merchantName" TEXT DEFAULT 'Jamae''s Craftopia',
+    "whatsappNumber" TEXT,
+    "aboutContent" JSONB,
+    "siteContent" JSONB,
+    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Coupons
+CREATE TABLE IF NOT EXISTS "Coupon" (
+    id TEXT PRIMARY KEY,
+    code TEXT UNIQUE NOT NULL,
+    label TEXT NOT NULL,
+    "discountPercent" INT NOT NULL,
+    "minSubtotal" INT DEFAULT 0,
+    active BOOLEAN DEFAULT true,
+    "expiresAt" TIMESTAMP(3),
+    "firstTimeOnly" BOOLEAN DEFAULT false,
+    "maxUses" INT DEFAULT 0,
+    "currentUses" INT DEFAULT 0,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Customer Addresses
+CREATE TABLE IF NOT EXISTS "Address" (
+    id TEXT PRIMARY KEY,
+    "userId" TEXT NOT NULL REFERENCES "User"(id) ON DELETE CASCADE,
+    "fullName" TEXT NOT NULL,
+    "mobileNumber" TEXT NOT NULL,
+    "houseFlatBuilding" TEXT NOT NULL,
+    "areaStreet" TEXT NOT NULL,
+    landmark TEXT,
+    city TEXT NOT NULL,
+    state TEXT NOT NULL,
+    "pinCode" TEXT NOT NULL,
+    "isDefault" BOOLEAN DEFAULT false,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Product Reviews
+CREATE TABLE IF NOT EXISTS "Review" (
+    id TEXT PRIMARY KEY,
+    "productId" TEXT NOT NULL REFERENCES "Product"(id) ON DELETE CASCADE,
+    "userId" TEXT NOT NULL REFERENCES "User"(id) ON DELETE CASCADE,
+    "orderId" TEXT REFERENCES "Order"(id) ON DELETE SET NULL,
+    "productRating" INT NOT NULL,
+    "deliveryRating" INT NOT NULL,
+    "packagingRating" INT NOT NULL,
+    title TEXT,
+    comment TEXT NOT NULL,
+    images TEXT[] DEFAULT ARRAY[]::TEXT[],
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+);

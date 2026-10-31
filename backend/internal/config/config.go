@@ -6,21 +6,27 @@ import (
 )
 
 type Config struct {
-	Port                string
-	DatabaseURL         string
-	DirectURL           string
-	JWTSecret           string
-	MerchantUPIID       string
-	MerchantPayeeName   string
-	WhatsAppNumber      string
-	CorsOrigin          string
-	Environment         string
-	IsServerless        bool
-	DBMaxConns          int
-	DBMinConns          int
-	CloudinaryCloudName string
-	CloudinaryAPIKey    string
-	CloudinaryAPISecret string
+	Port                         string
+	DatabaseURL                  string
+	DirectURL                    string
+	JWTSecret                    string
+	SessionCookieSecret          string
+	PasswordEncryptionPrivateKey string
+	MerchantUPIID                string
+	MerchantPayeeName            string
+	WhatsAppNumber               string
+	CorsOrigin                   string
+	Environment                  string
+	IsServerless                 bool
+	DBMaxConns                   int
+	DBMinConns                   int
+	CloudinaryCloudName          string
+	CloudinaryAPIKey             string
+	CloudinaryAPISecret          string
+	GmailUser                    string
+	GmailAppPassword             string
+	EmailFrom                    string
+	SupportEmail                 string
 }
 
 func Load() *Config {
@@ -41,7 +47,18 @@ func Load() *Config {
 
 	jwtSecret := os.Getenv("JWT_SECRET")
 	if jwtSecret == "" {
+		jwtSecret = os.Getenv("AUTH_SECRET")
+	}
+	if jwtSecret == "" {
 		jwtSecret = "jamaes-craftopia-super-secret-jwt-key-2026"
+	}
+
+	sessionSecret := os.Getenv("SESSION_COOKIE_SECRET")
+	if sessionSecret == "" {
+		sessionSecret = os.Getenv("AUTH_SECRET")
+	}
+	if sessionSecret == "" {
+		sessionSecret = jwtSecret
 	}
 
 	merchantUPI := os.Getenv("MERCHANT_UPI_ID")
@@ -61,6 +78,9 @@ func Load() *Config {
 
 	corsOrigin := os.Getenv("CORS_ORIGIN")
 	if corsOrigin == "" {
+		corsOrigin = os.Getenv("APP_URL")
+	}
+	if corsOrigin == "" {
 		corsOrigin = "*"
 	}
 
@@ -72,21 +92,27 @@ func Load() *Config {
 	isServerless := os.Getenv("VERCEL") != "" || os.Getenv("AWS_LAMBDA_FUNCTION_NAME") != ""
 
 	return &Config{
-		Port:              port,
-		DatabaseURL:       dbURL,
-		DirectURL:         directURL,
-		JWTSecret:         jwtSecret,
-		MerchantUPIID:     merchantUPI,
-		MerchantPayeeName: payeeName,
-		WhatsAppNumber:    whatsapp,
-		CorsOrigin:        corsOrigin,
-		Environment:       env,
-		IsServerless:        isServerless,
-		DBMaxConns:          GetEnvInt("DB_MAX_CONNS", 0),
-		DBMinConns:          GetEnvInt("DB_MIN_CONNS", 0),
-		CloudinaryCloudName: os.Getenv("CLOUDINARY_CLOUD_NAME"),
-		CloudinaryAPIKey:    os.Getenv("CLOUDINARY_API_KEY"),
-		CloudinaryAPISecret: os.Getenv("CLOUDINARY_API_SECRET"),
+		Port:                         port,
+		DatabaseURL:                  dbURL,
+		DirectURL:                    directURL,
+		JWTSecret:                    jwtSecret,
+		SessionCookieSecret:          sessionSecret,
+		PasswordEncryptionPrivateKey: os.Getenv("PASSWORD_ENCRYPTION_PRIVATE_KEY"),
+		MerchantUPIID:                merchantUPI,
+		MerchantPayeeName:            payeeName,
+		WhatsAppNumber:               whatsapp,
+		CorsOrigin:                   corsOrigin,
+		Environment:                  env,
+		IsServerless:                 isServerless,
+		DBMaxConns:                   GetEnvInt("DB_MAX_CONNS", 0),
+		DBMinConns:                   GetEnvInt("DB_MIN_CONNS", 0),
+		CloudinaryCloudName:          os.Getenv("CLOUDINARY_CLOUD_NAME"),
+		CloudinaryAPIKey:             os.Getenv("CLOUDINARY_API_KEY"),
+		CloudinaryAPISecret:          os.Getenv("CLOUDINARY_API_SECRET"),
+		GmailUser:                    os.Getenv("GMAIL_USER"),
+		GmailAppPassword:             os.Getenv("GMAIL_APP_PASSWORD"),
+		EmailFrom:                    os.Getenv("EMAIL_FROM"),
+		SupportEmail:                 os.Getenv("SUPPORT_EMAIL"),
 	}
 }
 
@@ -98,4 +124,3 @@ func GetEnvInt(key string, defaultVal int) int {
 	}
 	return defaultVal
 }
-

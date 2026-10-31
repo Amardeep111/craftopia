@@ -239,3 +239,20 @@ type AcceptCustomRequestPayload struct {
 	AdminNotes        string          `json:"adminNotes"`
 }
 
+
+type Session struct {
+	ID        string     `json:"id"`
+	UserID    string     `json:"userId"`
+	User      *User      `json:"user,omitempty"`
+	Token     string     `json:"token"`
+	ExpiresAt time.Time  `json:"expiresAt"`
+	RevokedAt *time.Time `json:"revokedAt,omitempty"`
+	CreatedAt time.Time  `json:"createdAt"`
+}
+
+type AdminDashboardStats struct {
+	Orders   int `json:"orders"`
+	Users    int `json:"users"`
+	Products int `json:"products"`
+	Pending  int `json:"pending"`
+}

@@ -1,0 +1,356 @@
+package handlers
+
+import (
+	"encoding/json"
+	"net/http"
+	"strings"
+
+	"craftopia-backend/internal/models"
+	"craftopia-backend/internal/repository"
+	"craftopia-backend/internal/utils"
+	
+)
+
+type AdminHandler struct {
+	orderRepo   *repository.OrderRepository
+	productRepo *repository.ProductRepository
+	userRepo    *repository.UserRepository
+	couponRepo  *repository.CouponRepository
+	settingRepo *repository.SettingRepository
+}
+
+func NewAdminHandler(
+	orderRepo *repository.OrderRepository,
+	productRepo *repository.ProductRepository,
+	userRepo *repository.UserRepository,
+	couponRepo *repository.CouponRepository,
+	settingRepo *repository.SettingRepository,
+) *AdminHandler {
+	return &AdminHandler{
+		orderRepo:   orderRepo,
+		productRepo: productRepo,
+		userRepo:    userRepo,
+		couponRepo:  couponRepo,
+		settingRepo: settingRepo,
+	}
+}
+
+// GetDashboard returns summary statistics for the admin dashboard
+func (h *AdminHandler) GetDashboard(w http.ResponseWriter, r *http.Request) {
+	stats, err := h.orderRepo.GetDashboardStats(r.Context())
+	if err != nil {
+		utils.Error(w, http.StatusInternalServerError, "Failed to load dashboard metrics")
+		return
+	}
+	utils.JSON(w, http.StatusOK, stats)
+}
+
+// ListOrders returns all orders
+func (h *AdminHandler) ListOrders(w http.ResponseWriter, r *http.Request) {
+	orders, err := h.orderRepo.GetAllOrdersAdmin(r.Context())
+	if err != nil {
+		utils.Error(w, http.StatusInternalServerError, "Failed to load orders")
+		return
+	}
+	utils.JSON(w, http.StatusOK, orders)
+}
+
+// UpdateOrder updates order fulfillment status or tracking
+func (h *AdminHandler) UpdateOrder(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		ID                string  `json:"id"`
+		Status            string  `json:"status"`
+		TrackingNumber    *string `json:"trackingNumber"`
+		ShippingPartner   *string `json:"shippingPartner"`
+		EstimatedDelivery *string `json:"estimatedDelivery"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		utils.Error(w, http.StatusBadRequest, "Invalid order update payload")
+		return
+	}
+
+	id := body.ID
+	if id == "" {
+		id = r.PathValue("id")
+	}
+	if id == "" {
+		utils.Error(w, http.StatusBadRequest, "Order ID is required")
+		return
+	}
+
+	if err := h.orderRepo.UpdateOrderStatus(r.Context(), id, body.Status, body.TrackingNumber, body.ShippingPartner, body.EstimatedDelivery); err != nil {
+		utils.Error(w, http.StatusInternalServerError, "Failed to update order")
+		return
+	}
+
+	utils.Success(w, http.StatusOK, "Order updated successfully", nil)
+}
+
+// ListProducts returns all products
+func (h *AdminHandler) ListProducts(w http.ResponseWriter, r *http.Request) {
+	products, err := h.productRepo.GetAllProductsAdmin(r.Context())
+	if err != nil {
+		utils.Error(w, http.StatusInternalServerError, "Failed to load products")
+		return
+	}
+	utils.JSON(w, http.StatusOK, products)
+}
+
+// CreateProduct creates a new product
+func (h *AdminHandler) CreateProduct(w http.ResponseWriter, r *http.Request) {
+	var p models.Product
+	if err := json.NewDecoder(r.Body).Decode(&p); err != nil {
+		utils.Error(w, http.StatusBadRequest, "Invalid product payload")
+		return
+	}
+
+	if p.ID == "" {
+		p.ID = utils.GenerateUUID()
+	}
+	if p.Slug == "" {
+		p.Slug = strings.ToLower(strings.ReplaceAll(p.Name, " ", "-"))
+	}
+
+	created, err := h.productRepo.CreateProduct(r.Context(), &p)
+	if err != nil {
+		utils.Error(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	utils.Success(w, http.StatusCreated, "Product created successfully", created)
+}
+
+// UpdateProduct updates product
+func (h *AdminHandler) UpdateProduct(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	var p models.Product
+	if err := json.NewDecoder(r.Body).Decode(&p); err != nil {
+		utils.Error(w, http.StatusBadRequest, "Invalid product payload")
+		return
+	}
+	if id != "" {
+		p.ID = id
+	}
+
+	if err := h.productRepo.UpdateProduct(r.Context(), &p); err != nil {
+		utils.Error(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	utils.Success(w, http.StatusOK, "Product updated successfully", p)
+}
+
+// DeleteProduct deletes product
+func (h *AdminHandler) DeleteProduct(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if id == "" {
+		utils.Error(w, http.StatusBadRequest, "Product ID is required")
+		return
+	}
+	if err := h.productRepo.DeleteProduct(r.Context(), id); err != nil {
+		utils.Error(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	utils.Success(w, http.StatusOK, "Product deleted successfully", nil)
+}
+
+// ListCategories returns categories
+func (h *AdminHandler) ListCategories(w http.ResponseWriter, r *http.Request) {
+	categories, err := h.productRepo.GetCategories(r.Context())
+	if err != nil {
+		utils.Error(w, http.StatusInternalServerError, "Failed to load categories")
+		return
+	}
+	utils.JSON(w, http.StatusOK, categories)
+}
+
+// CreateCategory creates a category
+func (h *AdminHandler) CreateCategory(w http.ResponseWriter, r *http.Request) {
+	var c models.Category
+	if err := json.NewDecoder(r.Body).Decode(&c); err != nil {
+		utils.Error(w, http.StatusBadRequest, "Invalid category payload")
+		return
+	}
+	if c.ID == "" {
+		c.ID = utils.GenerateUUID()
+	}
+	if c.Slug == "" {
+		c.Slug = strings.ToLower(strings.ReplaceAll(c.Name, " ", "-"))
+	}
+	created, err := h.productRepo.CreateCategory(r.Context(), &c)
+	if err != nil {
+		utils.Error(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	utils.Success(w, http.StatusCreated, "Category created successfully", created)
+}
+
+// UpdateCategory updates category
+func (h *AdminHandler) UpdateCategory(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	var c models.Category
+	if err := json.NewDecoder(r.Body).Decode(&c); err != nil {
+		utils.Error(w, http.StatusBadRequest, "Invalid category payload")
+		return
+	}
+	if id != "" {
+		c.ID = id
+	}
+	if err := h.productRepo.UpdateCategory(r.Context(), &c); err != nil {
+		utils.Error(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	utils.Success(w, http.StatusOK, "Category updated successfully", c)
+}
+
+// DeleteCategory deletes category
+func (h *AdminHandler) DeleteCategory(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if id == "" {
+		utils.Error(w, http.StatusBadRequest, "Category ID is required")
+		return
+	}
+	if err := h.productRepo.DeleteCategory(r.Context(), id); err != nil {
+		utils.Error(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	utils.Success(w, http.StatusOK, "Category deleted successfully", nil)
+}
+
+// ListUsers returns customers
+func (h *AdminHandler) ListUsers(w http.ResponseWriter, r *http.Request) {
+	users, err := h.userRepo.ListAllUsersAdmin(r.Context())
+	if err != nil {
+		utils.Error(w, http.StatusInternalServerError, "Failed to load users")
+		return
+	}
+	utils.JSON(w, http.StatusOK, users)
+}
+
+// ToggleUser toggles active status
+func (h *AdminHandler) ToggleUser(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		ID     string `json:"id"`
+		Active bool   `json:"active"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		utils.Error(w, http.StatusBadRequest, "Invalid payload")
+		return
+	}
+	if err := h.userRepo.ToggleUserActive(r.Context(), body.ID, body.Active); err != nil {
+		utils.Error(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	utils.Success(w, http.StatusOK, "User updated successfully", nil)
+}
+
+// ListCoupons returns all coupons
+func (h *AdminHandler) ListCoupons(w http.ResponseWriter, r *http.Request) {
+	coupons, err := h.couponRepo.ListAllCouponsAdmin(r.Context())
+	if err != nil {
+		utils.Error(w, http.StatusInternalServerError, "Failed to load coupons")
+		return
+	}
+	utils.JSON(w, http.StatusOK, coupons)
+}
+
+// CreateCoupon creates a coupon
+func (h *AdminHandler) CreateCoupon(w http.ResponseWriter, r *http.Request) {
+	var c repository.Coupon
+	if err := json.NewDecoder(r.Body).Decode(&c); err != nil {
+		utils.Error(w, http.StatusBadRequest, "Invalid coupon payload")
+		return
+	}
+	if c.ID == "" {
+		c.ID = utils.GenerateUUID()
+	}
+	c.Code = strings.ToUpper(strings.TrimSpace(c.Code))
+	created, err := h.couponRepo.CreateCoupon(r.Context(), &c)
+	if err != nil {
+		utils.Error(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	utils.Success(w, http.StatusCreated, "Coupon created successfully", created)
+}
+
+// ToggleCoupon updates active flag
+func (h *AdminHandler) ToggleCoupon(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		ID     string `json:"id"`
+		Active bool   `json:"active"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		utils.Error(w, http.StatusBadRequest, "Invalid payload")
+		return
+	}
+	if err := h.couponRepo.ToggleCoupon(r.Context(), body.ID, body.Active); err != nil {
+		utils.Error(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	utils.Success(w, http.StatusOK, "Coupon updated successfully", nil)
+}
+
+// DeleteCoupon deletes coupon
+func (h *AdminHandler) DeleteCoupon(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if id == "" {
+		utils.Error(w, http.StatusBadRequest, "Coupon ID is required")
+		return
+	}
+	if err := h.couponRepo.DeleteCoupon(r.Context(), id); err != nil {
+		utils.Error(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	utils.Success(w, http.StatusOK, "Coupon deleted successfully", nil)
+}
+
+// GetSite returns site settings
+func (h *AdminHandler) GetSite(w http.ResponseWriter, r *http.Request) {
+	s, err := h.settingRepo.GetSettings(r.Context())
+	if err != nil {
+		utils.Error(w, http.StatusInternalServerError, "Failed to load site settings")
+		return
+	}
+	utils.JSON(w, http.StatusOK, s)
+}
+
+// UpdateSite updates site settings
+func (h *AdminHandler) UpdateSite(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		MerchantVPA    *string         `json:"merchantVpa"`
+		MerchantName    *string         `json:"merchantName"`
+		WhatsAppNumber  *string         `json:"whatsappNumber"`
+		SiteContent     json.RawMessage `json:"siteContent"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		utils.Error(w, http.StatusBadRequest, "Invalid site settings payload")
+		return
+	}
+	if err := h.settingRepo.UpdateSiteSettings(r.Context(), body.MerchantVPA, body.MerchantName, body.WhatsAppNumber, body.SiteContent); err != nil {
+		utils.Error(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	utils.Success(w, http.StatusOK, "Site settings updated", nil)
+}
+
+// GetAbout returns about content
+func (h *AdminHandler) GetAbout(w http.ResponseWriter, r *http.Request) {
+	s, err := h.settingRepo.GetSettings(r.Context())
+	if err != nil {
+		utils.Error(w, http.StatusInternalServerError, "Failed to load about content")
+		return
+	}
+	utils.JSON(w, http.StatusOK, s.AboutContent)
+}
+
+// UpdateAbout updates about content
+func (h *AdminHandler) UpdateAbout(w http.ResponseWriter, r *http.Request) {
+	var body json.RawMessage
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		utils.Error(w, http.StatusBadRequest, "Invalid about payload")
+		return
+	}
+	if err := h.settingRepo.UpdateAboutContent(r.Context(), body); err != nil {
+		utils.Error(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	utils.Success(w, http.StatusOK, "About content updated", nil)
+}
