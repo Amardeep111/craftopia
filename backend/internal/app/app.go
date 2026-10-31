@@ -55,6 +55,9 @@ func Setup(cfg *config.Config, db *database.DB) *App {
 	mux.HandleFunc("GET /health/live", healthHandler.Liveness)
 	mux.HandleFunc("GET /health/ready", healthHandler.Readiness)
 	mux.HandleFunc("GET /api/health", healthHandler.Readiness)
+	mux.HandleFunc("GET /api/index", healthHandler.Readiness)
+	mux.HandleFunc("GET /api", healthHandler.Readiness)
+	mux.HandleFunc("GET /", healthHandler.Readiness)
 
 	// 2. Public Catalog
 	mux.HandleFunc("GET /api/categories", productHandler.ListCategories)

@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"os"
 	"sync"
 	"time"
@@ -46,7 +47,6 @@ func getApp() *app.App {
 	if err != nil {
 		slog.Error("Vercel Serverless: Database connection failed", "error", err)
 		// Return app without DB so health endpoints and fallbacks still function
-		// On next request, getApp will retry connecting to the database
 		return app.Setup(cfg, nil)
 	}
 
@@ -57,6 +57,29 @@ func getApp() *app.App {
 // Handler is the Vercel Serverless Function entrypoint.
 // Vercel routes all requests matching vercel.json rewrites to this function.
 func Handler(w http.ResponseWriter, r *http.Request) {
+	// When Vercel rewrites routes to /api/index, it supplies the original incoming path
+	// in the x-matched-path or x-forwarded-uri header.
+	// We restore r.URL.Path so Go 1.22's http.ServeMux matches the intended route pattern.
+	matchedPath := r.Header.Get("x-matched-path")
+	if matchedPath == "" {
+		matchedPath = r.Header.Get("X-Matched-Path")
+	}
+	if matchedPath == "" {
+		matchedPath = r.Header.Get("x-forwarded-uri")
+	}
+
+	if matchedPath != "" {
+		if parsed, err := url.Parse(matchedPath); err == nil && parsed.Path != "" {
+			r.URL.Path = parsed.Path
+			r.URL.RawPath = parsed.RawPath
+			if parsed.RawQuery != "" && r.URL.RawQuery == "" {
+				r.URL.RawQuery = parsed.RawQuery
+			}
+		} else {
+			r.URL.Path = matchedPath
+		}
+	}
+
 	appInstance := getApp()
 
 	if appInstance == nil || appInstance.Handler == nil {
@@ -66,4 +89,3 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 
 	appInstance.Handler.ServeHTTP(w, r)
 }
-
