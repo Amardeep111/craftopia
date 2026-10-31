@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"encoding/json"
 	"log/slog"
 	"net/http"
 	"net/url"
@@ -56,7 +57,22 @@ func getApp() *app.App {
 
 // Handler is the Vercel Serverless Function entrypoint.
 func Handler(w http.ResponseWriter, r *http.Request) {
-	// 1. Check deterministic __path rewrite query parameter from vercel.json
+	// Debug inspection of incoming headers from Vercel
+	if r.URL.Query().Get("dump_headers") == "true" {
+		w.Header().Set("Content-Type", "application/json")
+		hdr := make(map[string][]string)
+		for k, v := range r.Header {
+			hdr[k] = v
+		}
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"url_path":      r.URL.Path,
+			"url_raw_query": r.URL.RawQuery,
+			"request_uri":   r.RequestURI,
+			"headers":       hdr,
+		})
+		return
+	}
+
 	q := r.URL.Query()
 	if originalPath := q.Get("__path"); originalPath != "" {
 		cleanPath := "/" + strings.TrimPrefix(originalPath, "/")
