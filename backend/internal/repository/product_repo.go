@@ -31,7 +31,7 @@ func (r *ProductRepository) GetCategories(ctx context.Context) ([]models.Categor
 	}
 	defer rows.Close()
 
-	var categories []models.Category
+	categories := make([]models.Category, 0)
 	for rows.Next() {
 		var c models.Category
 		err := rows.Scan(
@@ -81,7 +81,7 @@ func (r *ProductRepository) GetProducts(ctx context.Context, categorySlug string
 	}
 	defer rows.Close()
 
-	var products []models.Product
+	products := make([]models.Product, 0)
 	for rows.Next() {
 		var p models.Product
 		var cat models.Category
@@ -155,7 +155,7 @@ func (r *ProductRepository) GetAllProductsAdmin(ctx context.Context) ([]models.P
 	}
 	defer rows.Close()
 
-	var products []models.Product
+	products := make([]models.Product, 0)
 	for rows.Next() {
 		var p models.Product
 		var cat models.Category

@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 	"sync"
@@ -55,20 +56,40 @@ func getApp() *app.App {
 
 // Handler is the Vercel Serverless Function entrypoint.
 func Handler(w http.ResponseWriter, r *http.Request) {
-	// Extract the actual request path forwarded by vercel.json rewrite (?path=:path*)
-	q := r.URL.Query()
-	rawPath := q.Get("path")
-	if rawPath == "" {
-		rawPath = q.Get("__path")
+	// 1. If RequestURI is present and not the internal function path, parse it to extract the original path & query
+	if r.RequestURI != "" && r.RequestURI != "/api/index" && r.RequestURI != "/api/index.go" && r.RequestURI != "/api" {
+		if parsed, err := url.ParseRequestURI(r.RequestURI); err == nil && parsed.Path != "" {
+			r.URL.Path = parsed.Path
+			if parsed.RawQuery != "" {
+				r.URL.RawQuery = parsed.RawQuery
+			}
+		}
 	}
 
-	if rawPath != "" {
-		clean := "/" + strings.TrimPrefix(rawPath, "/")
-		r.URL.Path = clean
-		q.Del("path")
+	// 2. Check proxy forwarding headers (x-forwarded-uri)
+	if (r.URL.Path == "/api/index" || r.URL.Path == "/api/index.go" || r.URL.Path == "/api") && r.Header.Get("x-forwarded-uri") != "" {
+		if parsed, err := url.ParseRequestURI(r.Header.Get("x-forwarded-uri")); err == nil && parsed.Path != "" {
+			r.URL.Path = parsed.Path
+			if parsed.RawQuery != "" && r.URL.RawQuery == "" {
+				r.URL.RawQuery = parsed.RawQuery
+			}
+		}
+	}
+
+	// 3. Check query parameter overrides (?__path= or ?path=)
+	q := r.URL.Query()
+	if rawPath := q.Get("__path"); rawPath != "" {
+		r.URL.Path = "/" + strings.TrimPrefix(rawPath, "/")
 		q.Del("__path")
 		r.URL.RawQuery = q.Encode()
-	} else if r.URL.Path == "/api/index" || r.URL.Path == "/api" {
+	} else if rawPath := q.Get("path"); rawPath != "" && rawPath != "api/index" && rawPath != "/api/index" {
+		r.URL.Path = "/" + strings.TrimPrefix(rawPath, "/")
+		q.Del("path")
+		r.URL.RawQuery = q.Encode()
+	}
+
+	// 4. Fallback: if path is still /api/index, /api/index.go, or /api, treat as root health check
+	if r.URL.Path == "/api/index" || r.URL.Path == "/api/index.go" || r.URL.Path == "/api" || r.URL.Path == "" {
 		r.URL.Path = "/"
 	}
 

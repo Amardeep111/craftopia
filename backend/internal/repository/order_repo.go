@@ -270,7 +270,7 @@ func (r *OrderRepository) GetOrdersByEmail(ctx context.Context, email string) ([
 	}
 	defer rows.Close()
 
-	var orders []models.Order
+	orders := make([]models.Order, 0)
 	for rows.Next() {
 		var o models.Order
 		if scanErr := rows.Scan(
@@ -407,7 +407,7 @@ func (r *OrderRepository) GetAllOrdersAdmin(ctx context.Context) ([]models.Order
 	}
 	defer rows.Close()
 
-	var orders []models.Order
+	orders := make([]models.Order, 0)
 	for rows.Next() {
 		var o models.Order
 		if scanErr := rows.Scan(

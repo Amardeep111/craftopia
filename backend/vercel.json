@@ -2,8 +2,8 @@
   "version": 2,
   "rewrites": [
     {
-      "source": "/:path*",
-      "destination": "/api/index?path=:path*"
+      "source": "/(.*)",
+      "destination": "/api/index.go"
     }
   ]
 }

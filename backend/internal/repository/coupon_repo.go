@@ -107,7 +107,7 @@ func (r *CouponRepository) ListActiveCoupons(ctx context.Context) ([]Coupon, err
 	}
 	defer rows.Close()
 
-	var list []Coupon
+	list := make([]Coupon, 0)
 	for rows.Next() {
 		var c Coupon
 		if err := rows.Scan(
@@ -132,7 +132,7 @@ func (r *CouponRepository) ListAllCouponsAdmin(ctx context.Context) ([]Coupon, e
 	}
 	defer rows.Close()
 
-	var list []Coupon
+	list := make([]Coupon, 0)
 	for rows.Next() {
 		var c Coupon
 		if err := rows.Scan(

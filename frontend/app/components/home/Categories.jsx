@@ -34,7 +34,7 @@ export default function Categories({ initialCategories }) {
         description="Find a small treasure, or start with a feeling — toys, flowers, keepsakes, and custom magic."
       />
       <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-        {categories.map((category, i) => (
+        {(Array.isArray(categories) ? categories : []).map((category, i) => (
           <ScrollReveal key={category.id || category.slug} delay={i * 0.05}>
             <CategoryCard category={{ ...category, id: category.slug || category.id }} />
           </ScrollReveal>

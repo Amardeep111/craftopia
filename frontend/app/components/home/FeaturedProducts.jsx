@@ -41,7 +41,7 @@ export default function FeaturedProducts({ initialProducts }) {
         description="A handful of pieces we love — each one handmade, each one a little different from the last."
       />
       <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-        {featured.length > 0 ? (
+        {Array.isArray(featured) && featured.length > 0 ? (
           featured.map((product, i) => (
             <ScrollReveal key={product.id} delay={i * 0.04}>
               <ProductCard product={product} />

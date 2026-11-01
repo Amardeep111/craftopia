@@ -44,7 +44,7 @@ func (r *AddressRepository) GetUserAddresses(ctx context.Context, userID string)
 	}
 	defer rows.Close()
 
-	var addresses []Address
+	addresses := make([]Address, 0)
 	for rows.Next() {
 		var a Address
 		if err := rows.Scan(

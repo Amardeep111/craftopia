@@ -48,10 +48,10 @@ func (r *ReviewRepository) GetProductReviews(ctx context.Context, productID stri
 	}
 	defer rows.Close()
 
-	var reviews []Review
+	reviews := make([]Review, 0)
 	for rows.Next() {
 		var rev Review
-		var images []string
+		images := make([]string, 0)
 		if err := rows.Scan(
 			&rev.ID, &rev.ProductID, &rev.UserID, &rev.UserName,
 			&rev.ProductRating, &rev.DeliveryRating, &rev.PackagingRating,

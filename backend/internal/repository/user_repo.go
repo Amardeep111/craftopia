@@ -81,7 +81,7 @@ func (r *UserRepository) ListAllUsersAdmin(ctx context.Context) ([]models.User, 
 	}
 	defer rows.Close()
 
-	var users []models.User
+	users := make([]models.User, 0)
 	for rows.Next() {
 		var u models.User
 		if err := rows.Scan(

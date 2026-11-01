@@ -30,9 +30,9 @@ export default function ShopClient({ initialProducts = [], initialCategories = [
   const [sort, setSort] = useState('featured')
 
   // Initial SSR state: pre-populated from server! Zero skeleton on first load.
-  const hasSSRData = initialProducts.length > 0 && selectedCategory === initialCategory
+  const hasSSRData = Array.isArray(initialProducts) && initialProducts.length > 0 && selectedCategory === initialCategory
   const [catalog, setCatalog] = useState(() => (hasSSRData ? initialProducts : []))
-  const [categories, setCategories] = useState(() => (initialCategories.length > 0 ? initialCategories : shopCategories))
+  const [categories, setCategories] = useState(() => (Array.isArray(initialCategories) && initialCategories.length > 0 ? initialCategories : shopCategories))
   const [loadingInitial, setLoadingInitial] = useState(() => !hasSSRData)
   const [loadingMore, setLoadingMore] = useState(false)
   const [hasMore, setHasMore] = useState(true)
@@ -205,7 +205,7 @@ export default function ShopClient({ initialProducts = [], initialCategories = [
           >
             All
           </button>
-          {categories.map((cat) => (
+          {(Array.isArray(categories) ? categories : []).map((cat) => (
             <button
               key={cat.id}
               type="button"

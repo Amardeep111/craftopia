@@ -67,7 +67,7 @@ func (r *CartRepository) GetCart(ctx context.Context, userID string) ([]models.C
 	}
 	defer rows.Close()
 
-	var items []models.CartItem
+	items := make([]models.CartItem, 0)
 	for rows.Next() {
 		var it models.CartItem
 		var p models.Product
@@ -127,8 +127,8 @@ func (r *CartRepository) SaveCart(ctx context.Context, userID string, items []Ca
 }
 
 func (r *CartRepository) ValidateCart(ctx context.Context, items []CartItemInput) (*CartValidationResult, error) {
-	var validated []ValidatedCartItem
-	var errList []string
+	validated := make([]ValidatedCartItem, 0)
+	errList := make([]string, 0)
 
 	var subtotal, gstTotal, codFeeTotal, otherChargeTotal int
 

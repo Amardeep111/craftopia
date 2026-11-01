@@ -51,7 +51,7 @@ func (r *CustomRequestRepository) List(ctx context.Context) ([]models.CustomRequ
 	}
 	defer rows.Close()
 
-	var list []models.CustomRequest
+	list := make([]models.CustomRequest, 0)
 	for rows.Next() {
 		var cr models.CustomRequest
 		err := rows.Scan(
