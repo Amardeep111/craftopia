@@ -2,6 +2,8 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
+	"log/slog"
 	"math"
 	"net/http"
 	"strconv"
@@ -70,7 +72,16 @@ func (h *ExtraHandlers) SaveCart(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := h.cartRepo.SaveCart(r.Context(), claims.UserID, body.Items); err != nil {
-		utils.Error(w, http.StatusInternalServerError, err.Error())
+		if errors.Is(err, repository.ErrInvalidCartItem) {
+			utils.Error(w, http.StatusBadRequest, err.Error())
+			return
+		}
+		if errors.Is(err, repository.ErrCartProductNotFound) {
+			utils.Error(w, http.StatusBadRequest, "One or more cart products no longer exist. Refresh your cart.")
+			return
+		}
+		slog.Error("Failed to save cart", "user_id", claims.UserID, "error", err)
+		utils.Error(w, http.StatusInternalServerError, "Failed to save cart")
 		return
 	}
 	utils.Success(w, http.StatusOK, "Cart saved", body.Items)

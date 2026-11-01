@@ -20,6 +20,46 @@ function mergeCartItems(savedItems, guestItems) {
   return [...merged.values()]
 }
 
+function normalizeCartItems(items) {
+  if (!Array.isArray(items)) return []
+
+  return items.flatMap((item) => {
+    const product = item?.product || item || {}
+    const id = item?.productId || product.id || item?.id
+    if (typeof id !== 'string' || !id) return []
+
+    const numberOr = (value, fallback = 0) => {
+      const number = Number(value)
+      return Number.isFinite(number) ? number : fallback
+    }
+    const rawQuantity = Number(item?.quantity)
+    const quantity = Number.isFinite(rawQuantity) && rawQuantity > 0
+      ? Math.min(99, Math.trunc(rawQuantity))
+      : 1
+    const price = numberOr(item?.price, numberOr(product.price))
+    const imageUrl = item?.imageUrl || item?.image || product.imageUrl || product.image || ''
+    const images = item?.images || product.images
+    const image = item?.image || item?.imageUrl || product.image || product.imageUrl || (Array.isArray(images) ? images[0] : '')
+
+    return [{
+      ...product,
+      ...item,
+      id,
+      name: item?.name || product.name || 'Handmade product',
+      price,
+      originalPrice: numberOr(item?.originalPrice, price),
+      discountPercent: numberOr(item?.discountPercent, numberOr(product.discountPercent)),
+      gstPercent: numberOr(item?.gstPercent, numberOr(product.gstPercent)),
+      codFee: numberOr(item?.codFee, numberOr(product.codFee)),
+      otherCharge: numberOr(item?.otherCharge, numberOr(product.otherCharge)),
+      image,
+      imageUrl,
+      visual: item?.visual || product.visual || image,
+      quantity,
+    }]
+  })
+}
+
 export default function CartSync({ initialUser = null, initialCart = null }) {
   const userId = useUserStore((state) => state.userId)
   const readyUserId = useRef(null)
@@ -66,7 +106,7 @@ export default function CartSync({ initialUser = null, initialCart = null }) {
 
         const currentLocal = useCartStore.getState().items || []
         // Merge server cart and local cart so any newly added items (like Buy Now) are never wiped out
-        const items = mergeCartItems(serverItems, currentLocal)
+        const items = mergeCartItems(normalizeCartItems(serverItems), normalizeCartItems(currentLocal))
 
         useCartStore.getState().replaceItems(items)
         useCartStore.getState().setOwnerUserId(userId)

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"strings"
 	"time"
 
 	"craftopia-backend/internal/database"
@@ -15,6 +16,11 @@ import (
 type CartRepository struct {
 	db *database.DB
 }
+
+var (
+	ErrInvalidCartItem     = errors.New("cart item must include a product and a quantity between 1 and 99")
+	ErrCartProductNotFound = errors.New("one or more cart products no longer exist")
+)
 
 func NewCartRepository(db *database.DB) *CartRepository {
 	return &CartRepository{db: db}
@@ -119,19 +125,45 @@ func (r *CartRepository) SaveCart(ctx context.Context, userID string, items []Ca
 		return fmt.Errorf("failed to clear old cart items: %w", err)
 	}
 
-	// Insert updated items
-	now := time.Now()
-	for _, it := range items {
-		if it.Quantity < 1 || it.Quantity > 99 {
+	// Normalize duplicate product IDs and write all cart rows in one database call.
+	productIndexes := make(map[string]int, len(items))
+	productIDs := make([]string, 0, len(items))
+	quantities := make([]int32, 0, len(items))
+	for _, item := range items {
+		productID := strings.TrimSpace(item.ProductID)
+		if productID == "" || item.Quantity < 1 || item.Quantity > 99 {
+			return ErrInvalidCartItem
+		}
+		if index, ok := productIndexes[productID]; ok {
+			quantities[index] += int32(item.Quantity)
+			if quantities[index] > 99 {
+				quantities[index] = 99
+			}
 			continue
 		}
-		_, err = tx.Exec(ctx, `
-			INSERT INTO "CartItem" (id, "cartId", "productId", quantity, "createdAt", "updatedAt")
-			VALUES ($1, $2, $3, $4, $5, $6);
-		`, generateID("citem"), cartID, it.ProductID, it.Quantity, now, now)
-		if err != nil {
-			return fmt.Errorf("failed to insert cart item: %w", err)
-		}
+		productIndexes[productID] = len(productIDs)
+		productIDs = append(productIDs, productID)
+		quantities = append(quantities, int32(item.Quantity))
+	}
+
+	// A single set-based insert avoids one database round trip per product and
+	// lets us report stale product IDs as a client error instead of a FK 500.
+	now := time.Now()
+	itemIDs := make([]string, len(productIDs))
+	for i := range itemIDs {
+		itemIDs[i] = generateID("citem")
+	}
+	commandTag, err := tx.Exec(ctx, `
+		INSERT INTO "CartItem" (id, "cartId", "productId", quantity, "createdAt", "updatedAt")
+		SELECT item.id, $1, item.product_id, item.quantity, $5, $5
+		FROM unnest($2::text[], $3::text[], $4::integer[]) AS item(id, product_id, quantity)
+		JOIN "Product" p ON p.id = item.product_id;
+	`, cartID, itemIDs, productIDs, quantities, now)
+	if err != nil {
+		return fmt.Errorf("failed to insert cart items: %w", err)
+	}
+	if commandTag.RowsAffected() != int64(len(productIDs)) {
+		return ErrCartProductNotFound
 	}
 
 	return tx.Commit(ctx)
