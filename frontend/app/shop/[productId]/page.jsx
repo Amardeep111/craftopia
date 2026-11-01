@@ -4,7 +4,7 @@ import ProductDetailsClient from './ProductDetailsClient'
 
 export const revalidate = 60
 
-const BACKEND_URL = (process.env.GO_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080').replace(/\/$/, '')
+const BACKEND_URL = (process.env.GO_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || (process.env.NODE_ENV === 'production' ? 'https://craftopia-backend.vercel.app' : 'http://localhost:8080')).replace(/\/$/, '')
 
 async function fetchProduct(productId) {
   try {

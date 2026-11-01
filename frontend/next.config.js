@@ -33,7 +33,7 @@ const nextConfig = {
   },
   // Automatically proxies API requests to the Go backend in local dev or unified hosting
   async rewrites() {
-    const backendURL = process.env.GO_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'
+    const backendURL = process.env.GO_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || (process.env.NODE_ENV === 'production' ? 'https://craftopia-backend.vercel.app' : 'http://localhost:8080')
     return [
       {
         source: '/api/:path*',

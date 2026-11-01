@@ -18,7 +18,7 @@ export function hasAdminPermission(user, permission) {
 export async function getAdminSession(token, permission) {
   if (!token) return null
   try {
-    const backendUrl = process.env.GO_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'
+    const backendUrl = process.env.GO_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || (process.env.NODE_ENV === 'production' ? 'https://craftopia-backend.vercel.app' : 'http://localhost:8080')
     const res = await fetch(`${backendUrl}/api/auth/me`, {
       headers: { Authorization: `Bearer ${token}` },
       cache: 'no-store',

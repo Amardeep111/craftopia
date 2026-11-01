@@ -10,7 +10,7 @@ export default async function AdminDashboard() {
   let orders = 0, users = 0, products = 0;
   // Dashboard statistics are loaded via REST API in Go backend
   try {
-    const backendUrl = process.env.GO_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'
+    const backendUrl = process.env.GO_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || (process.env.NODE_ENV === 'production' ? 'https://craftopia-backend.vercel.app' : 'http://localhost:8080')
     const res = await fetch(`${backendUrl}/api/products?limit=100`, { cache: 'no-store' }).then(r => r.json()).catch(() => ({ data: [] }));
     products = Array.isArray(res.data) ? res.data.length : 0;
   } catch {}

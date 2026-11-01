@@ -7,7 +7,7 @@ const getBaseUrl = () => {
   if (typeof window !== 'undefined') {
     return (process.env.NEXT_PUBLIC_API_URL || '').replace(/\/$/, '')
   }
-  return (process.env.GO_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080').replace(/\/$/, '')
+  return (process.env.GO_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || (process.env.NODE_ENV === 'production' ? 'https://craftopia-backend.vercel.app' : 'http://localhost:8080')).replace(/\/$/, '')
 }
 
 class APIError extends Error {
