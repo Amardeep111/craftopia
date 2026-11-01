@@ -40,7 +40,7 @@ export default function CustomOrders({ initialCustomer }) {
       .then((r) => r.json())
       .then((res) => {
         if (active && res?.success && res.data) {
-          setSiteInfo(res.data)
+          setSiteInfo(res.data.siteContent || res.data)
         }
       })
       .catch(() => {})

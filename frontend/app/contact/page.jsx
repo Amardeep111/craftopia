@@ -23,7 +23,15 @@ export default function Contact() {
       .then((r) => r.json())
       .then((res) => {
         if (active && res.success && res.data) {
-          setSiteInfo(res.data)
+          const content = res.data.siteContent && typeof res.data.siteContent === 'object'
+            ? res.data.siteContent
+            : res.data
+          setSiteInfo({
+            ...site,
+            ...content,
+            social: { ...site.social, ...(content.social || {}) },
+            visibility: { ...site.visibility, ...(content.visibility || {}) },
+          })
         }
       })
       .catch(() => {})
