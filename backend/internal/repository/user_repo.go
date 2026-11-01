@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
@@ -36,7 +37,10 @@ func (r *UserRepository) GetByEmail(ctx context.Context, email string) (*models.
 		}
 		return nil, fmt.Errorf("failed to query user: %w", err)
 	}
-	_ = r.db.Pool.QueryRow(ctx, `SELECT "adminPermissions" FROM "User" WHERE id = $1;`, u.ID).Scan(&u.AdminPermissions)
+	var permissionsJSON []byte
+	if r.db.Pool.QueryRow(ctx, `SELECT "adminPermissions" FROM "User" WHERE id = $1;`, u.ID).Scan(&permissionsJSON) == nil {
+		_ = json.Unmarshal(permissionsJSON, &u.AdminPermissions)
+	}
 	return &u, nil
 }
 
@@ -56,7 +60,10 @@ func (r *UserRepository) FindByID(ctx context.Context, id string) (*models.User,
 		}
 		return nil, fmt.Errorf("failed to query user by id: %w", err)
 	}
-	_ = r.db.Pool.QueryRow(ctx, `SELECT "adminPermissions" FROM "User" WHERE id = $1;`, u.ID).Scan(&u.AdminPermissions)
+	var permissionsJSON []byte
+	if r.db.Pool.QueryRow(ctx, `SELECT "adminPermissions" FROM "User" WHERE id = $1;`, u.ID).Scan(&permissionsJSON) == nil {
+		_ = json.Unmarshal(permissionsJSON, &u.AdminPermissions)
+	}
 	return &u, nil
 }
 
@@ -149,8 +156,12 @@ func (r *UserRepository) ListAdmins(ctx context.Context) ([]models.User, error) 
 	admins := make([]models.User, 0)
 	for rows.Next() {
 		var u models.User
-		if err := rows.Scan(&u.ID, &u.Email, &u.Name, &u.Phone, &u.Role, &u.AdminActive, &u.AdminPermissions, &u.Active, &u.CreatedAt, &u.UpdatedAt); err != nil {
+		var permissionsJSON []byte
+		if err := rows.Scan(&u.ID, &u.Email, &u.Name, &u.Phone, &u.Role, &u.AdminActive, &permissionsJSON, &u.Active, &u.CreatedAt, &u.UpdatedAt); err != nil {
 			return nil, err
+		}
+		if err := json.Unmarshal(permissionsJSON, &u.AdminPermissions); err != nil {
+			return nil, fmt.Errorf("failed to decode admin permissions: %w", err)
 		}
 		admins = append(admins, u)
 	}
@@ -158,18 +169,22 @@ func (r *UserRepository) ListAdmins(ctx context.Context) ([]models.User, error) 
 }
 
 func (r *UserRepository) SetAdminAccess(ctx context.Context, id, name string, active bool, permissions []string) error {
-	_, err := r.db.Pool.Exec(ctx, `
+	permissionsJSON, err := json.Marshal(permissions)
+	if err != nil {
+		return fmt.Errorf("failed to encode admin permissions: %w", err)
+	}
+	_, err = r.db.Pool.Exec(ctx, `
 		UPDATE "User" SET role = 'ADMIN', "adminActive" = $1,
-			"adminPermissions" = $2, name = COALESCE(NULLIF($3, ''), name), "updatedAt" = NOW()
+			"adminPermissions" = $2::jsonb, name = COALESCE(NULLIF($3, ''), name), "updatedAt" = NOW()
 		WHERE id = $4;
-	`, active, permissions, name, id)
+	`, active, string(permissionsJSON), name, id)
 	return err
 }
 
 func (r *UserRepository) RemoveAdminAccess(ctx context.Context, id string) error {
 	_, err := r.db.Pool.Exec(ctx, `
 		UPDATE "User" SET role = 'CUSTOMER', "adminActive" = false,
-			"adminPermissions" = ARRAY[]::TEXT[], "updatedAt" = NOW()
+			"adminPermissions" = '[]'::jsonb, "updatedAt" = NOW()
 		WHERE id = $1 AND role = 'ADMIN';
 	`, id)
 	return err

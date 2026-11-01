@@ -588,16 +588,17 @@ func (r *OrderRepository) RequestRefund(ctx context.Context, orderID, userEmail,
 
 	var req models.RefundRequest
 	req.OrderID = orderID
+	req.ID = generateID("refund")
 	req.Reason = reason
 	req.Amount = totalAmount
 	req.RefundUPIID = refundUPI
 	req.Status = "REQUESTED"
 
 	err = tx.QueryRow(ctx, `
-		INSERT INTO "RefundRequest" ("orderId", reason, amount, "refundUpiId", status, "createdAt", "updatedAt")
-		VALUES ($1, $2, $3, $4, 'REQUESTED', NOW(), NOW())
+		INSERT INTO "RefundRequest" (id, "orderId", reason, amount, "refundUpiId", status, "createdAt", "updatedAt")
+		VALUES ($1, $2, $3, $4, $5, 'REQUESTED', NOW(), NOW())
 		RETURNING id, "createdAt", "updatedAt";
-	`, orderID, reason, totalAmount, refundUPI).Scan(&req.ID, &req.CreatedAt, &req.UpdatedAt)
+	`, req.ID, orderID, reason, totalAmount, refundUPI).Scan(&req.ID, &req.CreatedAt, &req.UpdatedAt)
 	if err != nil {
 		return nil, fmt.Errorf("failed to insert refund request: %w", err)
 	}

@@ -2,12 +2,14 @@ package repository
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math"
 	"time"
 
 	"craftopia-backend/internal/database"
 	"craftopia-backend/internal/models"
+	"github.com/jackc/pgx/v5"
 )
 
 type CartRepository struct {
@@ -90,14 +92,19 @@ func (r *CartRepository) SaveCart(ctx context.Context, userID string, items []Ca
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
 
-	// Ensure Cart exists
+	// Serialize cart creation per user because Supabase does not enforce a unique
+	// constraint on Cart.userId.
+	if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock(hashtextextended($1, 0));`, userID); err != nil {
+		return fmt.Errorf("failed to lock cart: %w", err)
+	}
+	// Reuse an existing cart, or create one when none exists.
 	var cartID string
-	err = tx.QueryRow(ctx, `
-		INSERT INTO "Cart" (id, "userId", "createdAt", "updatedAt")
-		VALUES ($1, $2, NOW(), NOW())
-		ON CONFLICT ("userId") DO UPDATE SET "updatedAt" = NOW()
-		RETURNING id;
-	`, generateID("cart"), userID).Scan(&cartID)
+	err = tx.QueryRow(ctx, `SELECT id FROM "Cart" WHERE "userId" = $1 ORDER BY "createdAt" ASC LIMIT 1 FOR UPDATE;`, userID).Scan(&cartID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		err = tx.QueryRow(ctx, `INSERT INTO "Cart" (id, "userId", "createdAt", "updatedAt") VALUES ($1, $2, NOW(), NOW()) RETURNING id;`, generateID("cart"), userID).Scan(&cartID)
+	} else if err == nil {
+		_, err = tx.Exec(ctx, `UPDATE "Cart" SET "updatedAt" = NOW() WHERE id = $1;`, cartID)
+	}
 	if err != nil {
 		return fmt.Errorf("failed to upsert cart: %w", err)
 	}

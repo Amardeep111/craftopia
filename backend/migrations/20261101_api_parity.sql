@@ -2,7 +2,25 @@
 ALTER TYPE "PaymentStatus" ADD VALUE IF NOT EXISTS 'REFUND_REQUESTED';
 
 ALTER TABLE "User"
-    ADD COLUMN IF NOT EXISTS "adminPermissions" TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[];
+    ADD COLUMN IF NOT EXISTS "adminPermissions" JSONB NOT NULL DEFAULT '[]'::JSONB;
+
+-- Older backend schema versions used TEXT[]. Supabase currently stores this as
+-- JSONB, so normalize older installations without rewriting existing JSONB.
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = current_schema()
+          AND table_name = 'User'
+          AND column_name = 'adminPermissions'
+          AND data_type = 'ARRAY'
+    ) THEN
+        ALTER TABLE "User" ALTER COLUMN "adminPermissions" DROP DEFAULT;
+        ALTER TABLE "User" ALTER COLUMN "adminPermissions" TYPE JSONB
+            USING to_jsonb("adminPermissions");
+        ALTER TABLE "User" ALTER COLUMN "adminPermissions" SET DEFAULT '[]'::JSONB;
+    END IF;
+END $$;
 
 CREATE TABLE IF NOT EXISTS "RefundRequest" (
     id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::TEXT,
