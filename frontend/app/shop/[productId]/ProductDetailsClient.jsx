@@ -37,7 +37,9 @@ export default function ProductDetailsClient({ initialProduct, initialRelatedPro
   const [cartFeedback, setCartFeedback] = useState('')
   const [descriptionExpanded, setDescriptionExpanded] = useState(false)
   const [descriptionHasOverflow, setDescriptionHasOverflow] = useState(false)
+  const [showStickyPurchase, setShowStickyPurchase] = useState(false)
   const descriptionRef = useRef(null)
+  const purchaseOptionsRef = useRef(null)
   const addItem = useCartStore((s) => s.addItem)
   const cartItems = useCartStore((s) => s.items)
 
@@ -50,6 +52,16 @@ export default function ProductDetailsClient({ initialProduct, initialRelatedPro
     observer.observe(content)
     return () => observer.disconnect()
   }, [descriptionExpanded, product?.id, product?.description, descriptionContent])
+
+  useEffect(() => {
+    const purchaseOptions = purchaseOptionsRef.current
+    if (!purchaseOptions) return
+    const observer = new IntersectionObserver(([entry]) => {
+      setShowStickyPurchase(!entry.isIntersecting && entry.boundingClientRect.top < 0)
+    }, { threshold: 0.05 })
+    observer.observe(purchaseOptions)
+    return () => observer.disconnect()
+  }, [product?.id])
 
   useEffect(() => {
     if (initialProduct && (initialProduct.id === productId || initialProduct.slug === productId)) {
@@ -261,41 +273,11 @@ export default function ProductDetailsClient({ initialProduct, initialRelatedPro
                 . Calculated at checkout.
               </p>
             )}
-            {/* Keep the buying decision close to the product name and price. */}
-            <section className="mt-5 rounded-2xl border border-sand bg-white/75 p-4 shadow-[0_8px_24px_rgba(95,45,75,0.06)]" aria-label="Purchase options">
-              <div className="flex flex-wrap items-center gap-3">
-                <div className="inline-flex items-center rounded-full bg-ivory ring-1 ring-sand">
-                  <button type="button" disabled={qty <= 1} className="p-3 text-plum disabled:opacity-40" aria-label="Decrease quantity" onClick={() => setQty((q) => Math.max(1, q - 1))}>
-                    <Minus className="h-4 w-4" />
-                  </button>
-                  <span className="min-w-8 text-center font-semibold" aria-live="polite">{qty}</span>
-                  <button type="button" disabled={qty >= maxOrderQuantity} className="p-3 text-plum disabled:opacity-40" aria-label="Increase quantity" onClick={() => setQty((q) => Math.min(maxOrderQuantity, q + 1))}>
-                    <Plus className="h-4 w-4" />
-                  </button>
-                </div>
-                <Button
-                  disabled={purchaseBlocked}
-                  onClick={handleAddToCart}
-                  variant="outline"
-                  className="min-w-36 flex-1 border-plum/40 ring-1 ring-plum/10 hover:border-plum/60 hover:ring-plum/20 hover:shadow-[0_2px_8px_rgba(95,45,75,0.08)] focus:ring-plum/30 active:border-plum/70"
-                >
-                  {product.availableForSale === false ? 'Temporarily unavailable' : maxOrderQuantity <= 0 ? 'Stock limit reached' : deliveryRestricted ? 'Unavailable at this location' : goToBag ? 'Go to Bag' : addedConfirm ? 'Added to Bag' : 'Add to Cart'}
-                </Button>
-                <Button disabled={purchaseBlocked} onClick={handleBuyNow} className="min-w-32 flex-1">
-                  Buy Now
-                </Button>
-              </div>
-              <button type="button" onClick={() => setCustomOpen(true)} className="mt-3 min-h-10 w-full rounded-xl px-3 text-sm font-semibold text-plum transition hover:bg-blush/20">
-                Need a personal touch? <span className="underline underline-offset-4">Ask for customization</span>
-              </button>
-              {hasStockCount && maxOrderQuantity > 0 && <p className="mt-2 text-center text-xs text-muted">{maxOrderQuantity} available to add</p>}
-              {cartFeedback && <p className="mt-2 text-center text-sm text-plum" role="status" aria-live="polite">{cartFeedback}</p>}
-            </section>
             <section className="mt-5 space-y-4" aria-label="Product description and details">
               <div>
                 <h2 className="font-semibold text-plum">Description</h2>
                 <div className="relative mt-1">
-                  <div ref={descriptionRef} className={`overflow-hidden text-muted transition-[max-height] duration-300 ${descriptionExpanded ? 'max-h-[200rem]' : 'max-h-64'}`}>
+                  <div ref={descriptionRef} className={`overflow-hidden text-muted transition-[max-height] duration-300 ${descriptionExpanded ? 'max-h-[200rem]' : 'max-h-48'}`}>
                     {descriptionContent || product.description || product.short}
                   </div>
                   {!descriptionExpanded && descriptionHasOverflow && <div className="pointer-events-none absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-[#fbf7f2] to-transparent" aria-hidden="true" />}
@@ -326,6 +308,23 @@ export default function ProductDetailsClient({ initialProduct, initialRelatedPro
                 </div>
                 </div>
               </details>
+            </section>
+
+            <section ref={purchaseOptionsRef} className="mt-5 rounded-2xl border border-sand/80 bg-white/80 p-3 shadow-[0_8px_24px_rgba(95,45,75,0.05)] sm:p-4" aria-label="Purchase options">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="inline-flex shrink-0 items-center rounded-full bg-ivory ring-1 ring-sand">
+                  <button type="button" disabled={qty <= 1} className="p-3 text-plum disabled:opacity-40" aria-label="Decrease quantity" onClick={() => setQty((q) => Math.max(1, q - 1))}><Minus className="h-4 w-4" /></button>
+                  <span className="min-w-7 text-center text-sm font-semibold" aria-live="polite">{qty}</span>
+                  <button type="button" disabled={qty >= maxOrderQuantity} className="p-3 text-plum disabled:opacity-40" aria-label="Increase quantity" onClick={() => setQty((q) => Math.min(maxOrderQuantity, q + 1))}><Plus className="h-4 w-4" /></button>
+                </div>
+                <Button disabled={purchaseBlocked} onClick={handleAddToCart} variant="outline" className="min-h-11 min-w-0 flex-1 border-plum/30 px-3 text-sm">{product.availableForSale === false ? 'Unavailable' : maxOrderQuantity <= 0 ? 'Stock limit reached' : deliveryRestricted ? 'Not deliverable here' : goToBag ? 'Go to Bag' : addedConfirm ? 'Added to Bag' : 'Add to bag'}</Button>
+                <Button disabled={purchaseBlocked} onClick={handleBuyNow} className="min-h-11 min-w-0 flex-1 px-3 text-sm">Buy now</Button>
+              </div>
+              <div className="mt-2 flex min-h-8 items-center justify-between gap-3 border-t border-sand/70 pt-2">
+                <button type="button" onClick={() => setCustomOpen(true)} className="text-left text-xs font-medium text-plum underline decoration-plum/30 underline-offset-4 hover:decoration-plum">Request a custom version</button>
+                {hasStockCount && maxOrderQuantity > 0 && maxOrderQuantity <= 5 && <span className="text-right text-xs text-muted">Only {maxOrderQuantity} left</span>}
+              </div>
+              {cartFeedback && <p className="mt-2 text-sm text-plum" role="status" aria-live="polite">{cartFeedback}</p>}
             </section>
 
             <section className="mt-5 rounded-2xl border border-sand bg-ivory/70 p-4" aria-label="Delivery availability">
@@ -423,7 +422,7 @@ export default function ProductDetailsClient({ initialProduct, initialRelatedPro
           </div>
         </Modal>
       </div>
-      <section className="fixed inset-x-0 bottom-0 z-40 border-t border-sand bg-white/95 px-3 pt-2 shadow-[0_-8px_24px_rgba(95,45,75,0.10)] backdrop-blur lg:hidden" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 0.5rem)' }} aria-label="Quick purchase options">
+      {showStickyPurchase && <section className="fixed inset-x-0 bottom-0 z-40 border-t border-sand bg-white/95 px-3 pt-2 shadow-[0_-8px_24px_rgba(95,45,75,0.10)] backdrop-blur lg:hidden" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 0.5rem)' }} aria-label="Quick purchase options">
         <div className="mx-auto flex max-w-xl items-center gap-2">
           <div className="inline-flex shrink-0 items-center rounded-full bg-ivory ring-1 ring-sand">
             <button type="button" disabled={qty <= 1} className="p-2.5 text-plum disabled:opacity-40" aria-label="Decrease quantity" onClick={() => setQty((q) => Math.max(1, q - 1))}><Minus className="h-4 w-4" /></button>
@@ -434,7 +433,7 @@ export default function ProductDetailsClient({ initialProduct, initialRelatedPro
           <Button disabled={purchaseBlocked} onClick={handleBuyNow} size="sm" className="min-h-11 flex-1 px-3">Buy now · {formatPrice(salePrice)}</Button>
         </div>
         {cartFeedback && <p role="status" aria-live="polite" className="mx-auto max-w-xl truncate pb-1 pt-1 text-center text-xs text-plum">{cartFeedback}</p>}
-      </section>
+      </section>}
 
       {/* Customer Reviews — below product */}
       <CustomerReviews product={product} />
