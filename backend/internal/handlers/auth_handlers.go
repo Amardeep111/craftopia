@@ -80,7 +80,12 @@ func (h *AuthHandler) Signup(w http.ResponseWriter, r *http.Request) {
 		phone = req.Mobile
 	}
 
-	existing, _ := h.userRepo.GetByEmail(r.Context(), req.Email)
+	existing, err := h.userRepo.GetByEmail(r.Context(), req.Email)
+	if err != nil {
+		slog.Error("Signup user lookup failed", "error", err)
+		utils.Error(w, http.StatusInternalServerError, "Unable to create account right now. Please try again.")
+		return
+	}
 	if existing != nil {
 		utils.Error(w, http.StatusConflict, "An account with this email already exists")
 		return
@@ -88,6 +93,7 @@ func (h *AuthHandler) Signup(w http.ResponseWriter, r *http.Request) {
 
 	user, err := h.userRepo.Create(r.Context(), req.Email, password, req.Name, phone)
 	if err != nil {
+		slog.Error("Signup user creation failed", "error", err)
 		utils.Error(w, http.StatusInternalServerError, "Failed to create user account")
 		return
 	}
@@ -95,6 +101,7 @@ func (h *AuthHandler) Signup(w http.ResponseWriter, r *http.Request) {
 	// Create stateful session in PostgreSQL
 	session, err := h.sessionRepo.Create(r.Context(), user.ID, 7*24*time.Hour)
 	if err != nil {
+		slog.Error("Signup session creation failed", "user_id", user.ID, "error", err)
 		utils.Error(w, http.StatusInternalServerError, "Failed to create session")
 		return
 	}

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"craftopia-backend/internal/config"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -27,6 +28,12 @@ func Connect(ctx context.Context, cfg *config.Config) (*DB, error) {
 		poolConfig.MinConns = 0
 		poolConfig.MaxConnLifetime = 15 * time.Minute
 		poolConfig.MaxConnIdleTime = 30 * time.Second
+		// Supabase's transaction pooler can reuse a PostgreSQL connection for a
+		// different client transaction. Named prepared statements may then
+		// collide with statements left on that connection (SQLSTATE 42P05).
+		poolConfig.ConnConfig.DefaultQueryExecMode = pgx.QueryExecModeExec
+		poolConfig.ConnConfig.StatementCacheCapacity = 0
+		poolConfig.ConnConfig.DescriptionCacheCapacity = 0
 	} else {
 		// Dedicated containers & VMs (Azure App Service, AWS EC2, VPS)
 		poolConfig.MaxConns = 25
@@ -73,4 +80,3 @@ func maskURL(url string) string {
 	}
 	return url[:12] + "..."
 }
-
