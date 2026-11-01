@@ -7,6 +7,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
+	"log/slog"
 	"math/big"
 	"net/http"
 	"strings"
@@ -155,12 +156,19 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	user, err := h.userRepo.GetByEmail(r.Context(), req.Email)
-	if err != nil || user == nil {
+	if err != nil {
+		slog.Error("Login user lookup failed", "error", err)
+		utils.Error(w, http.StatusUnauthorized, "Invalid email or password")
+		return
+	}
+	if user == nil {
+		slog.Warn("Login rejected", "reason", "user not found")
 		utils.Error(w, http.StatusUnauthorized, "Invalid email or password")
 		return
 	}
 
 	if !h.userRepo.VerifyPassword(user.Password, password) {
+		slog.Warn("Login rejected", "reason", "password mismatch")
 		utils.Error(w, http.StatusUnauthorized, "Invalid email or password")
 		return
 	}
