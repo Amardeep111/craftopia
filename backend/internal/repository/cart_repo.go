@@ -77,10 +77,14 @@ func (r *CartRepository) GetCart(ctx context.Context, userID string) ([]models.C
 			&it.ID, &it.CartID, &it.ProductID, &it.Quantity, &it.CreatedAt, &it.UpdatedAt,
 			&p.Name, &p.Slug, &p.Price, &p.DiscountPercent, &p.GSTPercent, &p.CODFee,
 			&p.OtherCharge, &p.Stock, &p.Published, &p.ImageURL,
-		); scanErr == nil {
-			it.Product = &p
-			items = append(items, it)
+		); scanErr != nil {
+			return nil, fmt.Errorf("failed to scan cart item: %w", scanErr)
 		}
+		it.Product = &p
+		items = append(items, it)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("failed while reading cart items: %w", err)
 	}
 	return items, nil
 }

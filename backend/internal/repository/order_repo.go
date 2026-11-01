@@ -222,38 +222,50 @@ func (r *OrderRepository) GetOrderByID(ctx context.Context, id string) (*models.
 		LEFT JOIN "Product" p ON oi."productId" = p.id
 		WHERE oi."orderId" = $1;
 	`, o.ID)
-	if err == nil {
-		defer itemsRows.Close()
-		for itemsRows.Next() {
-			var it models.OrderItem
-			var p models.Product
-			if scanErr := itemsRows.Scan(
-				&it.ID, &it.OrderID, &it.ProductID, &it.Quantity, &it.UnitPrice, &it.GSTPercent,
-				&it.GSTAmount, &it.CODFee, &it.OtherCharge, &it.Customization, &it.CreatedAt,
-				&p.Name, &p.Slug,
-			); scanErr == nil {
-				it.Product = &p
-				o.Items = append(o.Items, it)
-			}
-		}
+	if err != nil {
+		return nil, fmt.Errorf("failed to query order items: %w", err)
 	}
+	for itemsRows.Next() {
+		var it models.OrderItem
+		var p models.Product
+		if scanErr := itemsRows.Scan(
+			&it.ID, &it.OrderID, &it.ProductID, &it.Quantity, &it.UnitPrice, &it.GSTPercent,
+			&it.GSTAmount, &it.CODFee, &it.OtherCharge, &it.Customization, &it.CreatedAt,
+			&p.Name, &p.Slug,
+		); scanErr != nil {
+			itemsRows.Close()
+			return nil, fmt.Errorf("failed to scan order item: %w", scanErr)
+		}
+		it.Product = &p
+		o.Items = append(o.Items, it)
+	}
+	if err := itemsRows.Err(); err != nil {
+		itemsRows.Close()
+		return nil, fmt.Errorf("failed while reading order items: %w", err)
+	}
+	itemsRows.Close()
 
 	// Fetch payment logs
 	logsRows, err := r.db.Pool.Query(ctx, `
 		SELECT id, "orderId", amount, status, provider, "providerReference", method, utr, "verifiedBy", "verifiedAt", "createdAt"
 		FROM "PaymentLog" WHERE "orderId" = $1 ORDER BY "createdAt" DESC;
 	`, o.ID)
-	if err == nil {
-		defer logsRows.Close()
-		for logsRows.Next() {
-			var l models.PaymentLog
-			if scanErr := logsRows.Scan(
-				&l.ID, &l.OrderID, &l.Amount, &l.Status, &l.Provider, &l.ProviderReference,
-				&l.Method, &l.UTR, &l.VerifiedBy, &l.VerifiedAt, &l.CreatedAt,
-			); scanErr == nil {
-				o.PaymentLogs = append(o.PaymentLogs, l)
-			}
+	if err != nil {
+		return nil, fmt.Errorf("failed to query payment logs: %w", err)
+	}
+	defer logsRows.Close()
+	for logsRows.Next() {
+		var l models.PaymentLog
+		if scanErr := logsRows.Scan(
+			&l.ID, &l.OrderID, &l.Amount, &l.Status, &l.Provider, &l.ProviderReference,
+			&l.Method, &l.UTR, &l.VerifiedBy, &l.VerifiedAt, &l.CreatedAt,
+		); scanErr != nil {
+			return nil, fmt.Errorf("failed to scan payment log: %w", scanErr)
 		}
+		o.PaymentLogs = append(o.PaymentLogs, l)
+	}
+	if err := logsRows.Err(); err != nil {
+		return nil, fmt.Errorf("failed while reading payment logs: %w", err)
 	}
 
 	return &o, nil
@@ -276,9 +288,13 @@ func (r *OrderRepository) GetOrdersByEmail(ctx context.Context, email string) ([
 		if scanErr := rows.Scan(
 			&o.ID, &o.OrderNumber, &o.CustomerName, &o.CustomerEmail, &o.Status,
 			&o.PaymentMethod, &o.PaymentStatus, &o.PaymentReference, &o.TotalAmount, &o.CreatedAt,
-		); scanErr == nil {
-			orders = append(orders, o)
+		); scanErr != nil {
+			return nil, fmt.Errorf("failed to scan customer order: %w", scanErr)
 		}
+		orders = append(orders, o)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("failed while reading customer orders: %w", err)
 	}
 	return orders, nil
 }
@@ -374,20 +390,25 @@ func (r *OrderRepository) GetOrderByOrderNumber(ctx context.Context, orderNumber
 		LEFT JOIN "Product" p ON oi."productId" = p.id
 		WHERE oi."orderId" = $1;
 	`, o.ID)
-	if err == nil {
-		defer itemsRows.Close()
-		for itemsRows.Next() {
-			var it models.OrderItem
-			var p models.Product
-			if scanErr := itemsRows.Scan(
-				&it.ID, &it.OrderID, &it.ProductID, &it.Quantity, &it.UnitPrice, &it.GSTPercent,
-				&it.GSTAmount, &it.CODFee, &it.OtherCharge, &it.Customization, &it.CreatedAt,
-				&p.Name, &p.Slug,
-			); scanErr == nil {
-				it.Product = &p
-				o.Items = append(o.Items, it)
-			}
+	if err != nil {
+		return nil, fmt.Errorf("failed to query order items: %w", err)
+	}
+	defer itemsRows.Close()
+	for itemsRows.Next() {
+		var it models.OrderItem
+		var p models.Product
+		if scanErr := itemsRows.Scan(
+			&it.ID, &it.OrderID, &it.ProductID, &it.Quantity, &it.UnitPrice, &it.GSTPercent,
+			&it.GSTAmount, &it.CODFee, &it.OtherCharge, &it.Customization, &it.CreatedAt,
+			&p.Name, &p.Slug,
+		); scanErr != nil {
+			return nil, fmt.Errorf("failed to scan order item: %w", scanErr)
 		}
+		it.Product = &p
+		o.Items = append(o.Items, it)
+	}
+	if err := itemsRows.Err(); err != nil {
+		return nil, fmt.Errorf("failed while reading order items: %w", err)
 	}
 	return &o, nil
 }
@@ -414,9 +435,10 @@ func (r *OrderRepository) GetAllOrdersAdmin(ctx context.Context) ([]models.Order
 			&o.ShippingAddress, &o.Status, &o.PaymentMethod, &o.PaymentStatus, &o.PaymentReference,
 			&o.TotalAmount, &o.Subtotal, &o.Discount, &o.Shipping, &o.Fee, &o.Notes, &o.TrackingNumber,
 			&o.ShippingPartner, &o.EstimatedDelivery, &o.CreatedAt, &o.UpdatedAt,
-		); scanErr == nil {
-			orders = append(orders, o)
+		); scanErr != nil {
+			return nil, fmt.Errorf("failed to scan admin order: %w", scanErr)
 		}
+		orders = append(orders, o)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("failed while reading admin orders: %w", err)

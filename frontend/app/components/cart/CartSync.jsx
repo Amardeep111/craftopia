@@ -3,7 +3,6 @@
 import { useEffect, useRef } from 'react'
 import { useCartStore } from '@/lib/cart'
 import { useUserStore } from '@/lib/user'
-import { fetchCurrentUser } from '@/lib/auth/client'
 
 function mergeCartItems(savedItems, guestItems) {
   const merged = new Map(savedItems.map((item) => [item.id, { ...item }]))
@@ -21,29 +20,21 @@ function mergeCartItems(savedItems, guestItems) {
   return [...merged.values()]
 }
 
-export default function CartSync() {
+export default function CartSync({ initialUser = null, initialCart = null }) {
   const userId = useUserStore((state) => state.userId)
   const readyUserId = useRef(null)
   const initializedUserId = useRef(null)
 
   useEffect(() => {
-    let alive = true
-    fetchCurrentUser().then((auth) => {
-      if (!alive) return
-      if (!auth.authenticated || !auth.user) {
-        if (useUserStore.getState().userId) {
-          useUserStore.getState().logout()
-          useCartStore.getState().replaceItems([])
-          useCartStore.getState().setOwnerUserId(null)
-        }
-        return
-      }
-      if (auth.user?.userId) {
-        useUserStore.getState().login({ ...auth.user, userId: auth.user.userId })
-      }
-    }).catch(() => {})
-    return () => { alive = false }
-  }, [])
+    const userStore = useUserStore.getState()
+    if (initialUser?.userId) {
+      userStore.login(initialUser)
+    } else if (userStore.userId) {
+      userStore.logout()
+      useCartStore.getState().replaceItems([])
+      useCartStore.getState().setOwnerUserId(null)
+    }
+  }, [initialUser])
 
   useEffect(() => {
     let active = true
@@ -62,12 +53,17 @@ export default function CartSync() {
 
     async function initialize() {
       try {
-        const response = await fetch('/api/cart', { cache: 'no-store' })
-        const result = await response.json()
-        if (!response.ok || !result.success) throw new Error(result.error || 'Saved cart unavailable')
+        let serverItems
+        if (initialUser?.userId === userId && Array.isArray(initialCart)) {
+          serverItems = initialCart
+        } else {
+          const response = await fetch('/api/cart', { cache: 'no-store' })
+          const result = await response.json()
+          if (!response.ok || !result.success) throw new Error(result.error || 'Saved cart unavailable')
+          serverItems = Array.isArray(result.data) ? result.data : []
+        }
         if (!active) return
 
-        const serverItems = Array.isArray(result.data) ? result.data : []
         const currentLocal = useCartStore.getState().items || []
         // Merge server cart and local cart so any newly added items (like Buy Now) are never wiped out
         const items = mergeCartItems(serverItems, currentLocal)
@@ -91,7 +87,7 @@ export default function CartSync() {
     }
     initialize()
     return () => { active = false }
-  }, [userId])
+  }, [userId, initialUser, initialCart])
 
   useEffect(() => {
     let timer

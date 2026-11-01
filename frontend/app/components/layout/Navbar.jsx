@@ -9,7 +9,6 @@ import { FlowerBurst } from '../ui/Decor'
 import { useLockBody, useScrolled } from '@/hooks/useScrolled'
 import { cn } from '@/lib/cn'
 import { useCartStore } from '@/lib/cart'
-import { fetchCurrentUser } from '@/lib/auth/client'
 import { useUserStore } from '@/lib/user'
 
 const links = [
@@ -37,7 +36,7 @@ function Logo() {
   )
 }
 
-export default function Navbar() {
+export default function Navbar({ initialUser = null }) {
   const scrolled = useScrolled()
   const [open, setOpen] = useState(false)
   const pathname = usePathname()
@@ -48,14 +47,9 @@ export default function Navbar() {
   const userLogout = useUserStore((state) => state.logout)
 
   useEffect(() => {
-    let active = true
-    fetchCurrentUser().then((auth) => {
-      if (!active) return
-      if (auth.authenticated && auth.user) userLogin(auth.user)
-      else userLogout()
-    }).catch(() => { if (active) userLogout() })
-    return () => { active = false }
-  }, [userLogin, userLogout])
+    if (initialUser) userLogin(initialUser)
+    else userLogout()
+  }, [initialUser, userLogin, userLogout])
 
   // Reactive cart badge — directly subscribes to the Zustand cart store,
   // which is the single source of truth shared with the cart page and

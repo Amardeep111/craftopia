@@ -1,3 +1,4 @@
+import 'server-only'
 import { ADMIN_PERMISSION_IDS } from '@/lib/auth/permissions'
 
 export const ADMIN_PERMISSIONS = ADMIN_PERMISSION_IDS
@@ -24,8 +25,8 @@ export async function getAdminSession(token, permission) {
       cache: 'no-store',
     })
     const data = await res.json()
-    if (!res.ok || !data?.success || !data?.data) return null
-    const user = data.data
+    if (!res.ok || !data?.success || !data?.data?.user) return null
+    const user = data.data.user
     return hasAdminPermission(user, permission) ? { user } : null
   } catch {
     return null

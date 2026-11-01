@@ -50,9 +50,13 @@ func (r *AddressRepository) GetUserAddresses(ctx context.Context, userID string)
 		if err := rows.Scan(
 			&a.ID, &a.UserID, &a.FullName, &a.MobileNumber, &a.HouseFlatBuilding, &a.AreaStreet,
 			&a.Landmark, &a.City, &a.State, &a.PinCode, &a.AddressType, &a.IsDefault, &a.CreatedAt, &a.UpdatedAt,
-		); err == nil {
-			addresses = append(addresses, a)
+		); err != nil {
+			return nil, fmt.Errorf("failed to scan address: %w", err)
 		}
+		addresses = append(addresses, a)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("failed while reading addresses: %w", err)
 	}
 	return addresses, nil
 }

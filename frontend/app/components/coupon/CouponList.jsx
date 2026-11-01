@@ -1,42 +1,12 @@
 'use client'
 
-import { useEffect, useState } from 'react'
 import { Ticket, CheckCircle2, XCircle, AlertCircle, Sparkles, Clock } from 'lucide-react'
 
-export default function CouponList({ initialCoupons }) {
-  const hasInitial = Boolean(initialCoupons && (initialCoupons.available?.length || initialCoupons.used?.length || initialCoupons.exhausted?.length))
-  const [available, setAvailable] = useState(() => initialCoupons?.available || [])
-  const [used, setUsed] = useState(() => initialCoupons?.used || [])
-  const [exhausted, setExhausted] = useState(() => initialCoupons?.exhausted || [])
-  const [isLoggedIn, setIsLoggedIn] = useState(false)
-  const [loading, setLoading] = useState(() => !hasInitial)
-  const [error, setError] = useState('')
-
-  useEffect(() => {
-    if (hasInitial) return
-    async function load() {
-      try {
-        const authRes = await fetch('/api/auth/me')
-        const authData = authRes.ok ? await authRes.json() : null
-        setIsLoggedIn(Boolean(authData?.success && authData.data?.isLoggedIn))
-
-        const res = await fetch('/api/coupons')
-        const data = await res.json()
-        if (!res.ok || !data.success) throw new Error(data.error || 'Failed.')
-        setAvailable(data.data || [])
-        setUsed(data.used || [])
-        setExhausted(data.exhausted || [])
-      } catch (e) {
-        setError('Failed to load coupons.')
-      } finally {
-        setLoading(false)
-      }
-    }
-    load()
-  }, [hasInitial])
-
-  if (loading) return <div className="py-8 text-center text-muted">Loading coupons...</div>
-  if (error) return <div className="py-8 text-center text-red-600">{error}</div>
+export default function CouponList({ initialCoupons, initialIsLoggedIn = false }) {
+  const available = initialCoupons?.available || []
+  const used = initialCoupons?.used || []
+  const exhausted = initialCoupons?.exhausted || []
+  const isLoggedIn = initialIsLoggedIn
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-8">

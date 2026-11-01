@@ -98,6 +98,23 @@ CREATE TABLE IF NOT EXISTS "User" (
 
 ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "adminPermissions" JSONB NOT NULL DEFAULT '[]'::JSONB;
 
+-- Shopping cart (required by the authenticated cart endpoints)
+CREATE TABLE IF NOT EXISTS "Cart" (
+    id TEXT PRIMARY KEY,
+    "userId" TEXT NOT NULL REFERENCES "User"(id) ON DELETE CASCADE,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS "CartItem" (
+    id TEXT PRIMARY KEY,
+    "cartId" TEXT NOT NULL REFERENCES "Cart"(id) ON DELETE CASCADE,
+    "productId" TEXT NOT NULL REFERENCES "Product"(id) ON DELETE CASCADE,
+    quantity INT NOT NULL DEFAULT 1,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Orders
 CREATE TABLE IF NOT EXISTS "Order" (
     id TEXT PRIMARY KEY,
@@ -111,6 +128,7 @@ CREATE TABLE IF NOT EXISTS "Order" (
     "paymentMethod" TEXT,
     "paymentStatus" "PaymentStatus" DEFAULT 'PENDING',
     "paymentReference" TEXT,
+    "idempotencyKey" TEXT,
     "totalAmount" INT NOT NULL,
     subtotal INT NOT NULL,
     discount INT DEFAULT 0,
@@ -175,14 +193,6 @@ CREATE TABLE IF NOT EXISTS "CustomRequest" (
     "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
--- Indexes for performance
-CREATE INDEX IF NOT EXISTS "idx_product_category" ON "Product"("categoryId");
-CREATE INDEX IF NOT EXISTS "idx_product_featured" ON "Product"(featured);
-CREATE INDEX IF NOT EXISTS "idx_order_email" ON "Order"("customerEmail");
-CREATE INDEX IF NOT EXISTS "idx_order_status" ON "Order"(status, "paymentStatus");
-CREATE INDEX IF NOT EXISTS "idx_payment_log_order" ON "PaymentLog"("orderId");
-
-
 -- Sessions (for stateful AES-256-GCM authenticated cookie auth)
 CREATE TABLE IF NOT EXISTS "Session" (
     id TEXT PRIMARY KEY,
@@ -222,6 +232,14 @@ CREATE TABLE IF NOT EXISTS "Coupon" (
     "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS "CouponUsage" (
+    id TEXT PRIMARY KEY,
+    "couponId" TEXT NOT NULL REFERENCES "Coupon"(id) ON DELETE CASCADE,
+    "userId" TEXT REFERENCES "User"(id) ON DELETE SET NULL,
+    used BOOLEAN NOT NULL DEFAULT true,
+    "usedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Customer Addresses
 CREATE TABLE IF NOT EXISTS "Address" (
     id TEXT PRIMARY KEY,
@@ -234,6 +252,7 @@ CREATE TABLE IF NOT EXISTS "Address" (
     city TEXT NOT NULL,
     state TEXT NOT NULL,
     "pinCode" TEXT NOT NULL,
+    "addressType" TEXT NOT NULL DEFAULT 'home',
     "isDefault" BOOLEAN DEFAULT false,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -244,7 +263,7 @@ CREATE TABLE IF NOT EXISTS "Review" (
     id TEXT PRIMARY KEY,
     "productId" TEXT NOT NULL REFERENCES "Product"(id) ON DELETE CASCADE,
     "userId" TEXT NOT NULL REFERENCES "User"(id) ON DELETE CASCADE,
-    "orderId" TEXT REFERENCES "Order"(id) ON DELETE SET NULL,
+    "orderId" TEXT NOT NULL REFERENCES "Order"(id),
     "productRating" INT NOT NULL,
     "deliveryRating" INT NOT NULL,
     "packagingRating" INT NOT NULL,
@@ -252,6 +271,24 @@ CREATE TABLE IF NOT EXISTS "Review" (
     comment TEXT NOT NULL,
     images TEXT[] DEFAULT ARRAY[]::TEXT[],
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS "ContactMessage" (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    email TEXT NOT NULL,
+    message TEXT NOT NULL,
+    read BOOLEAN NOT NULL DEFAULT false,
+    replied BOOLEAN NOT NULL DEFAULT false,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS "AuthRateLimit" (
+    key TEXT PRIMARY KEY,
+    attempts INT NOT NULL DEFAULT 0,
+    "windowStartedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "blockedUntil" TIMESTAMP(3),
+    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Refund Requests
@@ -284,3 +321,24 @@ CREATE TABLE IF NOT EXISTS "EmailVerification" (
     "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 CREATE INDEX IF NOT EXISTS "idx_email_verification" ON "EmailVerification"(email, "expiresAt");
+
+-- Query support for the storefront and common account/order lookups.
+CREATE INDEX IF NOT EXISTS "idx_product_category" ON "Product"("categoryId");
+CREATE INDEX IF NOT EXISTS "idx_product_published_created" ON "Product"("createdAt" DESC) WHERE published = true;
+CREATE INDEX IF NOT EXISTS "idx_product_category_published_created" ON "Product"("categoryId", "createdAt" DESC) WHERE published = true;
+CREATE INDEX IF NOT EXISTS "idx_product_featured_published_created" ON "Product"("createdAt" DESC) WHERE published = true AND featured = true;
+CREATE INDEX IF NOT EXISTS "idx_category_storefront_order" ON "Category"("order", name) WHERE published = true AND hidden = false;
+CREATE INDEX IF NOT EXISTS "idx_order_email_created" ON "Order"("customerEmail", "createdAt" DESC);
+CREATE INDEX IF NOT EXISTS "idx_order_created" ON "Order"("createdAt" DESC);
+CREATE INDEX IF NOT EXISTS "idx_order_status" ON "Order"(status, "paymentStatus");
+CREATE INDEX IF NOT EXISTS "idx_address_user_default_updated" ON "Address"("userId", "isDefault" DESC, "updatedAt" DESC);
+CREATE INDEX IF NOT EXISTS "idx_cart_user_created" ON "Cart"("userId", "createdAt");
+CREATE INDEX IF NOT EXISTS "idx_cart_item_cart_created" ON "CartItem"("cartId", "createdAt");
+CREATE INDEX IF NOT EXISTS "idx_order_item_order_created" ON "OrderItem"("orderId", "createdAt");
+CREATE INDEX IF NOT EXISTS "idx_payment_log_order_created" ON "PaymentLog"("orderId", "createdAt" DESC);
+CREATE INDEX IF NOT EXISTS "idx_review_product_created" ON "Review"("productId", "createdAt" DESC);
+CREATE INDEX IF NOT EXISTS "idx_custom_request_created" ON "CustomRequest"("createdAt" DESC);
+CREATE INDEX IF NOT EXISTS "idx_coupon_usage_coupon_user" ON "CouponUsage"("couponId", "userId");
+CREATE INDEX IF NOT EXISTS "idx_coupon_created" ON "Coupon"("createdAt" DESC);
+CREATE INDEX IF NOT EXISTS "idx_coupon_active_discount" ON "Coupon"("discountPercent" DESC) WHERE active = true;
+CREATE INDEX IF NOT EXISTS "idx_customer_created" ON "User"("createdAt" DESC) WHERE role = 'CUSTOMER';

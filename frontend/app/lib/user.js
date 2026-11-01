@@ -1,6 +1,5 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import { invalidateAuthCache } from './auth/client'
 
 export const useUserStore = create(
   persist(
@@ -11,7 +10,6 @@ export const useUserStore = create(
       userId: null,
 
       login(userData) {
-        invalidateAuthCache()
         set({
           isLoggedIn: true,
           email: userData.email || userData.contact || null,
@@ -21,7 +19,6 @@ export const useUserStore = create(
       },
 
       logout() {
-        invalidateAuthCache()
         set({
           isLoggedIn: false,
           email: null,

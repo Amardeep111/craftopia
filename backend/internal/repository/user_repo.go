@@ -23,13 +23,14 @@ func NewUserRepository(db *database.DB) *UserRepository {
 
 func (r *UserRepository) GetByEmail(ctx context.Context, email string) (*models.User, error) {
 	query := `
-		SELECT id, email, password, name, phone, role, "adminActive", active, "createdAt", "updatedAt"
+		SELECT id, email, password, name, phone, role, "adminActive", "adminPermissions", active, "createdAt", "updatedAt"
 		FROM "User" WHERE email = $1 LIMIT 1;
 	`
 	var u models.User
+	var permissionsJSON []byte
 	err := r.db.Pool.QueryRow(ctx, query, email).Scan(
 		&u.ID, &u.Email, &u.Password, &u.Name, &u.Phone, &u.Role,
-		&u.AdminActive, &u.Active, &u.CreatedAt, &u.UpdatedAt,
+		&u.AdminActive, &permissionsJSON, &u.Active, &u.CreatedAt, &u.UpdatedAt,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -37,9 +38,10 @@ func (r *UserRepository) GetByEmail(ctx context.Context, email string) (*models.
 		}
 		return nil, fmt.Errorf("failed to query user: %w", err)
 	}
-	var permissionsJSON []byte
-	if r.db.Pool.QueryRow(ctx, `SELECT "adminPermissions" FROM "User" WHERE id = $1;`, u.ID).Scan(&permissionsJSON) == nil {
-		_ = json.Unmarshal(permissionsJSON, &u.AdminPermissions)
+	if len(permissionsJSON) > 0 {
+		if err := json.Unmarshal(permissionsJSON, &u.AdminPermissions); err != nil {
+			return nil, fmt.Errorf("failed to decode admin permissions: %w", err)
+		}
 	}
 	return &u, nil
 }
@@ -50,19 +52,21 @@ func (r *UserRepository) FindByEmail(ctx context.Context, email string) (*models
 
 func (r *UserRepository) FindByID(ctx context.Context, id string) (*models.User, error) {
 	var u models.User
+	var permissionsJSON []byte
 	err := r.db.Pool.QueryRow(ctx, `
-		SELECT id, email, password, name, phone, role, "adminActive", active, "createdAt", "updatedAt"
+		SELECT id, email, password, name, phone, role, "adminActive", "adminPermissions", active, "createdAt", "updatedAt"
 		FROM "User" WHERE id = $1;
-	`, id).Scan(&u.ID, &u.Email, &u.Password, &u.Name, &u.Phone, &u.Role, &u.AdminActive, &u.Active, &u.CreatedAt, &u.UpdatedAt)
+	`, id).Scan(&u.ID, &u.Email, &u.Password, &u.Name, &u.Phone, &u.Role, &u.AdminActive, &permissionsJSON, &u.Active, &u.CreatedAt, &u.UpdatedAt)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, nil
 		}
 		return nil, fmt.Errorf("failed to query user by id: %w", err)
 	}
-	var permissionsJSON []byte
-	if r.db.Pool.QueryRow(ctx, `SELECT "adminPermissions" FROM "User" WHERE id = $1;`, u.ID).Scan(&permissionsJSON) == nil {
-		_ = json.Unmarshal(permissionsJSON, &u.AdminPermissions)
+	if len(permissionsJSON) > 0 {
+		if err := json.Unmarshal(permissionsJSON, &u.AdminPermissions); err != nil {
+			return nil, fmt.Errorf("failed to decode admin permissions: %w", err)
+		}
 	}
 	return &u, nil
 }
@@ -118,9 +122,13 @@ func (r *UserRepository) ListAllUsersAdmin(ctx context.Context) ([]models.User, 
 		var u models.User
 		if err := rows.Scan(
 			&u.ID, &u.Email, &u.Name, &u.Phone, &u.Role, &u.AdminActive, &u.Active, &u.CreatedAt, &u.UpdatedAt,
-		); err == nil {
-			users = append(users, u)
+		); err != nil {
+			return nil, fmt.Errorf("failed to scan customer: %w", err)
 		}
+		users = append(users, u)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("failed while reading customers: %w", err)
 	}
 	return users, nil
 }

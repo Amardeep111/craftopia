@@ -113,9 +113,13 @@ func (r *CouponRepository) ListActiveCoupons(ctx context.Context) ([]Coupon, err
 		if err := rows.Scan(
 			&c.ID, &c.Code, &c.Label, &c.DiscountPercent, &c.MinSubtotal, &c.Active,
 			&c.ExpiresAt, &c.FirstTimeOnly, &c.MaxUses, &c.CurrentUses,
-		); err == nil {
-			list = append(list, c)
+		); err != nil {
+			return nil, fmt.Errorf("failed to scan available coupon: %w", err)
 		}
+		list = append(list, c)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("failed while reading available coupons: %w", err)
 	}
 	return list, nil
 }
@@ -138,9 +142,13 @@ func (r *CouponRepository) ListAllCouponsAdmin(ctx context.Context) ([]Coupon, e
 		if err := rows.Scan(
 			&c.ID, &c.Code, &c.Label, &c.DiscountPercent, &c.MinSubtotal, &c.Active,
 			&c.ExpiresAt, &c.FirstTimeOnly, &c.MaxUses, &c.CurrentUses,
-		); err == nil {
-			list = append(list, c)
+		); err != nil {
+			return nil, fmt.Errorf("failed to scan admin coupon: %w", err)
 		}
+		list = append(list, c)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("failed while reading admin coupons: %w", err)
 	}
 	return list, nil
 }

@@ -56,12 +56,16 @@ func (r *ReviewRepository) GetProductReviews(ctx context.Context, productID stri
 			&rev.ID, &rev.ProductID, &rev.UserID, &rev.UserName,
 			&rev.ProductRating, &rev.DeliveryRating, &rev.PackagingRating,
 			&rev.Title, &rev.Comment, &images, &rev.CreatedAt,
-		); err == nil {
-			rev.Images = images
-			rev.AverageRating = float64(rev.ProductRating+rev.DeliveryRating+rev.PackagingRating) / 3.0
-			rev.VerifiedPurchase = true
-			reviews = append(reviews, rev)
+		); err != nil {
+			return nil, fmt.Errorf("failed to scan review: %w", err)
 		}
+		rev.Images = images
+		rev.AverageRating = float64(rev.ProductRating+rev.DeliveryRating+rev.PackagingRating) / 3.0
+		rev.VerifiedPurchase = true
+		reviews = append(reviews, rev)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("failed while reading reviews: %w", err)
 	}
 	return reviews, nil
 }

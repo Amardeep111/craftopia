@@ -1,5 +1,6 @@
 import PageHeader from '@/components/layout/PageHeader'
 import CouponList from '@/components/coupon/CouponList'
+import { getServerUser } from '@/lib/auth/server'
 
 export const dynamic = 'force-dynamic'
 
@@ -27,7 +28,7 @@ async function getCoupons() {
 }
 
 export default async function CouponsPage() {
-  const coupons = await getCoupons()
+  const [coupons, user] = await Promise.all([getCoupons(), getServerUser()])
 
   return (
     <>
@@ -36,7 +37,7 @@ export default async function CouponsPage() {
         title="Coupons you can use right now."
         description="Grab a code below and apply it in your cart or at checkout. Minimum cart values apply."
       />
-      <CouponList initialCoupons={coupons} />
+      <CouponList initialCoupons={coupons} initialIsLoggedIn={Boolean(user)} />
     </>
   )
 }

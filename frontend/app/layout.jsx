@@ -5,6 +5,7 @@ import ScrollToTop from './components/layout/ScrollToTop'
 import PageTransition from './components/layout/PageTransition'
 import ConditionalStorefrontChrome from './components/layout/ConditionalStorefrontChrome'
 import CartSync from './components/cart/CartSync'
+import { getServerCart, getServerUser } from './lib/auth/server'
 
 export const metadata = {
   title: {
@@ -17,7 +18,10 @@ export const metadata = {
   icons: { icon: '/favicon.svg' },
 }
 
-export default function RootLayout({ children }) {
+export default async function RootLayout({ children }) {
+  // These are independent authenticated reads; overlap their network/database latency.
+  const [initialUser, initialCart] = await Promise.all([getServerUser(), getServerCart()])
+
   return (
     <html lang="en">
       <head>
@@ -29,7 +33,7 @@ export default function RootLayout({ children }) {
         />
       </head>
       <body>
-        <CartSync />
+        <CartSync initialUser={initialUser} initialCart={initialCart} />
         <div className="flex min-h-screen flex-col">
           <a
             href="#main"
@@ -38,7 +42,7 @@ export default function RootLayout({ children }) {
             Skip to content
           </a>
           <ScrollToTop />
-          <ConditionalStorefrontChrome><Navbar /></ConditionalStorefrontChrome>
+          <ConditionalStorefrontChrome><Navbar initialUser={initialUser} /></ConditionalStorefrontChrome>
           <main id="main" className="flex-1">
             <PageTransition>
               {children}

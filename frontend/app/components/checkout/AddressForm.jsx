@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useCallback, useEffect, useRef } from 'react'
+import dynamic from 'next/dynamic'
 import {
   MapPin, Compass, RotateCcw, ChevronDown, ChevronUp,
   User, Home, Building, Check, Navigation, Loader2,
@@ -10,7 +11,11 @@ import Input from '@/components/ui/Input'
 import Select from '@/components/ui/Select'
 import { ADDRESS_TYPES, validateAddress, blankAddress } from '@/lib/address'
 import { STATE_OPTIONS, getStateAndCityFromPin } from '@/lib/address/india'
-import InteractiveLocationPicker from './InteractiveLocationPicker'
+
+const InteractiveLocationPicker = dynamic(() => import('./InteractiveLocationPicker'), {
+  ssr: false,
+  loading: () => <div className="rounded-2xl bg-ivory p-6 text-center text-sm text-muted" role="status">Loading location tools…</div>,
+})
 
 export default function AddressForm({ open, onClose, onSave, initial = null, saving = false }) {
   const [data, setData] = useState(initial ? { ...initial } : blankAddress())

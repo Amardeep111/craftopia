@@ -101,7 +101,7 @@ func (r *ProductRepository) GetProducts(ctx context.Context, categorySlug string
 		       COALESCE(c.id, p."categoryId"), COALESCE(c.name, ''), COALESCE(c.slug, '')
 		FROM "Product" p
 		LEFT JOIN "Category" c ON p."categoryId" = c.id
-		WHERE p.published = true
+		WHERE p.published = true AND c.published = true AND c.hidden = false
 	`
 	var args []any
 	argID := 1
@@ -162,7 +162,10 @@ func (r *ProductRepository) GetProductByIDOrSlug(ctx context.Context, identifier
 		       COALESCE(c.id, p."categoryId"), COALESCE(c.name, ''), COALESCE(c.slug, '')
 		FROM "Product" p
 		LEFT JOIN "Category" c ON p."categoryId" = c.id
-		WHERE p.id = $1 OR p.slug = $1
+		WHERE (p.id = $1 OR p.slug = $1)
+		  AND p.published = true
+		  AND c.published = true
+		  AND c.hidden = false
 		LIMIT 1;
 	`
 	var p models.Product
