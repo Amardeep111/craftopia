@@ -82,15 +82,16 @@ const (
 type PaymentStatus string
 
 const (
-	PaymentStatusPending               PaymentStatus = "PENDING"
-	PaymentStatusAwaitingVerification  PaymentStatus = "AWAITING_VERIFICATION"
-	PaymentStatusPaid                  PaymentStatus = "PAID"
-	PaymentStatusCODPendingCollection  PaymentStatus = "COD_PENDING_COLLECTION"
-	PaymentStatusCODFinalCollected     PaymentStatus = "COD_COLLECTED"
-	PaymentStatusFailed                PaymentStatus = "FAILED"
-	PaymentStatusCancelled             PaymentStatus = "CANCELLED"
-	PaymentStatusManualReview          PaymentStatus = "MANUAL_REVIEW"
-	PaymentStatusRefunded              PaymentStatus = "REFUNDED"
+	PaymentStatusPending              PaymentStatus = "PENDING"
+	PaymentStatusAwaitingVerification PaymentStatus = "AWAITING_VERIFICATION"
+	PaymentStatusPaid                 PaymentStatus = "PAID"
+	PaymentStatusCODPendingCollection PaymentStatus = "COD_PENDING_COLLECTION"
+	PaymentStatusCODFinalCollected    PaymentStatus = "COD_COLLECTED"
+	PaymentStatusFailed               PaymentStatus = "FAILED"
+	PaymentStatusCancelled            PaymentStatus = "CANCELLED"
+	PaymentStatusManualReview         PaymentStatus = "MANUAL_REVIEW"
+	PaymentStatusRefunded             PaymentStatus = "REFUNDED"
+	PaymentStatusRefundRequested      PaymentStatus = "REFUND_REQUESTED"
 )
 
 type Order struct {
@@ -118,20 +119,21 @@ type Order struct {
 	UpdatedAt         time.Time       `json:"updatedAt"`
 	Items             []OrderItem     `json:"items,omitempty"`
 	PaymentLogs       []PaymentLog    `json:"paymentLogs,omitempty"`
+	RefundRequests    []RefundRequest `json:"refundRequests,omitempty"`
 }
 
 type OrderItem struct {
-	ID            string   `json:"id"`
-	OrderID       string   `json:"orderId"`
-	ProductID     string   `json:"productId"`
-	Product       *Product `json:"product,omitempty"`
-	Quantity      int      `json:"quantity"`
-	UnitPrice     int      `json:"unitPrice"`
-	GSTPercent    int      `json:"gstPercent"`
-	GSTAmount     int      `json:"gstAmount"`
-	CODFee        int      `json:"codFee"`
-	OtherCharge   int      `json:"otherCharge"`
-	Customization *string  `json:"customization,omitempty"`
+	ID            string    `json:"id"`
+	OrderID       string    `json:"orderId"`
+	ProductID     string    `json:"productId"`
+	Product       *Product  `json:"product,omitempty"`
+	Quantity      int       `json:"quantity"`
+	UnitPrice     int       `json:"unitPrice"`
+	GSTPercent    int       `json:"gstPercent"`
+	GSTAmount     int       `json:"gstAmount"`
+	CODFee        int       `json:"codFee"`
+	OtherCharge   int       `json:"otherCharge"`
+	Customization *string   `json:"customization,omitempty"`
 	CreatedAt     time.Time `json:"createdAt"`
 }
 
@@ -181,11 +183,11 @@ type CustomRequest struct {
 }
 
 type CartItem struct {
-	ID        string   `json:"id"`
-	CartID    string   `json:"cartId"`
-	ProductID string   `json:"productId"`
-	Product   *Product `json:"product,omitempty"`
-	Quantity  int      `json:"quantity"`
+	ID        string    `json:"id"`
+	CartID    string    `json:"cartId"`
+	ProductID string    `json:"productId"`
+	Product   *Product  `json:"product,omitempty"`
+	Quantity  int       `json:"quantity"`
 	CreatedAt time.Time `json:"createdAt"`
 	UpdatedAt time.Time `json:"updatedAt"`
 }
@@ -198,6 +200,7 @@ type User struct {
 	Phone            *string   `json:"phone,omitempty"`
 	Role             string    `json:"role"`
 	AdminActive      bool      `json:"adminActive"`
+	AdminPermissions []string  `json:"adminPermissions"`
 	Active           bool      `json:"active"`
 	CreatedAt        time.Time `json:"createdAt"`
 	UpdatedAt        time.Time `json:"updatedAt"`
@@ -239,7 +242,6 @@ type AcceptCustomRequestPayload struct {
 	AdminNotes        string          `json:"adminNotes"`
 }
 
-
 type Session struct {
 	ID        string     `json:"id"`
 	UserID    string     `json:"userId"`
@@ -255,4 +257,26 @@ type AdminDashboardStats struct {
 	Users    int `json:"users"`
 	Products int `json:"products"`
 	Pending  int `json:"pending"`
+}
+
+type RefundRequest struct {
+	ID          string     `json:"id"`
+	OrderID     string     `json:"orderId"`
+	Reason      string     `json:"reason"`
+	Amount      int        `json:"amount"`
+	RefundUPIID string     `json:"refundUpiId"`
+	Status      string     `json:"status"`
+	AdminNote   *string    `json:"adminNote,omitempty"`
+	ReviewedBy  *string    `json:"reviewedBy,omitempty"`
+	ReviewedAt  *time.Time `json:"reviewedAt,omitempty"`
+	CreatedAt   time.Time  `json:"createdAt"`
+	UpdatedAt   time.Time  `json:"updatedAt"`
+}
+
+type PromotionProduct struct {
+	ID              string `json:"id"`
+	DiscountPercent int    `json:"discountPercent"`
+	GSTPercent      int    `json:"gstPercent"`
+	CODFee          int    `json:"codFee"`
+	OtherCharge     int    `json:"otherCharge"`
 }

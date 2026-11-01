@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 
 	"craftopia-backend/internal/middleware"
 	"craftopia-backend/internal/models"
@@ -145,4 +146,76 @@ func (h *OrderHandler) VerifyUPIPayment(w http.ResponseWriter, r *http.Request) 
 	}
 
 	utils.Success(w, http.StatusOK, "Payment verified and order confirmed successfully", order)
+}
+
+type CancelOrderRequest struct {
+	OrderNumber string `json:"orderNumber"`
+}
+
+// CancelOrder handles POST /api/orders/cancel
+func (h *OrderHandler) CancelOrder(w http.ResponseWriter, r *http.Request) {
+	claims, err := middleware.GetUserFromContext(r.Context())
+	if err != nil || claims == nil {
+		utils.Error(w, http.StatusUnauthorized, "Please sign in to cancel this order.")
+		return
+	}
+
+	var req CancelOrderRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.OrderNumber == "" {
+		utils.Error(w, http.StatusBadRequest, "Order number is required.")
+		return
+	}
+
+	order, err := h.repo.CancelOrder(r.Context(), req.OrderNumber, claims.Email, claims.Role == "ADMIN")
+	if err != nil {
+		utils.Error(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	utils.Success(w, http.StatusOK, "Order cancelled. Stock released.", order)
+}
+
+type RequestRefundPayload struct {
+	OrderID     string `json:"orderId"`
+	Reason      string `json:"reason"`
+	RefundUPIID string `json:"refundUpiId"`
+}
+
+// RequestRefund handles POST /api/orders/refund
+func (h *OrderHandler) RequestRefund(w http.ResponseWriter, r *http.Request) {
+	claims, err := middleware.GetUserFromContext(r.Context())
+	if err != nil || claims == nil {
+		utils.Error(w, http.StatusUnauthorized, "Please sign in to request a refund.")
+		return
+	}
+
+	var req RequestRefundPayload
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		utils.Error(w, http.StatusBadRequest, "Invalid refund request payload.")
+		return
+	}
+
+	if req.OrderID == "" {
+		utils.Error(w, http.StatusBadRequest, "Order is required for a refund request.")
+		return
+	}
+
+	if len(strings.TrimSpace(req.Reason)) < 5 || len(req.Reason) > 1000 {
+		utils.Error(w, http.StatusBadRequest, "Please provide a reason between 5 and 1,000 characters.")
+		return
+	}
+
+	upi := strings.TrimSpace(req.RefundUPIID)
+	if !strings.Contains(upi, "@") || len(upi) < 4 {
+		utils.Error(w, http.StatusBadRequest, "Enter a valid UPI ID for the refund.")
+		return
+	}
+
+	refundReq, err := h.repo.RequestRefund(r.Context(), req.OrderID, claims.Email, req.Reason, upi)
+	if err != nil {
+		utils.Error(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	utils.Success(w, http.StatusCreated, "Refund request submitted for review.", refundReq)
 }

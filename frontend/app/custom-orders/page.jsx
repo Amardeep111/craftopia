@@ -99,7 +99,7 @@ export default function CustomOrders() {
         const response = await fetch('/api/custom-requests/upload', { method: 'POST', body: data })
         const result = await response.json().catch(() => ({}))
         if (!response.ok || !result.success) throw new Error(result.error || `Could not upload ${file.name}.`)
-        return { url: result.url, name: file.name }
+        return { url: result.data?.url, name: file.name }
       }))
       const successful = uploads.filter((result) => result.status === 'fulfilled').map((result) => result.value)
       if (successful.length) setReferenceImages((current) => [...current, ...successful])

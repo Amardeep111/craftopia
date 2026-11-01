@@ -174,7 +174,7 @@ export default function AdminCustomRequests() {
       if (!response.ok || !result.success) throw new Error(result.error || 'Failed to accept request and create order.')
 
       setAcceptItem(null)
-      setNotice(`Request accepted! Order ${result.order?.orderNumber || ''} created and quote email sent to ${modalForm.customerEmail}.`)
+      setNotice(`Request accepted! Order ${result.data?.order?.orderNumber || ''} created for ${modalForm.customerEmail}.`)
       await load()
     } catch (err) {
       setModalError(err.message || 'Could not complete order creation.')

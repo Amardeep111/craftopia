@@ -2,13 +2,14 @@ package handlers
 
 import (
 	"encoding/json"
+	"io"
 	"net/http"
 	"strings"
 
+	"craftopia-backend/internal/middleware"
 	"craftopia-backend/internal/models"
 	"craftopia-backend/internal/repository"
 	"craftopia-backend/internal/utils"
-	
 )
 
 type AdminHandler struct {
@@ -63,9 +64,24 @@ func (h *AdminHandler) UpdateOrder(w http.ResponseWriter, r *http.Request) {
 		TrackingNumber    *string `json:"trackingNumber"`
 		ShippingPartner   *string `json:"shippingPartner"`
 		EstimatedDelivery *string `json:"estimatedDelivery"`
+		RefundRequestID   string  `json:"refundRequestId"`
+		RefundStatus      string  `json:"refundStatus"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		utils.Error(w, http.StatusBadRequest, "Invalid order update payload")
+		return
+	}
+	if body.RefundRequestID != "" {
+		claims, _ := middleware.GetUserFromContext(r.Context())
+		adminEmail := "admin@jamaescraftopia.com"
+		if claims != nil && claims.Email != "" {
+			adminEmail = claims.Email
+		}
+		if err := h.orderRepo.UpdateRefundRequest(r.Context(), body.RefundRequestID, body.RefundStatus, adminEmail); err != nil {
+			utils.Error(w, http.StatusBadRequest, err.Error())
+			return
+		}
+		utils.Success(w, http.StatusOK, "Refund request updated", nil)
 		return
 	}
 
@@ -154,7 +170,7 @@ func (h *AdminHandler) DeleteProduct(w http.ResponseWriter, r *http.Request) {
 
 // ListCategories returns categories
 func (h *AdminHandler) ListCategories(w http.ResponseWriter, r *http.Request) {
-	categories, err := h.productRepo.GetCategories(r.Context())
+	categories, err := h.productRepo.GetAllCategoriesAdmin(r.Context())
 	if err != nil {
 		utils.Error(w, http.StatusInternalServerError, "Failed to load categories")
 		return
@@ -186,13 +202,69 @@ func (h *AdminHandler) CreateCategory(w http.ResponseWriter, r *http.Request) {
 // UpdateCategory updates category
 func (h *AdminHandler) UpdateCategory(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
-	var c models.Category
-	if err := json.NewDecoder(r.Body).Decode(&c); err != nil {
+	payload, err := io.ReadAll(r.Body)
+	if err != nil {
 		utils.Error(w, http.StatusBadRequest, "Invalid category payload")
 		return
 	}
-	if id != "" {
+	var c models.Category
+	var fields map[string]json.RawMessage
+	if err := json.Unmarshal(payload, &c); err != nil {
+		utils.Error(w, http.StatusBadRequest, "Invalid category payload")
+		return
+	}
+	if err := json.Unmarshal(payload, &fields); err != nil {
+		utils.Error(w, http.StatusBadRequest, "Invalid category payload")
+		return
+	}
+	if id == "" {
+		id = c.ID
+	}
+	if c.ID == "" {
 		c.ID = id
+	}
+	if id == "" {
+		utils.Error(w, http.StatusBadRequest, "Category ID is required")
+		return
+	}
+	existing, err := h.productRepo.GetCategoryByID(r.Context(), id)
+	if err != nil {
+		utils.Error(w, http.StatusInternalServerError, "Failed to load category")
+		return
+	}
+	if existing == nil {
+		utils.Error(w, http.StatusNotFound, "Category not found")
+		return
+	}
+	c = *existing
+	c.ID = id
+	if _, ok := fields["name"]; ok {
+		var value string
+		_ = json.Unmarshal(fields["name"], &value)
+		c.Name = value
+	}
+	if _, ok := fields["slug"]; ok {
+		var value string
+		_ = json.Unmarshal(fields["slug"], &value)
+		c.Slug = value
+	}
+	if _, ok := fields["description"]; ok {
+		_ = json.Unmarshal(fields["description"], &c.Description)
+	}
+	if _, ok := fields["accent"]; ok {
+		_ = json.Unmarshal(fields["accent"], &c.Accent)
+	}
+	if _, ok := fields["image"]; ok {
+		_ = json.Unmarshal(fields["image"], &c.Image)
+	}
+	if _, ok := fields["published"]; ok {
+		_ = json.Unmarshal(fields["published"], &c.Published)
+	}
+	if _, ok := fields["hidden"]; ok {
+		_ = json.Unmarshal(fields["hidden"], &c.Hidden)
+	}
+	if _, ok := fields["order"]; ok {
+		_ = json.Unmarshal(fields["order"], &c.Order)
 	}
 	if err := h.productRepo.UpdateCategory(r.Context(), &c); err != nil {
 		utils.Error(w, http.StatusInternalServerError, err.Error())
@@ -316,9 +388,9 @@ func (h *AdminHandler) GetSite(w http.ResponseWriter, r *http.Request) {
 func (h *AdminHandler) UpdateSite(w http.ResponseWriter, r *http.Request) {
 	var body struct {
 		MerchantVPA    *string         `json:"merchantVpa"`
-		MerchantName    *string         `json:"merchantName"`
-		WhatsAppNumber  *string         `json:"whatsappNumber"`
-		SiteContent     json.RawMessage `json:"siteContent"`
+		MerchantName   *string         `json:"merchantName"`
+		WhatsAppNumber *string         `json:"whatsappNumber"`
+		SiteContent    json.RawMessage `json:"siteContent"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		utils.Error(w, http.StatusBadRequest, "Invalid site settings payload")

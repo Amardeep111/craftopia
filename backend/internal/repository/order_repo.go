@@ -78,7 +78,7 @@ func (r *OrderRepository) CreateOrder(ctx context.Context, userID *string, req *
 	for _, it := range req.Items {
 		var p models.Product
 		err := tx.QueryRow(ctx, `
-			SELECT id, name, price, "discountPercent", "gstPercent", "codFee", "otherCharge", stock
+			SELECT id, name, price, COALESCE("discountPercent", 0), COALESCE("gstPercent", 0), COALESCE("codFee", 0), COALESCE("otherCharge", 0), stock
 			FROM "Product" WHERE id = $1 FOR UPDATE;
 		`, it.ProductID).Scan(
 			&p.ID, &p.Name, &p.Price, &p.DiscountPercent, &p.GSTPercent, &p.CODFee, &p.OtherCharge, &p.Stock,
@@ -100,7 +100,7 @@ func (r *OrderRepository) CreateOrder(ctx context.Context, userID *string, req *
 			return nil, fmt.Errorf("failed to decrement product stock: %w", err)
 		}
 
-		unitPrice := int(math.Round(float64(p.Price * (100 - p.DiscountPercent)) / 100.0))
+		unitPrice := int(math.Round(float64(p.Price*(100-p.DiscountPercent)) / 100.0))
 		gstAmount := int(math.Round(float64(unitPrice*p.GSTPercent) / 100.0))
 		codFee := 0
 		if isCOD {
@@ -342,7 +342,6 @@ func (r *OrderRepository) VerifyUPIPayment(ctx context.Context, orderID string, 
 	return r.GetOrderByID(ctx, orderID)
 }
 
-
 // GetOrderByOrderNumber finds an order by its unique orderNumber string
 func (r *OrderRepository) GetOrderByOrderNumber(ctx context.Context, orderNumber string) (*models.Order, error) {
 	query := `
@@ -419,6 +418,31 @@ func (r *OrderRepository) GetAllOrdersAdmin(ctx context.Context) ([]models.Order
 			orders = append(orders, o)
 		}
 	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("failed while reading admin orders: %w", err)
+	}
+	refundRows, err := r.db.Pool.Query(ctx, `
+		SELECT id, "orderId", reason, amount, "refundUpiId", status, "adminNote", "reviewedBy", "reviewedAt", "createdAt", "updatedAt"
+		FROM "RefundRequest" ORDER BY "createdAt" DESC;
+	`)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query refund requests: %w", err)
+	}
+	defer refundRows.Close()
+	byOrder := make(map[string][]models.RefundRequest)
+	for refundRows.Next() {
+		var request models.RefundRequest
+		if err := refundRows.Scan(&request.ID, &request.OrderID, &request.Reason, &request.Amount, &request.RefundUPIID, &request.Status, &request.AdminNote, &request.ReviewedBy, &request.ReviewedAt, &request.CreatedAt, &request.UpdatedAt); err != nil {
+			return nil, fmt.Errorf("failed to scan refund request: %w", err)
+		}
+		byOrder[request.OrderID] = append(byOrder[request.OrderID], request)
+	}
+	if err := refundRows.Err(); err != nil {
+		return nil, fmt.Errorf("failed while reading refund requests: %w", err)
+	}
+	for i := range orders {
+		orders[i].RefundRequests = byOrder[orders[i].ID]
+	}
 	return orders, nil
 }
 
@@ -445,4 +469,192 @@ func (r *OrderRepository) GetDashboardStats(ctx context.Context) (*models.AdminD
 	_ = r.db.Pool.QueryRow(ctx, `SELECT COUNT(*) FROM "Product" WHERE published = true`).Scan(&stats.Products)
 	_ = r.db.Pool.QueryRow(ctx, `SELECT COUNT(*) FROM "Order" WHERE status = 'PENDING'`).Scan(&stats.Pending)
 	return &stats, nil
+}
+
+// CancelOrder cancels an order and increments product stock back in an atomic transaction
+func (r *OrderRepository) CancelOrder(ctx context.Context, orderNumber, userEmail string, isAdmin bool) (*models.Order, error) {
+	tx, err := r.db.Pool.Begin(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("transaction begin failed: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	var o models.Order
+	var customerEmail, status, paymentStatus string
+	query := `SELECT id, "orderNumber", "customerEmail", status, "paymentStatus", "totalAmount", "paymentMethod" FROM "Order" WHERE "orderNumber" = $1 FOR UPDATE;`
+	err = tx.QueryRow(ctx, query, orderNumber).Scan(&o.ID, &o.OrderNumber, &customerEmail, &status, &paymentStatus, &o.TotalAmount, &o.PaymentMethod)
+	if err != nil {
+		return nil, errors.New("Order not found.")
+	}
+
+	if !isAdmin && customerEmail != userEmail {
+		return nil, errors.New("You are not allowed to cancel this order.")
+	}
+
+	if status == "CANCELLED" {
+		return &o, nil
+	}
+
+	if status != "PENDING" && status != "CONFIRMED" {
+		return nil, errors.New("This order can no longer be cancelled.")
+	}
+
+	if paymentStatus == "PAID" {
+		return nil, errors.New("Paid orders require a refund review. Please contact us to cancel.")
+	}
+
+	// Fetch items to release stock. Fail the whole transaction if stock cannot
+	// be restored so the order is never marked cancelled inconsistently.
+	rows, err := tx.Query(ctx, `SELECT "productId", quantity FROM "OrderItem" WHERE "orderId" = $1;`, o.ID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load order items for cancellation: %w", err)
+	}
+	type stockRelease struct {
+		productID string
+		qty       int
+	}
+	var toRelease []stockRelease
+	for rows.Next() {
+		var sr stockRelease
+		if err := rows.Scan(&sr.productID, &sr.qty); err != nil {
+			rows.Close()
+			return nil, fmt.Errorf("failed to read order item for cancellation: %w", err)
+		}
+		toRelease = append(toRelease, sr)
+	}
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		return nil, fmt.Errorf("failed while reading order items for cancellation: %w", err)
+	}
+	rows.Close()
+	for _, item := range toRelease {
+		if _, err := tx.Exec(ctx, `UPDATE "Product" SET stock = stock + $1, "updatedAt" = NOW() WHERE id = $2;`, item.qty, item.productID); err != nil {
+			return nil, fmt.Errorf("failed to restore product stock: %w", err)
+		}
+	}
+
+	// Update order
+	_, err = tx.Exec(ctx, `UPDATE "Order" SET status = 'CANCELLED', "paymentStatus" = 'CANCELLED', "updatedAt" = NOW() WHERE id = $1;`, o.ID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to cancel order: %w", err)
+	}
+
+	// Log event in PaymentLog
+	if _, err := tx.Exec(ctx, `INSERT INTO "PaymentLog" (id, "orderId", amount, status, provider, method, "createdAt") VALUES (gen_random_uuid()::TEXT, $1, $2, 'CANCELLED', $3, 'ORDER_CANCELLATION', NOW());`, o.ID, o.TotalAmount, o.PaymentMethod); err != nil {
+		return nil, fmt.Errorf("failed to record cancellation: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return nil, fmt.Errorf("commit failed: %w", err)
+	}
+
+	o.Status = models.OrderStatusCancelled
+	o.PaymentStatus = models.PaymentStatusCancelled
+	return &o, nil
+}
+
+// RequestRefund submits a customer refund request
+func (r *OrderRepository) RequestRefund(ctx context.Context, orderID, userEmail, reason, refundUPI string) (*models.RefundRequest, error) {
+	tx, err := r.db.Pool.Begin(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	var customerEmail, paymentStatus string
+	var totalAmount int
+	err = tx.QueryRow(ctx, `SELECT "customerEmail", "paymentStatus", "totalAmount" FROM "Order" WHERE id = $1 FOR UPDATE;`, orderID).
+		Scan(&customerEmail, &paymentStatus, &totalAmount)
+	if err != nil {
+		return nil, errors.New("Order not found.")
+	}
+
+	if customerEmail != userEmail {
+		return nil, errors.New("You are not allowed to request a refund for this order.")
+	}
+
+	if paymentStatus != "PAID" && paymentStatus != "COD_COLLECTED" && paymentStatus != "REFUND_REJECTED" {
+		return nil, errors.New("A refund can only be requested after payment has been received.")
+	}
+
+	// Check existing request
+	var existingCount int
+	if err := tx.QueryRow(ctx, `SELECT COUNT(*) FROM "RefundRequest" WHERE "orderId" = $1 AND status IN ('REQUESTED', 'APPROVED', 'PROCESSING');`, orderID).Scan(&existingCount); err != nil {
+		return nil, fmt.Errorf("failed to check existing refund requests: %w", err)
+	}
+	if existingCount > 0 {
+		return nil, errors.New("A refund request is already in progress for this order.")
+	}
+
+	var req models.RefundRequest
+	req.OrderID = orderID
+	req.Reason = reason
+	req.Amount = totalAmount
+	req.RefundUPIID = refundUPI
+	req.Status = "REQUESTED"
+
+	err = tx.QueryRow(ctx, `
+		INSERT INTO "RefundRequest" ("orderId", reason, amount, "refundUpiId", status, "createdAt", "updatedAt")
+		VALUES ($1, $2, $3, $4, 'REQUESTED', NOW(), NOW())
+		RETURNING id, "createdAt", "updatedAt";
+	`, orderID, reason, totalAmount, refundUPI).Scan(&req.ID, &req.CreatedAt, &req.UpdatedAt)
+	if err != nil {
+		return nil, fmt.Errorf("failed to insert refund request: %w", err)
+	}
+
+	if _, err := tx.Exec(ctx, `UPDATE "Order" SET "paymentStatus" = 'REFUND_REQUESTED', "updatedAt" = NOW() WHERE id = $1;`, orderID); err != nil {
+		return nil, fmt.Errorf("failed to update order refund status: %w", err)
+	}
+	if _, err := tx.Exec(ctx, `INSERT INTO "PaymentLog" (id, "orderId", amount, status, provider, method, "createdAt") VALUES (gen_random_uuid()::TEXT, $1, $2, 'REFUND_REQUESTED', 'UPI', 'REFUND', NOW());`, orderID, totalAmount); err != nil {
+		return nil, fmt.Errorf("failed to record refund request: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return nil, fmt.Errorf("failed to commit refund: %w", err)
+	}
+
+	return &req, nil
+}
+
+func (r *OrderRepository) UpdateRefundRequest(ctx context.Context, id, status, adminEmail string) error {
+	valid := map[string]map[string]bool{
+		"REQUESTED":  {"APPROVED": true, "REJECTED": true},
+		"APPROVED":   {"PROCESSING": true, "REJECTED": true},
+		"PROCESSING": {"COMPLETED": true},
+	}
+	status = strings.ToUpper(strings.TrimSpace(status))
+	tx, err := r.db.Pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	var orderID, current string
+	var paymentMethod *string
+	if err := tx.QueryRow(ctx, `
+		SELECT rr."orderId", rr.status, o."paymentMethod"
+		FROM "RefundRequest" rr JOIN "Order" o ON o.id = rr."orderId"
+		WHERE rr.id = $1 FOR UPDATE OF rr, o;
+	`, id).Scan(&orderID, &current, &paymentMethod); err != nil {
+		return errors.New("Refund request not found.")
+	}
+	if !valid[current][status] {
+		return fmt.Errorf("refund status cannot change from %s to %s", current, status)
+	}
+	_, err = tx.Exec(ctx, `UPDATE "RefundRequest" SET status = $1, "reviewedBy" = $2, "reviewedAt" = NOW(), "updatedAt" = NOW() WHERE id = $3;`, status, adminEmail, id)
+	if err != nil {
+		return err
+	}
+	if status == "COMPLETED" {
+		_, err = tx.Exec(ctx, `UPDATE "Order" SET "paymentStatus" = 'REFUNDED', "updatedAt" = NOW() WHERE id = $1;`, orderID)
+	} else if status == "REJECTED" {
+		paymentStatus := "PAID"
+		if paymentMethod != nil && strings.Contains(strings.ToLower(*paymentMethod), "cash") {
+			paymentStatus = "COD_COLLECTED"
+		}
+		_, err = tx.Exec(ctx, `UPDATE "Order" SET "paymentStatus" = $1, "updatedAt" = NOW() WHERE id = $2;`, paymentStatus, orderID)
+	}
+	if err != nil {
+		return err
+	}
+	return tx.Commit(ctx)
 }

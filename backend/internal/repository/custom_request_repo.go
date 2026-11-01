@@ -20,19 +20,20 @@ func NewCustomRequestRepository(db *database.DB) *CustomRequestRepository {
 	return &CustomRequestRepository{db: db}
 }
 
-func (r *CustomRequestRepository) Create(ctx context.Context, userID *string, name, contact, idea, details, colors, budget string) (*models.CustomRequest, error) {
+func (r *CustomRequestRepository) Create(ctx context.Context, userID *string, name, contact, idea, details string, category *string, colors, budget string, occasion *string, referenceImages []string) (*models.CustomRequest, error) {
 	id := generateID("creq")
 	now := time.Now()
 
 	query := `
 		INSERT INTO "CustomRequest" (
-			id, "userId", name, contact, idea, details, colors, budget, status, "referenceImages", "createdAt", "updatedAt"
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'NEW', ARRAY[]::text[], $9, $10)
-		RETURNING id, name, contact, idea, details, colors, budget, status, "createdAt", "updatedAt";
+			id, "userId", name, contact, idea, category, colors, budget, occasion, details, "referenceImages", status, "createdAt", "updatedAt"
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'NEW', $12, $13)
+		RETURNING id, "userId", name, contact, idea, category, colors, budget, occasion, details, "referenceImages", status, "createdAt", "updatedAt";
 	`
 	var cr models.CustomRequest
-	err := r.db.Pool.QueryRow(ctx, query, id, userID, name, contact, idea, details, colors, budget, now, now).Scan(
-		&cr.ID, &cr.Name, &cr.Contact, &cr.Idea, &cr.Details, &cr.Colors, &cr.Budget, &cr.Status, &cr.CreatedAt, &cr.UpdatedAt,
+	err := r.db.Pool.QueryRow(ctx, query, id, userID, name, contact, idea, category, colors, budget, occasion, details, referenceImages, now, now).Scan(
+		&cr.ID, &cr.UserID, &cr.Name, &cr.Contact, &cr.Idea, &cr.Category, &cr.Colors, &cr.Budget, &cr.Occasion,
+		&cr.Details, &cr.ReferenceImages, &cr.Status, &cr.CreatedAt, &cr.UpdatedAt,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create custom request: %w", err)
@@ -42,7 +43,7 @@ func (r *CustomRequestRepository) Create(ctx context.Context, userID *string, na
 
 func (r *CustomRequestRepository) List(ctx context.Context) ([]models.CustomRequest, error) {
 	query := `
-		SELECT id, "userId", name, contact, idea, details, colors, budget, occasion, "quotedPrice", status, "adminNotes", "createdAt", "updatedAt"
+		SELECT id, "userId", name, contact, idea, category, colors, budget, occasion, details, "referenceImages", "quotedPrice", status, "adminNotes", "createdAt", "updatedAt"
 		FROM "CustomRequest" ORDER BY "createdAt" DESC;
 	`
 	rows, err := r.db.Pool.Query(ctx, query)
@@ -55,14 +56,40 @@ func (r *CustomRequestRepository) List(ctx context.Context) ([]models.CustomRequ
 	for rows.Next() {
 		var cr models.CustomRequest
 		err := rows.Scan(
-			&cr.ID, &cr.UserID, &cr.Name, &cr.Contact, &cr.Idea, &cr.Details, &cr.Colors,
-			&cr.Budget, &cr.Occasion, &cr.QuotedPrice, &cr.Status, &cr.AdminNotes, &cr.CreatedAt, &cr.UpdatedAt,
+			&cr.ID, &cr.UserID, &cr.Name, &cr.Contact, &cr.Idea, &cr.Category, &cr.Colors,
+			&cr.Budget, &cr.Occasion, &cr.Details, &cr.ReferenceImages, &cr.QuotedPrice, &cr.Status, &cr.AdminNotes, &cr.CreatedAt, &cr.UpdatedAt,
 		)
-		if err == nil {
-			list = append(list, cr)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan custom request: %w", err)
 		}
+		list = append(list, cr)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("failed while reading custom requests: %w", err)
 	}
 	return list, nil
+}
+
+func (r *CustomRequestRepository) Update(ctx context.Context, id, status string, quotedPrice *int, adminNotes string) (*models.CustomRequest, error) {
+	var cr models.CustomRequest
+	err := r.db.Pool.QueryRow(ctx, `
+		UPDATE "CustomRequest"
+		SET status = $2, "quotedPrice" = $3, "adminNotes" = $4, "updatedAt" = NOW()
+		WHERE id = $1
+		RETURNING id, "userId", name, contact, idea, category, colors, budget, occasion, details,
+		          "referenceImages", "quotedPrice", status, "adminNotes", "createdAt", "updatedAt";
+	`, id, status, quotedPrice, adminNotes).Scan(
+		&cr.ID, &cr.UserID, &cr.Name, &cr.Contact, &cr.Idea, &cr.Category, &cr.Colors,
+		&cr.Budget, &cr.Occasion, &cr.Details, &cr.ReferenceImages, &cr.QuotedPrice,
+		&cr.Status, &cr.AdminNotes, &cr.CreatedAt, &cr.UpdatedAt,
+	)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, errors.New("custom request not found")
+		}
+		return nil, fmt.Errorf("failed to update custom request: %w", err)
+	}
+	return &cr, nil
 }
 
 // AcceptWithOrder handles the complete acceptance workflow:
@@ -199,4 +226,3 @@ func (r *CustomRequestRepository) AcceptWithOrder(ctx context.Context, requestID
 		Status:      models.OrderStatusConfirmed,
 	}, nil
 }
-

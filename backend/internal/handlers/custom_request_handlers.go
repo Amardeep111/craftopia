@@ -3,6 +3,8 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
+	"strconv"
+	"strings"
 
 	"craftopia-backend/internal/middleware"
 	"craftopia-backend/internal/models"
@@ -19,12 +21,15 @@ func NewCustomRequestHandler(repo *repository.CustomRequestRepository) *CustomRe
 }
 
 type CreateCustomRequestBody struct {
-	Name    string `json:"name"`
-	Contact string `json:"contact"`
-	Idea    string `json:"idea"`
-	Details string `json:"details"`
-	Colors  string `json:"colors"`
-	Budget  string `json:"budget"`
+	Name            string   `json:"name"`
+	Contact         string   `json:"contact"`
+	Idea            string   `json:"idea"`
+	Details         string   `json:"details"`
+	Category        *string  `json:"category"`
+	Colors          string   `json:"colors"`
+	Budget          string   `json:"budget"`
+	Occasion        *string  `json:"occasion"`
+	ReferenceImages []string `json:"referenceImages"`
 }
 
 func (h *CustomRequestHandler) Create(w http.ResponseWriter, r *http.Request) {
@@ -44,7 +49,7 @@ func (h *CustomRequestHandler) Create(w http.ResponseWriter, r *http.Request) {
 		userID = &claims.UserID
 	}
 
-	created, err := h.repo.Create(r.Context(), userID, body.Name, body.Contact, body.Idea, body.Details, body.Colors, body.Budget)
+	created, err := h.repo.Create(r.Context(), userID, body.Name, body.Contact, body.Idea, body.Details, body.Category, body.Colors, body.Budget, body.Occasion, body.ReferenceImages)
 	if err != nil {
 		utils.Error(w, http.StatusInternalServerError, err.Error())
 		return
@@ -60,6 +65,82 @@ func (h *CustomRequestHandler) List(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	utils.JSON(w, http.StatusOK, requests)
+}
+
+// Update handles PATCH /api/admin/custom-requests, including quote edits and
+// the storefront admin's accept-and-create-order request shape.
+func (h *CustomRequestHandler) Update(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		ID           string                             `json:"id"`
+		Status       string                             `json:"status"`
+		QuotedPrice  json.RawMessage                    `json:"quotedPrice"`
+		AdminNotes   string                             `json:"adminNotes"`
+		CreateOrder  bool                               `json:"createOrder"`
+		OrderDetails *models.AcceptCustomRequestPayload `json:"orderDetails"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		utils.Error(w, http.StatusBadRequest, "Invalid custom request update payload")
+		return
+	}
+	if body.ID == "" {
+		utils.Error(w, http.StatusBadRequest, "Custom request ID is required")
+		return
+	}
+
+	if body.CreateOrder {
+		if body.OrderDetails == nil {
+			utils.Error(w, http.StatusBadRequest, "Order details are required to accept this request")
+			return
+		}
+		claims, _ := middleware.GetUserFromContext(r.Context())
+		adminEmail := "admin@jamaescraftopia.com"
+		if claims != nil && claims.Email != "" {
+			adminEmail = claims.Email
+		}
+		order, err := h.repo.AcceptWithOrder(r.Context(), body.ID, body.OrderDetails, adminEmail)
+		if err != nil {
+			utils.Error(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		utils.Success(w, http.StatusOK, "Custom request accepted and order created successfully", map[string]any{"order": order})
+		return
+	}
+
+	validStatus := map[string]bool{
+		"NEW": true, "REVIEWING": true, "QUOTED": true, "ACCEPTED": true,
+		"IN_PROGRESS": true, "COMPLETED": true, "DECLINED": true,
+	}
+	body.Status = strings.ToUpper(strings.TrimSpace(body.Status))
+	if !validStatus[body.Status] {
+		utils.Error(w, http.StatusBadRequest, "Invalid custom request status")
+		return
+	}
+
+	var quotedPrice *int
+	if len(body.QuotedPrice) > 0 && string(body.QuotedPrice) != "null" {
+		raw := strings.TrimSpace(string(body.QuotedPrice))
+		if strings.HasPrefix(raw, `"`) {
+			if err := json.Unmarshal(body.QuotedPrice, &raw); err != nil {
+				utils.Error(w, http.StatusBadRequest, "Invalid quoted price")
+				return
+			}
+		}
+		if raw != "" {
+			value, err := strconv.Atoi(raw)
+			if err != nil || value < 0 {
+				utils.Error(w, http.StatusBadRequest, "Quoted price must be a non-negative integer")
+				return
+			}
+			quotedPrice = &value
+		}
+	}
+
+	updated, err := h.repo.Update(r.Context(), body.ID, body.Status, quotedPrice, body.AdminNotes)
+	if err != nil {
+		utils.Error(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	utils.Success(w, http.StatusOK, "Custom request updated successfully", updated)
 }
 
 func (h *CustomRequestHandler) AcceptAndCreateOrder(w http.ResponseWriter, r *http.Request) {
@@ -98,4 +179,3 @@ func (h *CustomRequestHandler) AcceptAndCreateOrder(w http.ResponseWriter, r *ht
 
 	utils.Success(w, http.StatusOK, "Custom request accepted and order created successfully", order)
 }
-

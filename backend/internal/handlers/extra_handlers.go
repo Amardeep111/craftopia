@@ -2,7 +2,9 @@ package handlers
 
 import (
 	"encoding/json"
+	"math"
 	"net/http"
+	"strconv"
 
 	"craftopia-backend/internal/middleware"
 	"craftopia-backend/internal/repository"
@@ -271,4 +273,83 @@ func (h *ExtraHandlers) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	utils.Success(w, http.StatusOK, "Profile updated successfully", nil)
+}
+
+// DetectLocation handles GET /api/location/detect
+func (h *ExtraHandlers) DetectLocation(w http.ResponseWriter, r *http.Request) {
+	latStr := r.Header.Get("x-vercel-ip-latitude")
+	lngStr := r.Header.Get("x-vercel-ip-longitude")
+	city := r.Header.Get("x-vercel-ip-city")
+	region := r.Header.Get("x-vercel-ip-country-region")
+	country := r.Header.Get("x-vercel-ip-country")
+	if country == "" {
+		country = "India"
+	}
+	postal := r.Header.Get("x-vercel-ip-postal-code")
+
+	if latStr != "" && lngStr != "" {
+		lat, latErr := strconv.ParseFloat(latStr, 64)
+		lng, lngErr := strconv.ParseFloat(lngStr, 64)
+		if latErr != nil || lngErr != nil || math.IsNaN(lat) || math.IsNaN(lng) || math.IsInf(lat, 0) || math.IsInf(lng, 0) || lat < -90 || lat > 90 || lng < -180 || lng > 180 {
+			utils.Error(w, http.StatusBadGateway, "Location data from the platform was invalid")
+			return
+		}
+		utils.JSON(w, http.StatusOK, map[string]any{
+			"source":  "vercel-ip",
+			"lat":     lat,
+			"lng":     lng,
+			"city":    city,
+			"state":   region,
+			"country": country,
+			"pinCode": postal,
+		})
+		return
+	}
+
+	utils.Error(w, http.StatusServiceUnavailable, "IP location is unavailable. Please enable browser location or enter your address manually.")
+}
+
+type GeocodeRequest struct {
+	Lat any `json:"lat"`
+	Lng any `json:"lng"`
+}
+
+// Geocode handles POST /api/geocode
+func (h *ExtraHandlers) Geocode(w http.ResponseWriter, r *http.Request) {
+	var req GeocodeRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		utils.Error(w, http.StatusBadRequest, "Latitude and longitude are required.")
+		return
+	}
+
+	var lat, lng float64
+	switch v := req.Lat.(type) {
+	case float64:
+		lat = v
+	case string:
+		parsed, err := strconv.ParseFloat(v, 64)
+		if err != nil {
+			utils.Error(w, http.StatusBadRequest, "Invalid coordinates.")
+			return
+		}
+		lat = parsed
+	}
+	switch v := req.Lng.(type) {
+	case float64:
+		lng = v
+	case string:
+		parsed, err := strconv.ParseFloat(v, 64)
+		if err != nil {
+			utils.Error(w, http.StatusBadRequest, "Invalid coordinates.")
+			return
+		}
+		lng = parsed
+	}
+
+	if math.IsNaN(lat) || math.IsNaN(lng) || math.IsInf(lat, 0) || math.IsInf(lng, 0) || lat < -90 || lat > 90 || lng < -180 || lng > 180 || (lat == 0 && lng == 0) {
+		utils.Error(w, http.StatusBadRequest, "Invalid coordinates.")
+		return
+	}
+
+	utils.Error(w, http.StatusServiceUnavailable, "Reverse geocoding is not configured. Please enter your address manually.")
 }

@@ -18,11 +18,13 @@ END $$;
 DO $$ BEGIN
     CREATE TYPE "PaymentStatus" AS ENUM (
         'PENDING', 'AWAITING_VERIFICATION', 'PAID', 'COD_PENDING_COLLECTION',
-        'COD_COLLECTED', 'FAILED', 'CANCELLED', 'MANUAL_REVIEW', 'REFUNDED'
+        'COD_COLLECTED', 'FAILED', 'CANCELLED', 'MANUAL_REVIEW', 'REFUNDED', 'REFUND_REQUESTED'
     );
 EXCEPTION
     WHEN duplicate_object THEN null;
 END $$;
+
+ALTER TYPE "PaymentStatus" ADD VALUE IF NOT EXISTS 'REFUND_REQUESTED';
 
 DO $$ BEGIN
     CREATE TYPE "RequestStatus" AS ENUM (
@@ -88,10 +90,13 @@ CREATE TABLE IF NOT EXISTS "User" (
     phone TEXT,
     role TEXT DEFAULT 'CUSTOMER',
     "adminActive" BOOLEAN DEFAULT false,
+    "adminPermissions" TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[],
     active BOOLEAN DEFAULT true,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "adminPermissions" TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[];
 
 -- Orders
 CREATE TABLE IF NOT EXISTS "Order" (
@@ -248,3 +253,34 @@ CREATE TABLE IF NOT EXISTS "Review" (
     images TEXT[] DEFAULT ARRAY[]::TEXT[],
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Refund Requests
+CREATE TABLE IF NOT EXISTS "RefundRequest" (
+    id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::TEXT,
+    "orderId" TEXT NOT NULL REFERENCES "Order"(id) ON DELETE CASCADE,
+    reason TEXT NOT NULL,
+    amount INT NOT NULL,
+    "refundUpiId" TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'REQUESTED',
+    "adminNote" TEXT,
+    "reviewedBy" TEXT,
+    "reviewedAt" TIMESTAMP(3),
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS "idx_refund_order_status" ON "RefundRequest"("orderId", status);
+
+-- Email Verification for Signup and Password Change OTPs
+CREATE TABLE IF NOT EXISTS "EmailVerification" (
+    id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::TEXT,
+    email TEXT NOT NULL,
+    "codeHash" TEXT NOT NULL,
+    payload JSONB NOT NULL,
+    attempts INT DEFAULT 0,
+    resends INT DEFAULT 0,
+    "expiresAt" TIMESTAMP(3) NOT NULL,
+    "consumedAt" TIMESTAMP(3),
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS "idx_email_verification" ON "EmailVerification"(email, "expiresAt");

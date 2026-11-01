@@ -135,7 +135,7 @@ func (r *CartRepository) ValidateCart(ctx context.Context, items []CartItemInput
 	for _, it := range items {
 		var p models.Product
 		err := r.db.Pool.QueryRow(ctx, `
-			SELECT id, name, price, "discountPercent", "gstPercent", "codFee", "otherCharge", stock, published, "availableForSale", "allowedPaymentMethods"
+			SELECT id, name, price, COALESCE("discountPercent", 0), COALESCE("gstPercent", 0), COALESCE("codFee", 0), COALESCE("otherCharge", 0), stock, COALESCE(published, false), COALESCE("availableForSale", true), COALESCE("allowedPaymentMethods", ARRAY['upi']::TEXT[])
 			FROM "Product" WHERE id = $1;
 		`, it.ProductID).Scan(
 			&p.ID, &p.Name, &p.Price, &p.DiscountPercent, &p.GSTPercent, &p.CODFee,

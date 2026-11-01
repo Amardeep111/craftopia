@@ -20,7 +20,7 @@ func NewProductRepository(db *database.DB) *ProductRepository {
 
 func (r *ProductRepository) GetCategories(ctx context.Context) ([]models.Category, error) {
 	query := `
-		SELECT id, name, slug, description, accent, image, published, hidden, "order", "createdAt", "updatedAt"
+		SELECT id, name, slug, description, accent, image, COALESCE(published, true), COALESCE(hidden, false), COALESCE("order", 0), "createdAt", "updatedAt"
 		FROM "Category"
 		WHERE published = true AND hidden = false
 		ORDER BY "order" ASC, name ASC;
@@ -43,17 +43,62 @@ func (r *ProductRepository) GetCategories(ctx context.Context) ([]models.Categor
 		}
 		categories = append(categories, c)
 	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("failed while reading categories: %w", err)
+	}
 	return categories, nil
 }
 
-func (r *ProductRepository) GetProducts(ctx context.Context, categorySlug string, featuredOnly bool) ([]models.Product, error) {
+func (r *ProductRepository) GetAllCategoriesAdmin(ctx context.Context) ([]models.Category, error) {
+	rows, err := r.db.Pool.Query(ctx, `
+		SELECT id, name, slug, description, accent, image, COALESCE(published, true), COALESCE(hidden, false), COALESCE("order", 0), "createdAt", "updatedAt"
+		FROM "Category" ORDER BY "order" ASC, name ASC;
+	`)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query admin categories: %w", err)
+	}
+	defer rows.Close()
+
+	categories := make([]models.Category, 0)
+	for rows.Next() {
+		var c models.Category
+		if err := rows.Scan(&c.ID, &c.Name, &c.Slug, &c.Description, &c.Accent, &c.Image,
+			&c.Published, &c.Hidden, &c.Order, &c.CreatedAt, &c.UpdatedAt); err != nil {
+			return nil, fmt.Errorf("failed to scan admin category: %w", err)
+		}
+		categories = append(categories, c)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("failed while reading admin categories: %w", err)
+	}
+	return categories, nil
+}
+
+func (r *ProductRepository) GetCategoryByID(ctx context.Context, id string) (*models.Category, error) {
+	var c models.Category
+	err := r.db.Pool.QueryRow(ctx, `
+		SELECT id, name, slug, description, accent, image, COALESCE(published, true), COALESCE(hidden, false), COALESCE("order", 0), "createdAt", "updatedAt"
+		FROM "Category" WHERE id = $1;
+	`, id).Scan(&c.ID, &c.Name, &c.Slug, &c.Description, &c.Accent, &c.Image,
+		&c.Published, &c.Hidden, &c.Order, &c.CreatedAt, &c.UpdatedAt)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("failed to get category: %w", err)
+	}
+	return &c, nil
+}
+
+func (r *ProductRepository) GetProducts(ctx context.Context, categorySlug string, featuredOnly bool, limit, skip int) ([]models.Product, error) {
 	query := `
-		SELECT p.id, p.name, p.slug, p."categoryId", p.price, p."discountPercent", p."gstPercent",
-		       p."codFee", p."otherCharge", p.featured, p.short, p.description, p.materials, p.care,
+		SELECT p.id, p.name, p.slug, p."categoryId", COALESCE(p.price, 0), COALESCE(p."discountPercent", 0), COALESCE(p."gstPercent", 0),
+		       COALESCE(p."codFee", 0), COALESCE(p."otherCharge", 0), COALESCE(p.featured, false), p.short, p.description, p.materials, p.care,
 		       p.customization, p.visual, p.palette, p.images, p."imageUrl", p."cloudinaryPublicId",
-		       p.stock, p.published, p."availableForSale", p."unavailableStates", p."unavailablePinCodes",
-		       p."allowedPaymentMethods", p."createdAt", p."updatedAt",
-		       c.id, c.name, c.slug
+		       COALESCE(p.stock, 0), COALESCE(p.published, false), COALESCE(p."availableForSale", true),
+		       COALESCE(p."unavailableStates", ARRAY[]::TEXT[]), COALESCE(p."unavailablePinCodes", ARRAY[]::TEXT[]),
+		       COALESCE(p."allowedPaymentMethods", ARRAY['upi']::TEXT[]), p."createdAt", p."updatedAt",
+		       COALESCE(c.id, p."categoryId"), COALESCE(c.name, ''), COALESCE(c.slug, '')
 		FROM "Product" p
 		LEFT JOIN "Category" c ON p."categoryId" = c.id
 		WHERE p.published = true
@@ -73,7 +118,8 @@ func (r *ProductRepository) GetProducts(ctx context.Context, categorySlug string
 		argID++
 	}
 
-	query += ` ORDER BY p."createdAt" DESC;`
+	query += fmt.Sprintf(" ORDER BY p.\"createdAt\" DESC LIMIT $%d OFFSET $%d;", argID, argID+1)
+	args = append(args, limit, skip)
 
 	rows, err := r.db.Pool.Query(ctx, query, args...)
 	if err != nil {
@@ -99,17 +145,21 @@ func (r *ProductRepository) GetProducts(ctx context.Context, categorySlug string
 		p.Category = &cat
 		products = append(products, p)
 	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("failed while reading products: %w", err)
+	}
 	return products, nil
 }
 
 func (r *ProductRepository) GetProductByIDOrSlug(ctx context.Context, identifier string) (*models.Product, error) {
 	query := `
-		SELECT p.id, p.name, p.slug, p."categoryId", p.price, p."discountPercent", p."gstPercent",
-		       p."codFee", p."otherCharge", p.featured, p.short, p.description, p.materials, p.care,
+		SELECT p.id, p.name, p.slug, p."categoryId", COALESCE(p.price, 0), COALESCE(p."discountPercent", 0), COALESCE(p."gstPercent", 0),
+		       COALESCE(p."codFee", 0), COALESCE(p."otherCharge", 0), COALESCE(p.featured, false), p.short, p.description, p.materials, p.care,
 		       p.customization, p.visual, p.palette, p.images, p."imageUrl", p."cloudinaryPublicId",
-		       p.stock, p.published, p."availableForSale", p."unavailableStates", p."unavailablePinCodes",
-		       p."allowedPaymentMethods", p."createdAt", p."updatedAt",
-		       c.id, c.name, c.slug
+		       COALESCE(p.stock, 0), COALESCE(p.published, false), COALESCE(p."availableForSale", true),
+		       COALESCE(p."unavailableStates", ARRAY[]::TEXT[]), COALESCE(p."unavailablePinCodes", ARRAY[]::TEXT[]),
+		       COALESCE(p."allowedPaymentMethods", ARRAY['upi']::TEXT[]), p."createdAt", p."updatedAt",
+		       COALESCE(c.id, p."categoryId"), COALESCE(c.name, ''), COALESCE(c.slug, '')
 		FROM "Product" p
 		LEFT JOIN "Category" c ON p."categoryId" = c.id
 		WHERE p.id = $1 OR p.slug = $1
@@ -135,16 +185,16 @@ func (r *ProductRepository) GetProductByIDOrSlug(ctx context.Context, identifier
 	return &p, nil
 }
 
-
 // GetAllProductsAdmin returns all products (including unpublished) for admin management
 func (r *ProductRepository) GetAllProductsAdmin(ctx context.Context) ([]models.Product, error) {
 	query := `
-		SELECT p.id, p.name, p.slug, p."categoryId", p.price, p."discountPercent", p."gstPercent",
-		       p."codFee", p."otherCharge", p.featured, p.short, p.description, p.materials, p.care,
+		SELECT p.id, p.name, p.slug, p."categoryId", COALESCE(p.price, 0), COALESCE(p."discountPercent", 0), COALESCE(p."gstPercent", 0),
+		       COALESCE(p."codFee", 0), COALESCE(p."otherCharge", 0), COALESCE(p.featured, false), p.short, p.description, p.materials, p.care,
 		       p.customization, p.visual, p.palette, p.images, p."imageUrl", p."cloudinaryPublicId",
-		       p.stock, p.published, p."availableForSale", p."unavailableStates", p."unavailablePinCodes",
-		       p."allowedPaymentMethods", p."createdAt", p."updatedAt",
-		       c.id, c.name, c.slug
+		       COALESCE(p.stock, 0), COALESCE(p.published, false), COALESCE(p."availableForSale", true),
+		       COALESCE(p."unavailableStates", ARRAY[]::TEXT[]), COALESCE(p."unavailablePinCodes", ARRAY[]::TEXT[]),
+		       COALESCE(p."allowedPaymentMethods", ARRAY['upi']::TEXT[]), p."createdAt", p."updatedAt",
+		       COALESCE(c.id, p."categoryId"), COALESCE(c.name, ''), COALESCE(c.slug, '')
 		FROM "Product" p
 		LEFT JOIN "Category" c ON p."categoryId" = c.id
 		ORDER BY p.name ASC;
@@ -172,6 +222,9 @@ func (r *ProductRepository) GetAllProductsAdmin(ctx context.Context) ([]models.P
 		}
 		p.Category = &cat
 		products = append(products, p)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("failed while reading admin products: %w", err)
 	}
 	return products, nil
 }

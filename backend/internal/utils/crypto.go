@@ -14,6 +14,8 @@ import (
 	"fmt"
 	"io"
 	"strings"
+
+	"golang.org/x/crypto/bcrypt"
 )
 
 // DeriveKey generates a 32-byte AES-256 key via SHA-256 from the provided secret
@@ -29,6 +31,15 @@ func GenerateRandomHex(n int) (string, error) {
 		return "", err
 	}
 	return hex.EncodeToString(bytes), nil
+}
+
+func HashPassword(password string) (string, error) {
+	hashed, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	return string(hashed), err
+}
+
+func CheckPassword(hashed, password string) error {
+	return bcrypt.CompareHashAndPassword([]byte(hashed), []byte(password))
 }
 
 // EncryptSessionCookie encrypts a session token using AES-256-GCM, matching Node.js enc.v1 format

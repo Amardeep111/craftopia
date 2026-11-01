@@ -91,8 +91,8 @@ export default function CustomerReviews({ product }) {
     const response = await fetch(`/api/reviews/${encodeURIComponent(product.id)}`, { cache: 'no-store' })
     const result = await response.json()
     if (response.ok && result.success) {
-      setReviews(result.reviews || [])
-      setReviewAccess({ authenticated: Boolean(result.authenticated), canReview: Boolean(result.canReview) })
+      setReviews(result.data?.reviews || [])
+      setReviewAccess({ authenticated: Boolean(result.data?.authenticated), canReview: Boolean(result.data?.canReview) })
     }
   }, [product?.id])
 
@@ -160,7 +160,7 @@ export default function CustomerReviews({ product }) {
         const uploadResponse = await fetch('/api/reviews/upload', { method: 'POST', body: uploadForm })
         const uploadResult = await uploadResponse.json()
         if (!uploadResponse.ok || !uploadResult.success) throw new Error(uploadResult.error || 'Review photos could not be uploaded.')
-        images = uploadResult.images
+        images = uploadResult.data?.images || []
       }
       const response = await fetch(`/api/reviews/${encodeURIComponent(product.id)}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ productRating, deliveryRating, packagingRating, title: formTitle, comment: formText, images }) })
       const result = await response.json()

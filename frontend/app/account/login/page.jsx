@@ -253,7 +253,13 @@ function SignupStep({ onSwitchToLogin, onVerified }) {
     }
     if (res.ok && data.success) {
       setLoading(false)
-      onVerified({ challengeId: data.data.challengeId, email: data.data.email, name })
+      if (data.data?.user) {
+        onVerified(data.data.user)
+      } else if (data.data?.challengeId) {
+        onVerified({ challengeId: data.data.challengeId, email: data.data.email, name })
+      } else {
+        setErrors({ _form: 'The account was created, but the server did not return a session. Please sign in.' })
+      }
     } else {
       setLoading(false)
       if (data.errors) {
