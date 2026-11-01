@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ChevronLeft, Minus, Plus, Flower2 } from 'lucide-react'
+import { ChevronLeft, ChevronDown, Minus, Plus, Flower2 } from 'lucide-react'
 import { useCartStore } from '@/lib/cart'
 import { categories } from '@/data/categories'
 import { formatPrice } from '@/data/products'
@@ -57,7 +57,7 @@ export default function ProductDetailsClient({ initialProduct, initialRelatedPro
     const purchaseOptions = purchaseOptionsRef.current
     if (!purchaseOptions) return
     const observer = new IntersectionObserver(([entry]) => {
-      setShowStickyPurchase(!entry.isIntersecting && entry.boundingClientRect.top < 0)
+      setShowStickyPurchase(!entry.isIntersecting)
     }, { threshold: 0.05 })
     observer.observe(purchaseOptions)
     return () => observer.disconnect()
@@ -245,13 +245,13 @@ export default function ProductDetailsClient({ initialProduct, initialRelatedPro
 
           {/* Info: Real data renders immediately on page load */}
           <div>
-            <Badge>Handmade</Badge>
-            <h1 className="heading-display mt-3 text-3xl sm:text-4xl">{product.name}</h1>
-            <p className="mt-2 text-sm font-semibold uppercase tracking-[0.18em] text-bloom">
+            <p className="inline-flex items-center gap-2 text-sm font-semibold text-moss"><Flower2 className="h-4 w-4" aria-hidden="true" /> Handmade</p>
+            <h1 className="heading-display mt-2 text-3xl sm:text-4xl">{product.name}</h1>
+            <p className="mt-2 text-sm font-semibold text-bloom">
               {category?.name || product?.categoryName || product?.category?.name || ''}
             </p>
             <div className="mt-4 flex flex-wrap items-baseline gap-3">
-              <p className="text-2xl font-semibold text-plum">{formatPrice(salePrice)}</p>
+              <p className="text-3xl font-semibold tracking-tight text-plum">{formatPrice(salePrice)}</p>
               {discountPercent > 0 && (
                 <>
                   <span className="text-base text-muted line-through">{formatPrice(product.price)}</span>
@@ -269,18 +269,18 @@ export default function ProductDetailsClient({ initialProduct, initialRelatedPro
                   otherCharge > 0 ? `Other charge ${formatPrice(otherCharge)} per item` : null,
                 ]
                   .filter(Boolean)
-                  .join(' · ')}
+                  .join(', ')}
                 . Calculated at checkout.
               </p>
             )}
             <section className="mt-5 space-y-4" aria-label="Product description and details">
               <div>
-                <h2 className="font-semibold text-plum">Description</h2>
+                <h2 className="heading-display text-xl">Description</h2>
                 <div className="relative mt-1">
                   <div ref={descriptionRef} className={`overflow-hidden text-muted transition-[max-height] duration-300 ${descriptionExpanded ? 'max-h-[200rem]' : 'max-h-48'}`}>
                     {descriptionContent || product.description || product.short}
                   </div>
-                  {!descriptionExpanded && descriptionHasOverflow && <div className="pointer-events-none absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-[#fbf7f2] to-transparent" aria-hidden="true" />}
+                  {!descriptionExpanded && descriptionHasOverflow && <div className="pointer-events-none absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-cream to-transparent" aria-hidden="true" />}
                 </div>
                 {(descriptionHasOverflow || descriptionExpanded) && (
                   <button type="button" aria-expanded={descriptionExpanded} onClick={() => setDescriptionExpanded((expanded) => !expanded)} className="mt-2 inline-flex min-h-10 items-center gap-1 rounded-full px-3 text-sm font-semibold text-plum transition hover:bg-blush/25">
@@ -288,98 +288,103 @@ export default function ProductDetailsClient({ initialProduct, initialRelatedPro
                   </button>
                 )}
               </div>
-              <details className="group rounded-2xl bg-ivory/80 p-4">
-                <summary className="cursor-pointer list-none font-semibold text-plum focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-plum">
-                  <span className="flex items-center justify-between">Product details <span className="text-lg transition-transform group-open:rotate-180" aria-hidden="true">⌄</span></span>
-                  <span className="mt-1 block text-xs font-normal text-muted">Materials, care, and customization</span>
+              <details className="group border-y border-sand/80 py-4">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-4 font-semibold text-plum focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-plum">
+                  <span>Materials, care & customization</span>
+                  <ChevronDown className="h-4 w-4 shrink-0 text-moss transition-transform group-open:rotate-180" aria-hidden="true" />
                 </summary>
                 <div className="mt-4 space-y-4">
-                <div>
-                  <h3 className="text-sm font-medium text-plum">Customization</h3>
-                  <div className="mt-1 text-sm text-muted">{customizationContent || product.customization || 'Made with care to your preferences.'}</div>
-                </div>
-                <div>
-                  <h3 className="text-sm font-medium text-plum">Materials</h3>
-                  <div className="mt-1 text-sm text-muted">{materialsContent || product.materials || 'Soft cotton-blend yarn and fine details.'}</div>
-                </div>
-                <div>
-                  <h3 className="text-sm font-medium text-plum">Care</h3>
-                  <div className="mt-1 text-sm text-muted">{careContent || product.care || 'Spot clean gently with a damp cloth.'}</div>
-                </div>
+                  <div>
+                    <h3 className="text-sm font-medium text-plum">Customization</h3>
+                    <div className="mt-1 text-sm text-muted">{customizationContent || product.customization || 'Made with care to your preferences.'}</div>
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-medium text-plum">Materials</h3>
+                    <div className="mt-1 text-sm text-muted">{materialsContent || product.materials || 'Soft cotton-blend yarn and fine details.'}</div>
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-medium text-plum">Care</h3>
+                    <div className="mt-1 text-sm text-muted">{careContent || product.care || 'Spot clean gently with a damp cloth.'}</div>
+                  </div>
                 </div>
               </details>
             </section>
 
-            <section ref={purchaseOptionsRef} className="mt-5 rounded-2xl border border-sand/80 bg-white/80 p-3 shadow-[0_8px_24px_rgba(95,45,75,0.05)] sm:p-4" aria-label="Purchase options">
+            <details className="group mt-5 border-y border-sand/80 py-4" aria-label="Delivery availability">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-sm font-semibold text-plum focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-plum">
+                <span>Check delivery to your area <span className="mt-1 block text-xs font-normal text-muted">Use your state or PIN code</span></span>
+                <ChevronDown className="h-4 w-4 shrink-0 text-moss transition-transform group-open:rotate-180" aria-hidden="true" />
+              </summary>
+              <div className="pt-3">
+                <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_9rem_auto]">
+                  <Select
+                    label="State (optional)"
+                    options={indiaStates.map((state) => ({ value: state, label: state }))}
+                    value={deliveryState}
+                    onChange={(value) => {
+                      setDeliveryState(value)
+                      setDeliveryResult(null)
+                    }}
+                    placeholder="Choose a state"
+                    showSearch
+                    searchPlaceholder="Search states..."
+                  />
+                  <label className="block text-sm font-semibold text-plum">
+                    PIN code (optional)
+                    <input
+                      aria-label="Delivery PIN code"
+                      inputMode="numeric"
+                      maxLength={6}
+                      value={deliveryPin}
+                      onChange={(event) => {
+                        setDeliveryPin(event.target.value.replace(/\D/g, '').slice(0, 6))
+                        setDeliveryResult(null)
+                      }}
+                      placeholder="6-digit PIN"
+                      className="mt-1.5 min-h-11 w-full rounded-xl border border-sand bg-white px-3 text-sm font-normal"
+                    />
+                  </label>
+                  <button
+                    type="button"
+                    onClick={checkDelivery}
+                    className="min-h-11 self-end rounded-xl bg-plum px-4 text-sm font-semibold text-cream"
+                  >
+                    Check
+                  </button>
+                </div>
+                {deliveryResult && (
+                  <p
+                    role={deliveryResult.available ? 'status' : 'alert'}
+                    className={`mt-2 text-sm ${deliveryResult.available ? 'text-green-800' : 'text-bloom'}`}
+                  >
+                    {deliveryResult.message}
+                  </p>
+                )}
+                {!deliveryResult &&
+                  ((product.unavailableStates && product.unavailableStates.length > 0) ||
+                    (product.unavailablePinCodes && product.unavailablePinCodes.length > 0)) && (
+                    <p className="mt-2 text-xs text-muted">
+                      Some delivery areas are excluded. Check your state or PIN code.
+                    </p>
+                  )}
+              </div>
+            </details>
+
+            <section ref={purchaseOptionsRef} className="mt-6 border-y border-sand py-4" aria-label="Purchase options">
               <div className="flex items-center gap-2 sm:gap-3">
                 <div className="inline-flex shrink-0 items-center rounded-full bg-ivory ring-1 ring-sand">
                   <button type="button" disabled={qty <= 1} className="p-3 text-plum disabled:opacity-40" aria-label="Decrease quantity" onClick={() => setQty((q) => Math.max(1, q - 1))}><Minus className="h-4 w-4" /></button>
                   <span className="min-w-7 text-center text-sm font-semibold" aria-live="polite">{qty}</span>
                   <button type="button" disabled={qty >= maxOrderQuantity} className="p-3 text-plum disabled:opacity-40" aria-label="Increase quantity" onClick={() => setQty((q) => Math.min(maxOrderQuantity, q + 1))}><Plus className="h-4 w-4" /></button>
                 </div>
-                <Button disabled={purchaseBlocked} onClick={handleAddToCart} variant="outline" className="min-h-11 min-w-0 flex-1 border-plum/30 px-3 text-sm">{product.availableForSale === false ? 'Unavailable' : maxOrderQuantity <= 0 ? 'Stock limit reached' : deliveryRestricted ? 'Not deliverable here' : goToBag ? 'Go to Bag' : addedConfirm ? 'Added to Bag' : 'Add to bag'}</Button>
-                <Button disabled={purchaseBlocked} onClick={handleBuyNow} className="min-h-11 min-w-0 flex-1 px-3 text-sm">Buy now</Button>
+                <Button disabled={purchaseBlocked} onClick={handleAddToCart} className="min-h-11 min-w-0 flex-1 px-3 text-sm">{product.availableForSale === false ? 'Unavailable' : maxOrderQuantity <= 0 ? 'Stock limit reached' : deliveryRestricted ? 'Not deliverable here' : goToBag ? 'Go to bag' : addedConfirm ? 'Added to bag' : 'Add to bag'}</Button>
+                <Button disabled={purchaseBlocked} onClick={handleBuyNow} variant="outline" className="min-h-11 min-w-0 flex-1 border-plum/30 px-3 text-sm">Buy now</Button>
               </div>
-              <div className="mt-2 flex min-h-8 items-center justify-between gap-3 border-t border-sand/70 pt-2">
+              <div className="mt-3 flex min-h-8 items-center justify-between gap-3">
                 <button type="button" onClick={() => setCustomOpen(true)} className="text-left text-xs font-medium text-plum underline decoration-plum/30 underline-offset-4 hover:decoration-plum">Request a custom version</button>
                 {hasStockCount && maxOrderQuantity > 0 && maxOrderQuantity <= 5 && <span className="text-right text-xs text-muted">Only {maxOrderQuantity} left</span>}
               </div>
               {cartFeedback && <p className="mt-2 text-sm text-plum" role="status" aria-live="polite">{cartFeedback}</p>}
-            </section>
-
-            <section className="mt-5 rounded-2xl border border-sand bg-ivory/70 p-4" aria-label="Delivery availability">
-              <h2 className="text-sm font-semibold text-plum">Check delivery availability</h2>
-              <div className="mt-3 grid gap-2 sm:grid-cols-[minmax(0,1fr)_9rem_auto]">
-                <Select
-                  label="State (optional)"
-                  options={indiaStates.map((state) => ({ value: state, label: state }))}
-                  value={deliveryState}
-                  onChange={(value) => {
-                    setDeliveryState(value)
-                    setDeliveryResult(null)
-                  }}
-                  placeholder="Choose a state"
-                  showSearch
-                  searchPlaceholder="Search states..."
-                />
-                <label className="block text-sm font-semibold text-plum">
-                  PIN code (optional)
-                  <input
-                    aria-label="Delivery PIN code"
-                    inputMode="numeric"
-                    maxLength={6}
-                    value={deliveryPin}
-                    onChange={(event) => {
-                      setDeliveryPin(event.target.value.replace(/\D/g, '').slice(0, 6))
-                      setDeliveryResult(null)
-                    }}
-                    placeholder="6-digit PIN"
-                    className="mt-1.5 min-h-11 w-full rounded-xl border border-sand bg-white px-3 text-sm font-normal"
-                  />
-                </label>
-                <button
-                  type="button"
-                  onClick={checkDelivery}
-                  className="min-h-11 self-end rounded-xl bg-plum px-4 text-sm font-semibold text-cream"
-                >
-                  Check
-                </button>
-              </div>
-              {deliveryResult && (
-                <p
-                  role={deliveryResult.available ? 'status' : 'alert'}
-                  className={`mt-2 text-sm ${deliveryResult.available ? 'text-green-800' : 'text-bloom'}`}
-                >
-                  {deliveryResult.message}
-                </p>
-              )}
-              {!deliveryResult &&
-                ((product.unavailableStates && product.unavailableStates.length > 0) ||
-                  (product.unavailablePinCodes && product.unavailablePinCodes.length > 0)) && (
-                  <p className="mt-2 text-xs text-muted">
-                    Some delivery areas are excluded. Check your state or PIN code.
-                  </p>
-                )}
             </section>
 
           </div>
