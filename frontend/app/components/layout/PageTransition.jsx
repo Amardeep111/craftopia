@@ -6,6 +6,10 @@ import { AnimatePresence, motion } from 'framer-motion'
 export default function PageTransition({ children }) {
   const pathname = usePathname()
 
+  // Keep admin navigation stable: the shared page animation makes each route
+  // change look like a reload and shifts the admin content as it remounts.
+  if (pathname?.startsWith('/admin')) return <>{children}</>
+
   return (
     <AnimatePresence mode="wait">
       <motion.div

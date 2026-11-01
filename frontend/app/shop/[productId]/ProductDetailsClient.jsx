@@ -203,7 +203,27 @@ export default function ProductDetailsClient({ initialProduct, initialRelatedPro
                 . Calculated at checkout.
               </p>
             )}
-            <p className="mt-4 leading-relaxed text-muted">{product.description}</p>
+            <section className="mt-5 space-y-4" aria-label="Product description and details">
+              <div>
+                <h2 className="font-semibold text-plum">Description</h2>
+                <p className="mt-1 leading-relaxed text-muted">{product.description || product.short}</p>
+              </div>
+              <div className="space-y-4 rounded-2xl bg-ivory/80 p-4">
+                <h2 className="font-semibold text-plum">Product details</h2>
+                <div>
+                  <h3 className="text-sm font-medium text-plum">Customization</h3>
+                  <p className="mt-1 text-sm text-muted">{product.customization || 'Made with care to your preferences.'}</p>
+                </div>
+                <div>
+                  <h3 className="text-sm font-medium text-plum">Materials</h3>
+                  <p className="mt-1 text-sm text-muted">{product.materials || 'Soft cotton-blend yarn and fine details.'}</p>
+                </div>
+                <div>
+                  <h3 className="text-sm font-medium text-plum">Care</h3>
+                  <p className="mt-1 text-sm text-muted">{product.care || 'Spot clean gently with a damp cloth.'}</p>
+                </div>
+              </div>
+            </section>
 
             <section className="mt-5 rounded-2xl border border-sand bg-ivory/70 p-4" aria-label="Delivery availability">
               <h2 className="text-sm font-semibold text-plum">Check delivery availability</h2>
@@ -259,22 +279,6 @@ export default function ProductDetailsClient({ initialProduct, initialRelatedPro
                   </p>
                 )}
             </section>
-
-            {/* Details */}
-            <div className="mt-8 space-y-4 rounded-3xl bg-ivory/80 p-5">
-              <div>
-                <h2 className="font-semibold text-plum">Customization</h2>
-                <p className="mt-1 text-sm text-muted">{product.customization || 'Made with care to your preferences.'}</p>
-              </div>
-              <div>
-                <h2 className="font-semibold text-plum">Materials</h2>
-                <p className="mt-1 text-sm text-muted">{product.materials || 'Soft cotton-blend yarn and fine details.'}</p>
-              </div>
-              <div>
-                <h2 className="font-semibold text-plum">Care</h2>
-                <p className="mt-1 text-sm text-muted">{product.care || 'Spot clean gently with a damp cloth.'}</p>
-              </div>
-            </div>
 
             {/* Purchase controls */}
             <div className="mt-8 flex flex-wrap items-center gap-4">

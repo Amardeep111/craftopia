@@ -7,6 +7,7 @@ export default function ScrollToTop() {
   const pathname = usePathname()
 
   useEffect(() => {
+    if (pathname?.startsWith('/admin')) return
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
   }, [pathname])
 

@@ -5,6 +5,7 @@ import { getAdminSession } from '@/lib/auth/admin';
 import { Shield, Package, Users, TrendingUp, CheckCircle, Tag, Settings, UserRound, ClipboardList } from 'lucide-react';
 import AdminLogoutButton from './logout-button';
 import { AdminAccessProvider } from './access-context';
+import AdminNavLink from './admin-nav-link';
 
 export default async function AdminLayout({ children }) {
   const token = (await cookies()).get('jamaes_session')?.value;
@@ -59,14 +60,5 @@ export default async function AdminLayout({ children }) {
       </main>
     </div>
     </AdminAccessProvider>
-  );
-}
-
-function AdminNavLink({ href, icon, label }) {
-  return (
-    <Link href={href} className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-cream/80 hover:bg-plum/50 hover:text-cream transition">
-      {icon}
-      <span>{label}</span>
-    </Link>
   );
 }
