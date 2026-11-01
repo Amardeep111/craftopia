@@ -8,13 +8,15 @@ import (
 	"craftopia-backend/internal/database"
 	"craftopia-backend/internal/models"
 	"craftopia-backend/internal/utils"
-	
+
 	"github.com/jackc/pgx/v5"
 )
 
 type SessionRepository struct {
 	db *database.DB
 }
+
+var ErrInactiveAdminSession = errors.New("admin session is no longer active")
 
 func NewSessionRepository(db *database.DB) *SessionRepository {
 	return &SessionRepository{db: db}
@@ -74,6 +76,47 @@ func (r *SessionRepository) Verify(ctx context.Context, token string) (*models.S
 
 	s.User = &u
 	return &s, &u, nil
+}
+
+// ExtendAdminSession implements a sliding one-hour admin inactivity timeout.
+func (r *SessionRepository) ExtendAdminSession(ctx context.Context, token string, duration, renewWindow time.Duration) (time.Time, error) {
+	var expiresAt time.Time
+	err := r.db.Pool.QueryRow(ctx, `
+		WITH extended AS (
+			UPDATE "Session" s
+			SET "expiresAt" = NOW() + $2
+			FROM "User" u
+			WHERE s.token = $1
+			  AND s."userId" = u.id
+			  AND s."revokedAt" IS NULL
+			  AND s."expiresAt" > NOW()
+			  AND s."expiresAt" <= NOW() + $3
+			  AND u.active = true
+			  AND u.role IN ('ADMIN', 'SUPERADMIN')
+			  AND u."adminActive" = true
+			RETURNING s."expiresAt"
+		)
+		SELECT "expiresAt" FROM extended
+		UNION ALL
+		SELECT s."expiresAt"
+		FROM "Session" s
+		JOIN "User" u ON s."userId" = u.id
+		WHERE s.token = $1
+		  AND s."revokedAt" IS NULL
+		  AND s."expiresAt" > NOW()
+		  AND u.active = true
+		  AND u.role IN ('ADMIN', 'SUPERADMIN')
+		  AND u."adminActive" = true
+		  AND NOT EXISTS (SELECT 1 FROM extended)
+		LIMIT 1;
+	`, token, duration, renewWindow).Scan(&expiresAt)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return time.Time{}, ErrInactiveAdminSession
+	}
+	if err != nil {
+		return time.Time{}, err
+	}
+	return expiresAt, nil
 }
 
 // Invalidate marks a single session as revoked

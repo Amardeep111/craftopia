@@ -6,6 +6,7 @@ import { Shield, Package, Users, TrendingUp, CheckCircle, Tag, Settings, UserRou
 import AdminLogoutButton from './logout-button';
 import { AdminAccessProvider } from './access-context';
 import AdminNavLink from './admin-nav-link';
+import AdminSessionHeartbeat from './AdminSessionHeartbeat';
 
 export default async function AdminLayout({ children }) {
   const token = (await cookies()).get('jamaes_session')?.value;
@@ -20,6 +21,7 @@ export default async function AdminLayout({ children }) {
   return (
     <AdminAccessProvider role={role} permissions={permissions}>
     <div className="min-h-screen bg-ink/5">
+      <AdminSessionHeartbeat />
       <nav className="sticky top-0 z-40 flex min-h-[64px] flex-wrap items-center justify-between gap-2 border-b border-plum/20 bg-plum px-3 py-3 shadow-soft sm:px-4 md:px-6">
         <div className="flex items-center gap-3">
           <Shield className="h-6 w-6 text-cream" aria-hidden="true" />

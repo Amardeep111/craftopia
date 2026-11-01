@@ -69,6 +69,7 @@ func Setup(cfg *config.Config, db *database.DB) *App {
 	mux.HandleFunc("POST /api/auth/signup", authHandler.Signup)
 	mux.HandleFunc("POST /api/auth/login", authHandler.Login)
 	mux.HandleFunc("POST /api/auth/logout", authHandler.Logout)
+	mux.Handle("POST /api/auth/heartbeat", adminAuth(authHandler.Heartbeat))
 	mux.HandleFunc("POST /api/auth/otp", authHandler.RequestOTP)
 	mux.HandleFunc("POST /api/auth/verify", authHandler.VerifyOTP)
 	mux.HandleFunc("GET /api/auth/password-key", authHandler.PasswordKey)

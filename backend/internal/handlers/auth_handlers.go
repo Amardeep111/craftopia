@@ -7,6 +7,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"math/big"
 	"net/http"
@@ -24,6 +25,12 @@ type AuthHandler struct {
 	sessionRepo *repository.SessionRepository
 	cfg         *config.Config
 }
+
+const (
+	customerSessionDuration = 7 * 24 * time.Hour
+	adminSessionDuration    = time.Hour
+	adminSessionRenewWindow = 15 * time.Minute
+)
 
 func NewAuthHandler(userRepo *repository.UserRepository, sessionRepo *repository.SessionRepository, cfg *config.Config) *AuthHandler {
 	return &AuthHandler{
@@ -99,7 +106,7 @@ func (h *AuthHandler) Signup(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Create stateful session in PostgreSQL
-	session, err := h.sessionRepo.Create(r.Context(), user.ID, 7*24*time.Hour)
+	session, err := h.sessionRepo.Create(r.Context(), user.ID, customerSessionDuration)
 	if err != nil {
 		slog.Error("Signup session creation failed", "user_id", user.ID, "error", err)
 		utils.Error(w, http.StatusInternalServerError, "Failed to create session")
@@ -112,16 +119,7 @@ func (h *AuthHandler) Signup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	isProd := h.cfg.Environment == "production"
-	http.SetCookie(w, &http.Cookie{
-		Name:     "jamaes_session",
-		Value:    encryptedCookie,
-		Path:     "/",
-		MaxAge:   7 * 24 * 3600,
-		HttpOnly: true,
-		Secure:   isProd,
-		SameSite: http.SameSiteLaxMode,
-	})
+	h.setSessionCookie(w, encryptedCookie, customerSessionDuration)
 
 	utils.Success(w, http.StatusCreated, "Account created successfully", map[string]any{
 		"token": encryptedCookie,
@@ -190,8 +188,13 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Create stateful session in PostgreSQL
-	session, err := h.sessionRepo.Create(r.Context(), user.ID, 7*24*time.Hour)
+	// Administrators get a one-hour inactivity timeout; customer sessions retain
+	// their existing seven-day duration.
+	sessionDuration := customerSessionDuration
+	if user.Role == "ADMIN" || user.Role == "SUPERADMIN" {
+		sessionDuration = adminSessionDuration
+	}
+	session, err := h.sessionRepo.Create(r.Context(), user.ID, sessionDuration)
 	if err != nil {
 		utils.Error(w, http.StatusInternalServerError, "Failed to create session")
 		return
@@ -203,16 +206,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	isProd := h.cfg.Environment == "production"
-	http.SetCookie(w, &http.Cookie{
-		Name:     "jamaes_session",
-		Value:    encryptedCookie,
-		Path:     "/",
-		MaxAge:   7 * 24 * 3600,
-		HttpOnly: true,
-		Secure:   isProd,
-		SameSite: http.SameSiteLaxMode,
-	})
+	h.setSessionCookie(w, encryptedCookie, sessionDuration)
 
 	utils.Success(w, http.StatusOK, "Logged in successfully", map[string]any{
 		"token": encryptedCookie,
@@ -223,6 +217,48 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 			"role":  user.Role,
 		},
 	})
+}
+
+func (h *AuthHandler) setSessionCookie(w http.ResponseWriter, value string, duration time.Duration) {
+	http.SetCookie(w, &http.Cookie{
+		Name:     "jamaes_session",
+		Value:    value,
+		Path:     "/",
+		MaxAge:   int(duration.Seconds()),
+		Expires:  time.Now().Add(duration),
+		HttpOnly: true,
+		Secure:   h.cfg.Environment == "production",
+		SameSite: http.SameSiteLaxMode,
+	})
+}
+
+// Heartbeat extends an authenticated admin session while the admin is active.
+func (h *AuthHandler) Heartbeat(w http.ResponseWriter, r *http.Request) {
+	claims, err := middleware.GetUserFromContext(r.Context())
+	if err != nil || claims == nil || (claims.Role != "ADMIN" && claims.Role != "SUPERADMIN") {
+		utils.Error(w, http.StatusForbidden, "Administrator access required")
+		return
+	}
+	rawToken := middleware.GetRawSessionTokenFromContext(r.Context())
+	cookie, cookieErr := r.Cookie("jamaes_session")
+	if rawToken == "" || cookieErr != nil {
+		utils.Error(w, http.StatusUnauthorized, "An active admin session is required")
+		return
+	}
+
+	expiresAt, err := h.sessionRepo.ExtendAdminSession(r.Context(), rawToken, adminSessionDuration, adminSessionRenewWindow)
+	if err != nil {
+		if errors.Is(err, repository.ErrInactiveAdminSession) {
+			utils.Error(w, http.StatusUnauthorized, "Admin session expired. Sign in again.")
+			return
+		}
+		slog.Error("Failed to extend admin session", "user_id", claims.UserID, "error", err)
+		utils.Error(w, http.StatusInternalServerError, "Could not extend admin session")
+		return
+	}
+
+	h.setSessionCookie(w, cookie.Value, time.Until(expiresAt))
+	utils.Success(w, http.StatusOK, "Admin session extended", map[string]time.Time{"expiresAt": expiresAt})
 }
 
 func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
