@@ -188,8 +188,8 @@ func (r *ProductRepository) GetProductByIDOrSlug(ctx context.Context, identifier
 	return &p, nil
 }
 
-// GetAllProductsAdmin returns all products (including unpublished) for admin management
-func (r *ProductRepository) GetAllProductsAdmin(ctx context.Context) ([]models.Product, error) {
+// GetAdminProductByID returns the full record for editing, including hidden products.
+func (r *ProductRepository) GetAdminProductByID(ctx context.Context, id string) (*models.Product, error) {
 	query := `
 		SELECT p.id, p.name, p.slug, p."categoryId", COALESCE(p.price, 0), COALESCE(p."discountPercent", 0), COALESCE(p."gstPercent", 0),
 		       COALESCE(p."codFee", 0), COALESCE(p."otherCharge", 0), COALESCE(p.featured, false), p.short, p.description, p.materials, p.care,
@@ -200,24 +200,71 @@ func (r *ProductRepository) GetAllProductsAdmin(ctx context.Context) ([]models.P
 		       COALESCE(c.id, p."categoryId"), COALESCE(c.name, ''), COALESCE(c.slug, '')
 		FROM "Product" p
 		LEFT JOIN "Category" c ON p."categoryId" = c.id
-		ORDER BY p.name ASC;
+		WHERE p.id = $1
+		LIMIT 1;
 	`
-	rows, err := r.db.Pool.Query(ctx, query)
+	var product models.Product
+	var category models.Category
+	err := r.db.Pool.QueryRow(ctx, query, id).Scan(
+		&product.ID, &product.Name, &product.Slug, &product.CategoryID, &product.Price, &product.DiscountPercent, &product.GSTPercent,
+		&product.CODFee, &product.OtherCharge, &product.Featured, &product.Short, &product.Description, &product.Materials, &product.Care,
+		&product.Customization, &product.Visual, &product.Palette, &product.Images, &product.ImageURL, &product.CloudinaryPublicID,
+		&product.Stock, &product.Published, &product.AvailableForSale, &product.UnavailableStates, &product.UnavailablePinCodes,
+		&product.AllowedPaymentMethods, &product.CreatedAt, &product.UpdatedAt,
+		&category.ID, &category.Name, &category.Slug,
+	)
 	if err != nil {
-		return nil, fmt.Errorf("failed to query admin products: %w", err)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("failed to get admin product: %w", err)
+	}
+	product.Category = &category
+	return &product, nil
+}
+
+// GetAllProductsAdmin returns one searchable page of products, including unpublished listings.
+func (r *ProductRepository) GetAllProductsAdmin(ctx context.Context, page, pageSize int, search string) (*PageResult[models.AdminProductSummary], error) {
+	pattern := "%" + search + "%"
+	var total int64
+	if err := r.db.Pool.QueryRow(ctx, `
+		SELECT COUNT(*)
+		FROM "Product" p
+		LEFT JOIN "Category" c ON p."categoryId" = c.id
+		WHERE $1 = '' OR p.name ILIKE $2 OR p.slug ILIKE $2 OR c.name ILIKE $2;
+	`, search, pattern).Scan(&total); err != nil {
+		return nil, fmt.Errorf("failed to count admin products: %w", err)
+	}
+	offset := (page - 1) * pageSize
+	query := `
+		SELECT p.id, p.name, p.slug, p."categoryId", COALESCE(p.price, 0), COALESCE(p."discountPercent", 0), COALESCE(p."gstPercent", 0),
+		       COALESCE(p."codFee", 0), COALESCE(p."otherCharge", 0), COALESCE(p.featured, false),
+		       p.visual, p.palette, p.images, p."imageUrl",
+		       COALESCE(p.stock, 0), COALESCE(p.published, false), COALESCE(p."availableForSale", true),
+		       COALESCE(p."unavailableStates", ARRAY[]::TEXT[]), COALESCE(p."unavailablePinCodes", ARRAY[]::TEXT[]),
+		       COALESCE(p."allowedPaymentMethods", ARRAY['upi']::TEXT[]),
+		       COALESCE(c.id, p."categoryId"), COALESCE(c.name, ''), COALESCE(c.slug, '')
+		FROM "Product" p
+		LEFT JOIN "Category" c ON p."categoryId" = c.id
+		WHERE $1 = '' OR p.name ILIKE $2 OR p.slug ILIKE $2 OR c.name ILIKE $2
+		ORDER BY p.name ASC, p.id ASC
+		LIMIT $3 OFFSET $4;
+	`
+	rows, err := r.db.Pool.Query(ctx, query, search, pattern, pageSize, offset)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query admin product page: %w", err)
 	}
 	defer rows.Close()
 
-	products := make([]models.Product, 0)
+	products := make([]models.AdminProductSummary, 0)
 	for rows.Next() {
-		var p models.Product
+		var p models.AdminProductSummary
 		var cat models.Category
 		err := rows.Scan(
 			&p.ID, &p.Name, &p.Slug, &p.CategoryID, &p.Price, &p.DiscountPercent, &p.GSTPercent,
-			&p.CODFee, &p.OtherCharge, &p.Featured, &p.Short, &p.Description, &p.Materials, &p.Care,
-			&p.Customization, &p.Visual, &p.Palette, &p.Images, &p.ImageURL, &p.CloudinaryPublicID,
+			&p.CODFee, &p.OtherCharge, &p.Featured, &p.Visual, &p.Palette, &p.Images, &p.ImageURL,
 			&p.Stock, &p.Published, &p.AvailableForSale, &p.UnavailableStates, &p.UnavailablePinCodes,
-			&p.AllowedPaymentMethods, &p.CreatedAt, &p.UpdatedAt,
+			&p.AllowedPaymentMethods,
 			&cat.ID, &cat.Name, &cat.Slug,
 		)
 		if err != nil {
@@ -227,9 +274,9 @@ func (r *ProductRepository) GetAllProductsAdmin(ctx context.Context) ([]models.P
 		products = append(products, p)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("failed while reading admin products: %w", err)
+		return nil, fmt.Errorf("failed while reading admin product page: %w", err)
 	}
-	return products, nil
+	return newPage(products, page, pageSize, total), nil
 }
 
 // CreateProduct inserts a new product

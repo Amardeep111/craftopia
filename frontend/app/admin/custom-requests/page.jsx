@@ -1,11 +1,12 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { ExternalLink, Image as ImageIcon, PackageCheck, CheckCircle2, X, MapPin, Calculator } from 'lucide-react'
 import { useAdminAccess } from '../access-context'
 import Select from '@/components/ui/Select'
 import { STATE_OPTIONS, getStateAndCityFromPin } from '@/lib/address/india'
+import AdminPagination from '../components/AdminPagination'
 
 const statuses = [
   ['NEW', 'New'], ['REVIEWING', 'Reviewing'], ['QUOTED', 'Quote prepared'], ['ACCEPTED', 'Accepted'],
@@ -33,6 +34,10 @@ export default function AdminCustomRequests() {
   const { can } = useAdminAccess()
   const canManage = can('customRequests.manage')
   const [requests, setRequests] = useState([])
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(25)
+  const [total, setTotal] = useState(0)
+  const [pages, setPages] = useState(0)
   const [query, setQuery] = useState('')
   const [loading, setLoading] = useState(true)
   const [savingId, setSavingId] = useState('')
@@ -64,11 +69,16 @@ export default function AdminCustomRequests() {
 
   async function load() {
     setError('')
+    setLoading(true)
     try {
-      const response = await fetch('/api/admin/custom-requests', { cache: 'no-store' })
+      const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) })
+      if (query.trim()) params.set('search', query.trim())
+      const response = await fetch(`/api/admin/custom-requests?${params}`, { cache: 'no-store' })
       const result = await response.json()
       if (!response.ok || !result.success) throw new Error(result.error || 'Could not load custom requests.')
-      setRequests(result.data)
+      setRequests(Array.isArray(result.data?.items) ? result.data.items : [])
+      setTotal(result.data?.total || 0)
+      setPages(result.data?.pages || 0)
     } catch (cause) {
       setError(cause.message || 'Could not load custom requests.')
     } finally {
@@ -77,8 +87,9 @@ export default function AdminCustomRequests() {
   }
 
   useEffect(() => {
-    load()
-  }, [])
+    const timer = window.setTimeout(load, 250)
+    return () => window.clearTimeout(timer)
+  }, [page, pageSize, query])
 
   function update(id, patch) {
     setRequests((items) => items.map((item) => (item.id === id ? { ...item, ...patch } : item)))
@@ -213,16 +224,6 @@ export default function AdminCustomRequests() {
     }
   }
 
-  const filtered = useMemo(() => {
-    const value = query.trim().toLowerCase()
-    if (!value) return requests
-    return requests.filter((item) =>
-      [item.name, item.contact, item.idea, item.category, item.status].some((part) =>
-        String(part || '').toLowerCase().includes(value)
-      )
-    )
-  }, [requests, query])
-
   // Computed modal calculations
   const modalBasePrice = Math.max(0, Math.round(Number(modalForm.basePrice || 0)))
   const modalGstAmount = Math.round((modalBasePrice * Number(modalForm.gstPercent || 0)) / 100)
@@ -246,7 +247,7 @@ export default function AdminCustomRequests() {
         Search requests
         <input
           value={query}
-          onChange={(event) => setQuery(event.target.value)}
+          onChange={(event) => { setPage(1); setQuery(event.target.value) }}
           placeholder="Name, contact, idea, or status"
           className="mt-1.5 min-h-11 w-full rounded-xl border border-sand bg-white px-3 text-sm text-plum"
         />
@@ -254,16 +255,16 @@ export default function AdminCustomRequests() {
 
       {loading ? (
         <p role="status">Loading custom requests…</p>
-      ) : filtered.length === 0 ? (
+      ) : requests.length === 0 ? (
         <div className="rounded-2xl bg-cream p-8 text-center shadow-soft ring-1 ring-sand">
           <h2 className="font-display text-xl text-plum">
-            {requests.length ? 'No requests match' : 'No custom requests yet'}
+            {total ? 'No requests on this page' : query.trim() ? 'No requests match' : 'No custom requests yet'}
           </h2>
           <p className="mt-2 text-sm text-muted">New custom order ideas will appear here.</p>
         </div>
       ) : (
         <div className="space-y-4">
-          {filtered.map((item) => {
+          {requests.map((item) => {
             const orderInfo = getOrderFromNotes(item.adminNotes)
             const isTerminal = ['COMPLETED', 'DECLINED'].includes(item.status)
 
@@ -429,6 +430,7 @@ export default function AdminCustomRequests() {
           })}
         </div>
       )}
+      {!loading && <AdminPagination page={page} pageSize={pageSize} total={total} pages={pages} onPageChange={setPage} onPageSizeChange={(value) => { setPage(1); setPageSize(value) }} />}
 
       {/* ── ACCEPT CUSTOM REQUEST & CREATE ORDER MODAL ── */}
       {acceptItem && (

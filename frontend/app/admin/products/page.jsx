@@ -2,9 +2,11 @@
 import ProductImage from '@/components/ui/ProductImage'
 import { uploadProductImage } from '@/lib/images'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useAdminAccess } from '../access-context'
 import { indiaStates } from '@/lib/india-states'
+import MarkdownEditor from '../components/MarkdownEditor'
+import AdminPagination from '../components/AdminPagination'
 
 const emptyProduct = {
   name: '', slug: '', categoryId: '', price: '0', discountPercent: '0', gstPercent: '0', codFee: '0', otherCharge: '0',
@@ -95,6 +97,9 @@ function ProductEditor({ initial, categories, onCancel, onSaved }) {
   function textarea(name, label, required = false) {
     return <label className="block text-sm font-medium text-plum">{label}<textarea aria-label={label} required={required} rows={3} value={form[name] ?? ''} onChange={(event) => update(name, event.target.value)} className="mt-1.5 w-full rounded-xl border border-sand bg-white px-3 py-2 text-sm text-plum outline-none focus:border-bloom focus:ring-2 focus:ring-bloom/20" /></label>
   }
+  function markdownField(name, label, required = false) {
+    return <div className="block text-sm font-medium text-plum"><MarkdownEditor id={`product-${name}`} label={label} value={form[name] ?? ''} onChange={(value) => update(name, value)} rows={4} required={required} /></div>
+  }
 
   async function submit(event) {
     event.preventDefault(); setError(''); setNotice(''); setSaving(true)
@@ -129,7 +134,7 @@ function ProductEditor({ initial, categories, onCancel, onSaved }) {
       <label className="block text-sm font-medium text-plum">Category<select aria-label="Category" required value={form.categoryId} onChange={(event) => update('categoryId', event.target.value)} className="mt-1.5 min-h-11 w-full rounded-xl border border-sand bg-white px-3 py-2 text-sm"><option value="">Choose category</option>{categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</select></label>
       <div><p className="text-sm font-medium text-plum">Product photo gallery</p><div className="mt-1.5 rounded-2xl border-2 border-dashed border-sand bg-white p-4 text-center"><input id="product-image-files" aria-label="Upload product images" type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={(event) => { uploadImages(event.target.files); event.target.value = '' }} className="sr-only" /><label htmlFor="product-image-files" className="inline-flex min-h-10 cursor-pointer items-center justify-center rounded-full bg-plum px-4 text-sm font-semibold text-cream">Choose product photos</label><p className="mt-2 text-xs text-muted">Upload up to 8 JPEG, PNG, or WebP images, max 4 MB each.</p>{uploading && <p role="status" className="mt-2 text-xs text-muted">Uploading images…</p>}</div>{form.images.length > 0 && <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-4">{form.images.map((url, index) => <div key={url} className="relative aspect-square overflow-hidden rounded-xl border border-sand bg-ivory"><img src={url} alt={`Product gallery image ${index + 1}`} className="h-full w-full object-cover" /><span className="absolute bottom-1 left-1 rounded-full bg-ink/75 px-2 py-0.5 text-[10px] text-white">{index === 0 ? 'Main photo' : `Photo ${index + 1}`}</span>{index > 0 && <button type="button" aria-label={`Make product photo ${index + 1} the main photo`} onClick={() => setForm((current) => { const images = [url, ...current.images.filter((item) => item !== url)]; return { ...current, images, imageUrl: url } })} className="absolute bottom-8 left-1 rounded-full bg-white/95 px-2 py-1 text-[10px] font-semibold text-plum shadow">Set as main</button>}<button type="button" aria-label={`Remove product photo ${index + 1}`} onClick={() => setForm((current) => { const images = current.images.filter((item) => item !== url); return { ...current, images, imageUrl: images[0] || '' } })} className="absolute right-1 top-1 rounded-full bg-white/95 px-2 py-1 text-xs font-bold text-plum shadow">×</button></div>)}</div>}{field('imageUrl', 'Main image URL (optional)', { placeholder: 'https://…' })}</div>
       <label className="block text-sm font-medium text-plum">Illustration style<select aria-label="Illustration style" value={form.visual} onChange={(event) => update('visual', event.target.value)} className="mt-1.5 min-h-11 w-full rounded-xl border border-sand bg-white px-3 py-2 text-sm"><option value="">Choose style</option>{visuals.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
-    </div>{textarea('short', 'Short description', true)}{textarea('description', 'Full description', true)}<div className="grid gap-4 sm:grid-cols-3">{textarea('materials', 'Materials')}{textarea('care', 'Care instructions')}{textarea('customization', 'Customization options')}</div></section>
+    </div>{textarea('short', 'Short description', true)}{markdownField('description', 'Full description', true)}<div className="grid gap-4 sm:grid-cols-3">{markdownField('materials', 'Materials')}{markdownField('care', 'Care instructions')}{markdownField('customization', 'Customization options')}</div></section>
 
     <section className="space-y-3 border-t border-sand pt-5"><h3 className="font-semibold text-plum">Price and inventory</h3><div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
       {field('price', 'Price (₹)', { type: 'number', min: 0, required: true })}{field('discountPercent', 'Discount (%)', { type: 'number', min: 0, max: 90 })}{field('gstPercent', 'GST (%)', { type: 'number', min: 0, max: 100 })}{field('codFee', 'COD fee (₹)', { type: 'number', min: 0 })}{field('otherCharge', 'Other fee/item (₹)', { type: 'number', min: 0 })}{field('stock', 'Units in stock', { type: 'number', min: 0, required: true })}
@@ -154,8 +159,13 @@ export default function AdminProducts() {
   const canManage = can('products.manage')
   const [products, setProducts] = useState([])
   const [categories, setCategories] = useState([])
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(25)
+  const [total, setTotal] = useState(0)
+  const [pages, setPages] = useState(0)
   const [editorProduct, setEditorProduct] = useState(null)
   const [editorOpen, setEditorOpen] = useState(false)
+  const [editingId, setEditingId] = useState('')
   const [search, setSearch] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
@@ -169,21 +179,45 @@ export default function AdminProducts() {
 
   async function load() {
     try {
-      const [productsResponse, categoriesResponse] = await Promise.all([fetch('/api/admin/products', { cache: 'no-store' }), fetch('/api/categories', { cache: 'no-store' })])
-      const [productResult, categoryResult] = await Promise.all([productsResponse.json(), categoriesResponse.json()])
+      setLoading(true)
+      const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) })
+      if (search.trim()) params.set('search', search.trim())
+      const productsResponse = await fetch(`/api/admin/products?${params}`, { cache: 'no-store' })
+      const productResult = await productsResponse.json()
       if (!productsResponse.ok || !productResult.success) throw new Error(productResult.error || 'Could not load products.')
-      setProducts(productResult.data)
-      setCategories(categoryResult.success ? categoryResult.data : [])
+      setProducts(Array.isArray(productResult.data?.items) ? productResult.data.items : [])
+      setTotal(productResult.data?.total || 0)
+      setPages(productResult.data?.pages || 0)
+      setError('')
     } catch (cause) { setError(cause.message || 'Could not load products.') }
     finally { setLoading(false) }
   }
-  useEffect(() => { load() }, [])
+  useEffect(() => {
+    fetch('/api/categories', { cache: 'no-store' })
+      .then((response) => response.json())
+      .then((result) => setCategories(result.success && Array.isArray(result.data) ? result.data : []))
+      .catch(() => setCategories([]))
+  }, [])
+  useEffect(() => {
+    const timer = window.setTimeout(load, 250)
+    return () => window.clearTimeout(timer)
+  }, [page, pageSize, search])
 
-  const filteredProducts = useMemo(() => {
-    const value = search.trim().toLowerCase()
-    if (!value) return products
-    return products.filter((product) => `${product.name} ${product.slug} ${product.category?.name || ''}`.toLowerCase().includes(value))
-  }, [products, search])
+  async function openEditor(product) {
+    setError('')
+    setEditingId(product.id)
+    try {
+      const response = await fetch(`/api/admin/products/${encodeURIComponent(product.id)}`, { cache: 'no-store' })
+      const result = await response.json()
+      if (!response.ok || !result.success) throw new Error(result.error || 'Could not load product details.')
+      setEditorProduct(result.data)
+      setEditorOpen(true)
+    } catch (cause) {
+      setError(cause.message || 'Could not load product details.')
+    } finally {
+      setEditingId('')
+    }
+  }
 
   function status(product) {
     if (!product.published) return { label: 'Hidden from shop', style: 'bg-ink/10 text-ink' }
@@ -196,9 +230,9 @@ export default function AdminProducts() {
   return <section className="space-y-6">
     <header className="flex flex-wrap items-start justify-between gap-4"><div><h1 className="font-display text-3xl text-plum">Products</h1><p className="mt-1 text-sm text-muted">Create listings and manage pricing, inventory, taxes, fees, and delivery areas.</p></div>{canManage && <button onClick={() => { setEditorProduct(null); setEditorOpen(true); setError('') }} className="min-h-11 rounded-full bg-plum px-5 font-semibold text-cream shadow-soft">+ Add product</button>}</header>
     {error && <p role="alert" className="rounded-xl bg-bloom/10 p-3 text-sm text-bloom">{error}</p>}
-    {editorOpen && <div ref={editorRef} className="scroll-mt-24" tabIndex={-1} aria-label={editorProduct ? `Edit ${editorProduct.name}` : 'Add a product'}><ProductEditor key={editorProduct?.id || 'new'} initial={editorProduct} categories={categories} onCancel={() => setEditorOpen(false)} onSaved={async () => { await load(); setEditorOpen(false) }} /></div>}
-    <label className="block max-w-md text-sm text-muted">Search catalog<input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Product name, URL, or category" className="mt-1.5 min-h-11 w-full rounded-xl border border-sand bg-white px-3 text-sm text-plum" /></label>
-    {loading ? <p role="status">Loading products…</p> : filteredProducts.length === 0 ? <div className="rounded-2xl bg-cream p-8 text-center shadow-soft ring-1 ring-sand"><h2 className="font-display text-xl text-plum">{products.length ? 'No products match' : 'Your catalog is empty'}</h2><p className="mt-2 text-sm text-muted">{products.length ? 'Try a different search.' : 'Add your first product to start building your store.'}</p></div> : <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{filteredProducts.map((product) => {
+    {editorOpen && <div ref={editorRef} className="scroll-mt-24" tabIndex={-1} aria-label={editorProduct ? `Edit ${editorProduct.name}` : 'Add a product'}><ProductEditor key={editorProduct?.id || 'new'} initial={editorProduct} categories={categories} onCancel={() => setEditorOpen(false)} onSaved={async () => { if (editorProduct) await load(); else setPage(1); setEditorOpen(false) }} /></div>}
+    <label className="block max-w-md text-sm text-muted">Search catalog<input value={search} onChange={(event) => { setPage(1); setSearch(event.target.value) }} placeholder="Product name, URL, or category" className="mt-1.5 min-h-11 w-full rounded-xl border border-sand bg-white px-3 text-sm text-plum" /></label>
+    {loading ? <p role="status">Loading products…</p> : products.length === 0 ? <div className="rounded-2xl bg-cream p-8 text-center shadow-soft ring-1 ring-sand"><h2 className="font-display text-xl text-plum">{total ? 'No products on this page' : search.trim() ? 'No products match' : 'Your catalog is empty'}</h2><p className="mt-2 text-sm text-muted">{total || search.trim() ? 'Try another page or search.' : 'Add your first product to start building your store.'}</p></div> : <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{products.map((product) => {
       const currentStatus = status(product)
       const restrictedLocations = [...(product.unavailableStates || []), ...(product.unavailablePinCodes || [])]
       return <article key={product.id} className="min-w-0 overflow-hidden rounded-2xl bg-cream p-4 shadow-soft ring-1 ring-sand sm:p-5">
@@ -209,8 +243,9 @@ export default function AdminProducts() {
         <div className="flex items-start justify-between gap-3 pt-4"><div className="min-w-0"><h2 className="break-words font-display text-xl text-plum">{product.name}</h2><p className="mt-1 break-all text-xs text-muted">{product.slug} · {product.category?.name || 'Uncategorized'}</p></div><span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${currentStatus.style}`}>{currentStatus.label}</span></div>
         <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-2 border-y border-sand py-3 text-sm"><span className="text-muted">Price</span><strong>{money(product.price)}</strong><span className="text-muted">Discount</span><strong>{product.discountPercent || 0}%</strong><span className="text-muted">GST</span><strong>{product.gstPercent || 0}%</strong><span className="text-muted">COD + other fees</span><strong>{money((product.codFee || 0) + (product.otherCharge || 0))}</strong><span className="text-muted">Inventory</span><strong>{product.stock} units</strong><span className="text-muted">Listing</span><strong>{product.published ? 'Published' : 'Hidden'}</strong><span className="text-muted">Purchasable</span><strong>{product.availableForSale === false ? 'Paused' : 'Yes'}</strong><span className="text-muted">Payment</span><strong>{(product.allowedPaymentMethods || ['upi']).map((method) => method.toUpperCase()).join(' + ')}</strong><span className="text-muted">Featured</span><strong>{product.featured ? 'Yes' : 'No'}</strong></div>
         <p className="mt-3 min-h-10 text-xs leading-5 text-muted">{restrictedLocations.length ? `Delivery blocked in: ${restrictedLocations.join(', ')}` : 'Delivery available across all locations.'}</p>
-        {canManage && <button onClick={() => { setEditorProduct(product); setEditorOpen(true); setError('') }} className="mt-3 min-h-11 w-full rounded-xl border border-plum/30 bg-white px-4 font-semibold text-plum hover:bg-blush/30">Edit product settings</button>}
+        {canManage && <button disabled={editingId === product.id} onClick={() => openEditor(product)} className="mt-3 min-h-11 w-full rounded-xl border border-plum/30 bg-white px-4 font-semibold text-plum hover:bg-blush/30 disabled:opacity-60">{editingId === product.id ? 'Loading details…' : 'Edit product settings'}</button>}
       </article>
     })}</div>}
+    {!loading && <AdminPagination page={page} pageSize={pageSize} total={total} pages={pages} onPageChange={setPage} onPageSizeChange={(value) => { setPage(1); setPageSize(value) }} />}
   </section>
 }

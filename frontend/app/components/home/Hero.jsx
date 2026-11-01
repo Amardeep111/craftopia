@@ -4,6 +4,7 @@ import Button from '../ui/Button'
 import CraftIllustration from '../ui/CraftIllustration'
 import { Blob, FlowerBurst } from '../ui/Decor'
 import { getSiteContent } from '@/lib/site'
+import MarkdownContent from '@/components/content/MarkdownContent'
 
 export default async function Hero() {
   const site = await getSiteContent()
@@ -22,7 +23,7 @@ export default async function Hero() {
             Siliguri · Handmade
           </p>
           <h1 className="heading-display mt-5 text-4xl leading-[1.12] sm:text-5xl lg:text-6xl">
-            {site.tagline || 'Handmade with love, created especially for you.'}
+            <MarkdownContent inline>{site.tagline || 'Handmade with love, created especially for you.'}</MarkdownContent>
           </h1>
           <p className="mt-5 max-w-xl text-lg leading-relaxed text-muted">
             Welcome to {site.name || "Jamae's Craftopia"} — a cozy little world of crochet teddies, everlasting flowers,

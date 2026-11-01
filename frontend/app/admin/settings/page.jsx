@@ -9,6 +9,7 @@ import {
 import { InstagramIcon, FacebookIcon } from '@/components/ui/SocialIcons'
 import { useAdminAccess } from '../access-context'
 import AboutTab from './AboutTab'
+import MarkdownEditor from '../components/MarkdownEditor'
 
 function VisibilityBadge({ isVisible, onToggle, disabled }) {
   return (
@@ -255,20 +256,22 @@ export default function AdminSettings() {
       .then(async (res) => {
         const json = await res.json()
         if (active && json.success && json.data) {
+          const storedContent = json.data.siteContent || {}
           setSiteForm((prev) => ({
             ...prev,
-            ...json.data,
-            social: { ...prev.social, ...(json.data.social || {}) },
-            visibility: { ...prev.visibility, ...(json.data.visibility || {}) },
+            ...storedContent,
+            whatsapp: storedContent.whatsapp || json.data.whatsappNumber || prev.whatsapp,
+            social: { ...prev.social, ...(storedContent.social || {}) },
+            visibility: { ...prev.visibility, ...(storedContent.visibility || {}) },
             images: {
               ...prev.images,
-              ...(json.data.images || {}),
-              hero: { ...prev.images.hero, ...(json.data.images?.hero || {}) },
-              brandStory: { ...prev.images.brandStory, ...(json.data.images?.brandStory || {}) },
-              customOrderCta: { ...prev.images.customOrderCta, ...(json.data.images?.customOrderCta || {}) },
-              customOrdersPage: { ...prev.images.customOrdersPage, ...(json.data.images?.customOrdersPage || {}) },
-              craftTable: Array.isArray(json.data.images?.craftTable) && json.data.images.craftTable.length
-                ? json.data.images.craftTable
+              ...(storedContent.images || {}),
+              hero: { ...prev.images.hero, ...(storedContent.images?.hero || {}) },
+              brandStory: { ...prev.images.brandStory, ...(storedContent.images?.brandStory || {}) },
+              customOrderCta: { ...prev.images.customOrderCta, ...(storedContent.images?.customOrderCta || {}) },
+              customOrdersPage: { ...prev.images.customOrdersPage, ...(storedContent.images?.customOrdersPage || {}) },
+              craftTable: Array.isArray(storedContent.images?.craftTable) && storedContent.images.craftTable.length
+                ? storedContent.images.craftTable
                 : prev.images.craftTable,
             },
           }))
@@ -311,7 +314,10 @@ export default function AdminSettings() {
       const res = await fetch('/api/admin/site', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(siteForm),
+        body: JSON.stringify({
+          siteContent: siteForm,
+          whatsappNumber: siteForm.whatsapp || null,
+        }),
       })
       const json = await res.json()
       if (!res.ok || !json.success) throw new Error(json.error || 'Failed to save site settings.')
@@ -450,16 +456,14 @@ export default function AdminSettings() {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold uppercase tracking-wider text-muted">
-                      Tagline / Footer Note
-                    </label>
-                    <input
-                      type="text"
-                      readOnly={!canManage}
+                    <MarkdownEditor
+                      id="site-tagline"
+                      label="Tagline / Footer Note"
                       value={siteForm.tagline}
-                      onChange={(e) => setSiteForm({ ...siteForm, tagline: e.target.value })}
-                      placeholder="Handmade with love, created especially for you."
-                      className="mt-1.5 w-full rounded-xl border border-sand bg-white px-4 py-2.5 text-sm text-plum read-only:bg-ink/5 focus:border-bloom focus:outline-none focus:ring-2 focus:ring-bloom/20"
+                      readOnly={!canManage}
+                      inline
+                      onChange={(value) => setSiteForm({ ...siteForm, tagline: value })}
+                      rows={2}
                     />
                   </div>
                 </div>

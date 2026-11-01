@@ -124,15 +124,26 @@ func (r *CouponRepository) ListActiveCoupons(ctx context.Context) ([]Coupon, err
 	return list, nil
 }
 
-// ListAllCouponsAdmin returns all coupons for the admin dashboard
-func (r *CouponRepository) ListAllCouponsAdmin(ctx context.Context) ([]Coupon, error) {
+// ListAllCouponsAdmin returns one searchable page of coupons.
+func (r *CouponRepository) ListAllCouponsAdmin(ctx context.Context, page, pageSize int, search string) (*PageResult[Coupon], error) {
+	pattern := "%" + search + "%"
+	var total int64
+	if err := r.db.Pool.QueryRow(ctx, `
+		SELECT COUNT(*) FROM "Coupon" WHERE $1 = '' OR code ILIKE $2 OR label ILIKE $2;
+	`, search, pattern).Scan(&total); err != nil {
+		return nil, fmt.Errorf("failed to count admin coupons: %w", err)
+	}
+	offset := (page - 1) * pageSize
 	query := `
 		SELECT id, code, label, "discountPercent", "minSubtotal", active, "expiresAt", "firstTimeOnly", "maxUses", "currentUses"
-		FROM "Coupon" ORDER BY "createdAt" DESC;
+		FROM "Coupon"
+		WHERE $1 = '' OR code ILIKE $2 OR label ILIKE $2
+		ORDER BY "createdAt" DESC, id DESC
+		LIMIT $3 OFFSET $4;
 	`
-	rows, err := r.db.Pool.Query(ctx, query)
+	rows, err := r.db.Pool.Query(ctx, query, search, pattern, pageSize, offset)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to query admin coupon page: %w", err)
 	}
 	defer rows.Close()
 
@@ -148,9 +159,9 @@ func (r *CouponRepository) ListAllCouponsAdmin(ctx context.Context) ([]Coupon, e
 		list = append(list, c)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("failed while reading admin coupons: %w", err)
+		return nil, fmt.Errorf("failed while reading admin coupon page: %w", err)
 	}
-	return list, nil
+	return newPage(list, page, pageSize, total), nil
 }
 
 // CreateCoupon inserts a new coupon

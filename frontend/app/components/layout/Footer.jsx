@@ -3,6 +3,7 @@ import { MapPin, Phone, Mail, MessageCircle } from 'lucide-react'
 import { FacebookIcon, InstagramIcon } from '../ui/SocialIcons'
 import { FlowerBurst } from '../ui/Decor'
 import { shopCategories } from '@/data/categories'
+import MarkdownContent from '@/components/content/MarkdownContent'
 import { getSiteContent } from '@/lib/site'
 
 const quickLinks = [
@@ -37,9 +38,9 @@ export default async function Footer() {
             <FlowerBurst className="h-7 w-7 text-bloom" />
             <span className="font-display text-2xl">{site.name || "Jamae's Craftopia"}</span>
           </Link>
-          <p className="mt-4 max-w-xs text-sm leading-relaxed text-muted">
-            {site.tagline || 'Little handmade things that bring big smiles — crocheted slowly in Siliguri, with love from two sisters.'}
-          </p>
+          <div className="mt-4 max-w-xs text-sm leading-relaxed text-muted">
+            <MarkdownContent>{site.tagline || 'Little handmade things that bring big smiles — crocheted slowly in Siliguri, with love from two sisters.'}</MarkdownContent>
+          </div>
         </div>
         <div>
           <h2 className="text-sm font-semibold uppercase tracking-[0.18em] text-plum">Visit</h2>

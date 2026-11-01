@@ -48,7 +48,12 @@ func (h *AdminHandler) GetDashboard(w http.ResponseWriter, r *http.Request) {
 
 // ListOrders returns all orders
 func (h *AdminHandler) ListOrders(w http.ResponseWriter, r *http.Request) {
-	orders, err := h.orderRepo.GetAllOrdersAdmin(r.Context())
+	page, pageSize, err := parseAdminPagination(r)
+	if err != nil {
+		utils.Error(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	orders, err := h.orderRepo.GetAllOrdersAdmin(r.Context(), page, pageSize, adminSearch(r), r.URL.Query().Get("status"), r.URL.Query().Get("paymentStatus"), r.URL.Query().Get("customer"))
 	if err != nil {
 		utils.Error(w, http.StatusInternalServerError, "Failed to load orders")
 		return
@@ -104,12 +109,30 @@ func (h *AdminHandler) UpdateOrder(w http.ResponseWriter, r *http.Request) {
 
 // ListProducts returns all products
 func (h *AdminHandler) ListProducts(w http.ResponseWriter, r *http.Request) {
-	products, err := h.productRepo.GetAllProductsAdmin(r.Context())
+	page, pageSize, err := parseAdminPagination(r)
+	if err != nil {
+		utils.Error(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	products, err := h.productRepo.GetAllProductsAdmin(r.Context(), page, pageSize, adminSearch(r))
 	if err != nil {
 		utils.Error(w, http.StatusInternalServerError, "Failed to load products")
 		return
 	}
 	utils.JSON(w, http.StatusOK, products)
+}
+
+func (h *AdminHandler) GetProduct(w http.ResponseWriter, r *http.Request) {
+	product, err := h.productRepo.GetAdminProductByID(r.Context(), r.PathValue("id"))
+	if err != nil {
+		utils.Error(w, http.StatusInternalServerError, "Failed to load product")
+		return
+	}
+	if product == nil {
+		utils.Error(w, http.StatusNotFound, "Product not found")
+		return
+	}
+	utils.JSON(w, http.StatusOK, product)
 }
 
 // CreateProduct creates a new product
@@ -289,7 +312,12 @@ func (h *AdminHandler) DeleteCategory(w http.ResponseWriter, r *http.Request) {
 
 // ListUsers returns customers
 func (h *AdminHandler) ListUsers(w http.ResponseWriter, r *http.Request) {
-	users, err := h.userRepo.ListAllUsersAdmin(r.Context())
+	page, pageSize, err := parseAdminPagination(r)
+	if err != nil {
+		utils.Error(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	users, err := h.userRepo.ListAllUsersAdmin(r.Context(), page, pageSize, adminSearch(r))
 	if err != nil {
 		utils.Error(w, http.StatusInternalServerError, "Failed to load users")
 		return
@@ -316,7 +344,12 @@ func (h *AdminHandler) ToggleUser(w http.ResponseWriter, r *http.Request) {
 
 // ListCoupons returns all coupons
 func (h *AdminHandler) ListCoupons(w http.ResponseWriter, r *http.Request) {
-	coupons, err := h.couponRepo.ListAllCouponsAdmin(r.Context())
+	page, pageSize, err := parseAdminPagination(r)
+	if err != nil {
+		utils.Error(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	coupons, err := h.couponRepo.ListAllCouponsAdmin(r.Context(), page, pageSize, adminSearch(r))
 	if err != nil {
 		utils.Error(w, http.StatusInternalServerError, "Failed to load coupons")
 		return

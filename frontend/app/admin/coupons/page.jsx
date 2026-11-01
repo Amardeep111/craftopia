@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useAdminAccess } from '../access-context'
+import AdminPagination from '../components/AdminPagination'
 
 const empty = { code: '', label: '', discountPercent: 10, minSubtotal: 0, expiresAt: '', firstTimeOnly: false, maxUses: 0 }
 
@@ -9,6 +10,11 @@ export default function AdminCoupons() {
   const { can } = useAdminAccess()
   const canManage = can('coupons.manage')
   const [coupons, setCoupons] = useState([])
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(25)
+  const [total, setTotal] = useState(0)
+  const [pages, setPages] = useState(0)
+  const [search, setSearch] = useState('')
   const [form, setForm] = useState(empty)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
@@ -16,13 +22,22 @@ export default function AdminCoupons() {
 
   async function load() {
     try {
-      const response = await fetch('/api/admin/coupons', { cache: 'no-store' })
+      setLoading(true)
+      const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) })
+      if (search.trim()) params.set('search', search.trim())
+      const response = await fetch(`/api/admin/coupons?${params}`, { cache: 'no-store' })
       const result = await response.json()
       if (!response.ok || !result.success) throw new Error(result.error || 'Could not load coupons.')
-      setCoupons(result.data)
+      setCoupons(Array.isArray(result.data?.items) ? result.data.items : [])
+      setTotal(result.data?.total || 0)
+      setPages(result.data?.pages || 0)
+      setError('')
     } catch (e) { setError(e.message) } finally { setLoading(false) }
   }
-  useEffect(() => { load() }, [])
+  useEffect(() => {
+    const timer = window.setTimeout(load, 250)
+    return () => window.clearTimeout(timer)
+  }, [page, pageSize, search])
 
   async function createCoupon(event) {
     event.preventDefault(); setError(''); setNotice('')
@@ -30,7 +45,9 @@ export default function AdminCoupons() {
       const response = await fetch('/api/admin/coupons', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) })
       const result = await response.json()
       if (!response.ok || !result.success) throw new Error(result.error || 'Could not create coupon.')
-      setNotice(`Coupon ${result.data.code} created.`); setForm(empty); await load()
+      setNotice(`Coupon ${result.data.code} created.`); setForm(empty)
+      if (page === 1) await load()
+      else setPage(1)
     } catch (e) { setError(e.message) }
   }
 
@@ -57,9 +74,11 @@ export default function AdminCoupons() {
       <label className="text-xs text-muted">Max uses (0 = unlimited)<input type="number" min="0" value={form.maxUses} onChange={(e) => setForm({ ...form, maxUses: e.target.value })} className="mt-1 w-full rounded-lg border border-sand px-3 py-2 text-sm text-plum" /></label>
       <button className="self-end rounded-full bg-plum px-4 py-2.5 text-sm font-semibold text-cream">Create coupon</button>
     </form>}
+    <label className="block max-w-md text-sm text-muted">Search coupons<input value={search} onChange={(event) => { setPage(1); setSearch(event.target.value) }} placeholder="Code or label" className="min-h-11 w-full rounded-xl border border-sand bg-white px-3 text-sm text-plum" /></label>
     {loading ? <p role="status">Loading coupons…</p> : <>
       <div className="space-y-3 md:hidden">{coupons.map((coupon) => <article key={coupon.id} className="rounded-2xl bg-cream p-4 shadow-soft ring-1 ring-sand"><div className="flex items-start justify-between gap-3"><div className="min-w-0"><strong className="break-all text-plum">{coupon.code}</strong><p className="break-words text-xs text-muted">{coupon.label}</p></div><span className="shrink-0 rounded-full bg-blush/50 px-2 py-1 text-xs">{coupon.active ? 'Active' : 'Inactive'}</span></div><div className="mt-3 grid grid-cols-2 gap-2 border-t border-sand pt-3 text-sm"><span className="text-muted">Discount</span><strong className="text-right">{coupon.discountPercent}%</strong><span className="text-muted">Minimum cart</span><strong className="text-right">₹{coupon.minSubtotal}</strong><span className="text-muted">Expiry</span><strong className="text-right">{coupon.expiresAt ? new Date(coupon.expiresAt).toLocaleDateString() : 'Never'}</strong><span className="text-muted">Uses</span><strong className="text-right">{coupon.currentUses || 0}{coupon.maxUses ? '/' + coupon.maxUses : ''}</strong><div className="col-span-2 mt-1 flex flex-wrap gap-1">{coupon.firstTimeOnly ? <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-700">First-time only</span> : null}{coupon.maxUses > 0 ? <span className="rounded-full bg-blush/50 px-2 py-0.5 text-xs">Max {coupon.maxUses}</span> : null}</div></div><button disabled={!canManage} onClick={() => toggle(coupon)} className="mt-3 min-h-11 w-full rounded-xl border border-sand px-3 py-2 text-sm">{coupon.active ? 'Deactivate coupon' : 'Activate coupon'}</button></article>)}{coupons.length === 0 && <p className="rounded-2xl bg-cream p-6 text-muted">No coupons created yet.</p>}</div>
       <div className="hidden overflow-x-auto rounded-2xl bg-cream shadow-soft ring-1 ring-sand md:block"><table className="w-full min-w-[650px] text-left text-sm"><thead className="border-b border-sand text-muted"><tr><th className="p-4">Code</th><th className="p-4">Discount</th><th className="p-4">Minimum cart</th><th className="p-4">Uses</th><th className="p-4">Restrictions</th><th className="p-4">Expiry</th><th className="p-4">Status</th><th className="p-4">Action</th></tr></thead><tbody>{coupons.map((coupon) => <tr key={coupon.id} className="border-b border-sand/70"><td className="p-4"><strong>{coupon.code}</strong><div className="text-xs text-muted">{coupon.label}</div></td><td className="p-4">{coupon.discountPercent}%</td><td className="p-4">₹{coupon.minSubtotal}</td><td className="p-4">{coupon.currentUses || 0}{coupon.maxUses ? ` / ${coupon.maxUses}` : ''}</td><td className="p-4"><div className="flex flex-wrap gap-1">{coupon.firstTimeOnly ? <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-700">First-time only</span> : null}{coupon.maxUses > 0 ? <span className="rounded-full bg-blush/50 px-2 py-0.5 text-xs">Max {coupon.maxUses} uses</span> : null}{!coupon.firstTimeOnly && !(coupon.maxUses > 0) ? <span className="text-xs text-muted">None</span> : null}</div></td><td className="p-4">{coupon.expiresAt ? new Date(coupon.expiresAt).toLocaleDateString() : 'Never'}</td><td className="p-4">{coupon.active ? 'Active' : 'Inactive'}</td><td className="p-4"><button disabled={!canManage} onClick={() => toggle(coupon)} className="rounded-lg border border-sand px-3 py-2">{coupon.active ? 'Deactivate' : 'Activate'}</button></td></tr>)}</tbody></table>{coupons.length === 0 && <p className="p-6 text-muted">No coupons created yet.</p>}</div>
     </>}
+    {!loading && <AdminPagination page={page} pageSize={pageSize} total={total} pages={pages} onPageChange={setPage} onPageSizeChange={(value) => { setPage(1); setPageSize(value) }} />}
   </section>
 }

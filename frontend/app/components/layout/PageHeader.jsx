@@ -10,7 +10,7 @@ export default function PageHeader({ eyebrow, title, description, className }) {
         ) : null}
         <h1 className="heading-display max-w-3xl text-4xl leading-tight sm:text-5xl md:text-6xl">{title}</h1>
         {description ? (
-          <p className="mt-4 max-w-2xl text-lg leading-relaxed text-muted">{description}</p>
+          <div className="mt-4 max-w-2xl text-lg leading-relaxed text-muted">{description}</div>
         ) : null}
       </div>
     </header>

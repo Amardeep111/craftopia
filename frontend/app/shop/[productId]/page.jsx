@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { Flower2 } from 'lucide-react'
 import ProductDetailsClient from './ProductDetailsClient'
+import MarkdownContent from '@/components/content/MarkdownContent'
 
 export const revalidate = 60
 
@@ -128,5 +129,15 @@ export default async function ProductDetailsPage({ params }) {
     )
   }
 
-  return <ProductDetailsClient initialProduct={product} initialRelatedProducts={relatedProducts} productId={productId} />
+  return (
+    <ProductDetailsClient
+      initialProduct={product}
+      initialRelatedProducts={relatedProducts}
+      productId={productId}
+      descriptionContent={<MarkdownContent>{product.description || product.short}</MarkdownContent>}
+      customizationContent={<MarkdownContent>{product.customization || 'Made with care to your preferences.'}</MarkdownContent>}
+      materialsContent={<MarkdownContent>{product.materials || 'Soft cotton-blend yarn and fine details.'}</MarkdownContent>}
+      careContent={<MarkdownContent>{product.care || 'Spot clean gently with a damp cloth.'}</MarkdownContent>}
+    />
+  )
 }

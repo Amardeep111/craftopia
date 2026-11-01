@@ -47,6 +47,13 @@ export const categories = [
     description: 'Handmade crochet clothing, made to your size and style',
     accent: 'bloom',
   },
+  {
+    id: 'miscellaneous',
+    name: 'Miscellaneous',
+    slug: 'miscellaneous',
+    description: 'A little bit of everything else, handmade with care',
+    accent: 'lavender',
+  },
 ]
 
 export const shopCategories = categories.filter((c) => c.id !== 'all')

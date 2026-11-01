@@ -51,6 +51,32 @@ type Product struct {
 	UpdatedAt             time.Time       `json:"updatedAt"`
 }
 
+// AdminProductSummary contains only fields used in the catalog grid. Long
+// description text is loaded on demand when an admin opens the editor.
+type AdminProductSummary struct {
+	ID                    string          `json:"id"`
+	Name                  string          `json:"name"`
+	Slug                  string          `json:"slug"`
+	CategoryID            string          `json:"categoryId"`
+	Category              *Category       `json:"category,omitempty"`
+	Price                 int             `json:"price"`
+	DiscountPercent       int             `json:"discountPercent"`
+	GSTPercent            int             `json:"gstPercent"`
+	CODFee                int             `json:"codFee"`
+	OtherCharge           int             `json:"otherCharge"`
+	Featured              bool            `json:"featured"`
+	Visual                *string         `json:"visual,omitempty"`
+	Palette               json.RawMessage `json:"palette,omitempty"`
+	Images                json.RawMessage `json:"images,omitempty"`
+	ImageURL              *string         `json:"imageUrl,omitempty"`
+	Stock                 int             `json:"stock"`
+	Published             bool            `json:"published"`
+	AvailableForSale      bool            `json:"availableForSale"`
+	UnavailableStates     []string        `json:"unavailableStates"`
+	UnavailablePinCodes   []string        `json:"unavailablePinCodes"`
+	AllowedPaymentMethods []string        `json:"allowedPaymentMethods"`
+}
+
 type ShippingAddress struct {
 	FullName          string  `json:"fullName"`
 	MobileNumber      string  `json:"mobileNumber"`
@@ -202,6 +228,7 @@ type User struct {
 	AdminActive      bool      `json:"adminActive"`
 	AdminPermissions []string  `json:"adminPermissions"`
 	Active           bool      `json:"active"`
+	OrderCount       int64     `json:"orderCount,omitempty"`
 	CreatedAt        time.Time `json:"createdAt"`
 	UpdatedAt        time.Time `json:"updatedAt"`
 }

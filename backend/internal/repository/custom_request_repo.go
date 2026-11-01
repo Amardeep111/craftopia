@@ -41,14 +41,29 @@ func (r *CustomRequestRepository) Create(ctx context.Context, userID *string, na
 	return &cr, nil
 }
 
-func (r *CustomRequestRepository) List(ctx context.Context) ([]models.CustomRequest, error) {
+func (r *CustomRequestRepository) List(ctx context.Context, page, pageSize int, search, status string) (*PageResult[models.CustomRequest], error) {
+	pattern := "%" + search + "%"
+	var total int64
+	if err := r.db.Pool.QueryRow(ctx, `
+		SELECT COUNT(*) FROM "CustomRequest" cr
+		WHERE ($1 = '' OR cr.name ILIKE $2 OR cr.contact ILIKE $2 OR cr.idea ILIKE $2 OR cr.details ILIKE $2 OR cr.status::text ILIKE $2)
+		  AND ($3 = '' OR cr.status::text = $3);
+	`, search, pattern, status).Scan(&total); err != nil {
+		return nil, fmt.Errorf("failed to count admin custom requests: %w", err)
+	}
+	offset := (page - 1) * pageSize
 	query := `
-		SELECT id, "userId", name, contact, idea, category, colors, budget, occasion, details, "referenceImages", "quotedPrice", status, "adminNotes", "createdAt", "updatedAt"
-		FROM "CustomRequest" ORDER BY "createdAt" DESC;
+		SELECT cr.id, cr."userId", cr.name, cr.contact, cr.idea, cr.category, cr.colors, cr.budget, cr.occasion,
+		       cr.details, cr."referenceImages", cr."quotedPrice", cr.status, cr."adminNotes", cr."createdAt", cr."updatedAt"
+		FROM "CustomRequest" cr
+		WHERE ($1 = '' OR cr.name ILIKE $2 OR cr.contact ILIKE $2 OR cr.idea ILIKE $2 OR cr.details ILIKE $2 OR cr.status::text ILIKE $2)
+		  AND ($3 = '' OR cr.status::text = $3)
+		ORDER BY cr."createdAt" DESC, cr.id DESC
+		LIMIT $4 OFFSET $5;
 	`
-	rows, err := r.db.Pool.Query(ctx, query)
+	rows, err := r.db.Pool.Query(ctx, query, search, pattern, status, pageSize, offset)
 	if err != nil {
-		return nil, fmt.Errorf("failed to list custom requests: %w", err)
+		return nil, fmt.Errorf("failed to query admin custom request page: %w", err)
 	}
 	defer rows.Close()
 
@@ -60,14 +75,14 @@ func (r *CustomRequestRepository) List(ctx context.Context) ([]models.CustomRequ
 			&cr.Budget, &cr.Occasion, &cr.Details, &cr.ReferenceImages, &cr.QuotedPrice, &cr.Status, &cr.AdminNotes, &cr.CreatedAt, &cr.UpdatedAt,
 		)
 		if err != nil {
-			return nil, fmt.Errorf("failed to scan custom request: %w", err)
+			return nil, fmt.Errorf("failed to scan admin custom request: %w", err)
 		}
 		list = append(list, cr)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("failed while reading custom requests: %w", err)
+		return nil, fmt.Errorf("failed while reading admin custom requests: %w", err)
 	}
-	return list, nil
+	return newPage(list, page, pageSize, total), nil
 }
 
 func (r *CustomRequestRepository) Update(ctx context.Context, id, status string, quotedPrice *int, adminNotes string) (*models.CustomRequest, error) {

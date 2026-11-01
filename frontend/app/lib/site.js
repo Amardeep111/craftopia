@@ -1,28 +1,7 @@
-import fs from 'fs'
-import path from 'path'
-import os from 'os'
 import defaultSite from '@/data/site-content.json'
+import { cache } from 'react'
 
-const SITE_FILE = path.join(process.cwd(), 'app', 'data', 'site-content.json')
-
-let inMemorySiteContent = defaultSite
-
-function readDiskOrTmp(targetFile, filename) {
-  try {
-    if (fs.existsSync(targetFile)) {
-      const raw = fs.readFileSync(targetFile, 'utf-8')
-      return JSON.parse(raw)
-    }
-  } catch {}
-  try {
-    const tmpFile = path.join(os.tmpdir(), filename)
-    if (fs.existsSync(tmpFile)) {
-      const raw = fs.readFileSync(tmpFile, 'utf-8')
-      return JSON.parse(raw)
-    }
-  } catch {}
-  return null
-}
+const BACKEND_URL = (process.env.GO_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || (process.env.NODE_ENV === 'production' ? 'https://craftopia-backend.vercel.app' : 'http://localhost:8080')).replace(/\/$/, '')
 
 export function mergeSiteContent(parsed) {
   if (!parsed || typeof parsed !== 'object') return defaultSite
@@ -63,86 +42,16 @@ export function mergeSiteContent(parsed) {
   }
 }
 
-export async function getSiteContent() {
-  if (inMemorySiteContent && inMemorySiteContent !== defaultSite) {
-    return inMemorySiteContent
-  }
-
-  const disk = readDiskOrTmp(SITE_FILE, 'site-content.json')
-  if (disk) {
-    inMemorySiteContent = mergeSiteContent(disk)
-    return inMemorySiteContent
-  }
-
-  inMemorySiteContent = defaultSite
-  return inMemorySiteContent
-}
-
-export function getSiteContentSync() {
-  if (inMemorySiteContent) return inMemorySiteContent
-  const disk = readDiskOrTmp(SITE_FILE, 'site-content.json')
-  if (disk) {
-    inMemorySiteContent = mergeSiteContent(disk)
-    return inMemorySiteContent
+export const getSiteContent = cache(async function getSiteContent() {
+  try {
+    const response = await fetch(`${BACKEND_URL}/api/site`, { cache: 'no-store' })
+    if (response.ok) {
+      const result = await response.json()
+      const content = result?.data?.siteContent || result?.data || result?.siteContent || result
+      if (content && typeof content === 'object') return mergeSiteContent(content)
+    }
+  } catch (error) {
+    console.error('Failed to load site content from the database:', error)
   }
   return defaultSite
-}
-
-export async function saveSiteContent(content) {
-  try {
-    const current = inMemorySiteContent || defaultSite
-    const merged = mergeSiteContent({
-      ...current,
-      ...content,
-      social: {
-        ...current.social,
-        ...(content.social || {}),
-      },
-      visibility: {
-        ...current.visibility,
-        ...(content.visibility || {}),
-      },
-      images: {
-        ...current.images,
-        ...(content.images || {}),
-        hero: {
-          ...(current.images?.hero || {}),
-          ...(content.images?.hero || {}),
-        },
-        brandStory: {
-          ...(current.images?.brandStory || {}),
-          ...(content.images?.brandStory || {}),
-        },
-        customOrderCta: {
-          ...(current.images?.customOrderCta || {}),
-          ...(content.images?.customOrderCta || {}),
-        },
-        customOrdersPage: {
-          ...(current.images?.customOrdersPage || {}),
-          ...(content.images?.customOrdersPage || {}),
-        },
-        craftTable: Array.isArray(content.images?.craftTable)
-          ? content.images.craftTable
-          : current.images?.craftTable || [],
-      },
-    })
-
-    inMemorySiteContent = merged
-
-    // Persist to disk (safely catching EROFS on read-only serverless filesystems)
-    try {
-      fs.writeFileSync(SITE_FILE, JSON.stringify(merged, null, 2), 'utf-8')
-    } catch (fsErr) {
-      // Read-only filesystem (Vercel/Lambda) or permission denied — fallback to /tmp
-      try {
-        const tmpFile = path.join(os.tmpdir(), 'site-content.json')
-        fs.writeFileSync(tmpFile, JSON.stringify(merged, null, 2), 'utf-8')
-      } catch {}
-    }
-
-    return { success: true, data: merged }
-  } catch (err) {
-    console.error('Error saving site content:', err)
-    throw new Error('Failed to save site content: ' + err.message)
-  }
-}
+})

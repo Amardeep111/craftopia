@@ -181,10 +181,10 @@ export default function AdminOrderDetail() {
           <section className="rounded-2xl bg-cream p-4 shadow-soft ring-1 ring-sand sm:p-5">
             <h2 className="font-display text-xl text-plum">Items</h2>
             <div className="mt-3 divide-y divide-sand">
-              {order.items.map((item) => (
+              {(order.items || []).map((item) => (
                 <div key={item.id} className="flex min-w-0 flex-col justify-between gap-2 py-3 sm:flex-row sm:items-center">
                   <div className="min-w-0">
-                    <p className="break-words font-medium text-plum">{item.product.name}</p>
+                    <p className="break-words font-medium text-plum">{item.product?.name || 'Product unavailable'}</p>
                     <p className="text-sm text-muted">
                       Qty {item.quantity} · {money(item.unitPrice)} each{item.customization ? ` · ${item.customization}` : ''}
                     </p>

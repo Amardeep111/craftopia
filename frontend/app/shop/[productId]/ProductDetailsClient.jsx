@@ -18,7 +18,7 @@ import SkeletonCard from '@/components/ui/SkeletonCard'
 import CustomerReviews from '@/components/ui/CustomerReviews'
 import { discountedPrice, useProductPricing } from '@/lib/promotions'
 
-export default function ProductDetailsClient({ initialProduct, initialRelatedProducts = [], productId }) {
+export default function ProductDetailsClient({ initialProduct, initialRelatedProducts = [], productId, descriptionContent, customizationContent, materialsContent, careContent }) {
   const router = useRouter()
   const [product, setProduct] = useState(initialProduct || null)
   const [productResolved, setProductResolved] = useState(Boolean(initialProduct))
@@ -206,21 +206,21 @@ export default function ProductDetailsClient({ initialProduct, initialRelatedPro
             <section className="mt-5 space-y-4" aria-label="Product description and details">
               <div>
                 <h2 className="font-semibold text-plum">Description</h2>
-                <p className="mt-1 leading-relaxed text-muted">{product.description || product.short}</p>
+                <div className="mt-1 text-muted">{descriptionContent || product.description || product.short}</div>
               </div>
               <div className="space-y-4 rounded-2xl bg-ivory/80 p-4">
                 <h2 className="font-semibold text-plum">Product details</h2>
                 <div>
                   <h3 className="text-sm font-medium text-plum">Customization</h3>
-                  <p className="mt-1 text-sm text-muted">{product.customization || 'Made with care to your preferences.'}</p>
+                  <div className="mt-1 text-sm text-muted">{customizationContent || product.customization || 'Made with care to your preferences.'}</div>
                 </div>
                 <div>
                   <h3 className="text-sm font-medium text-plum">Materials</h3>
-                  <p className="mt-1 text-sm text-muted">{product.materials || 'Soft cotton-blend yarn and fine details.'}</p>
+                  <div className="mt-1 text-sm text-muted">{materialsContent || product.materials || 'Soft cotton-blend yarn and fine details.'}</div>
                 </div>
                 <div>
                   <h3 className="text-sm font-medium text-plum">Care</h3>
-                  <p className="mt-1 text-sm text-muted">{product.care || 'Spot clean gently with a damp cloth.'}</p>
+                  <div className="mt-1 text-sm text-muted">{careContent || product.care || 'Spot clean gently with a damp cloth.'}</div>
                 </div>
               </div>
             </section>

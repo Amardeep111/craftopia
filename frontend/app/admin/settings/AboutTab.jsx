@@ -13,6 +13,8 @@ import {
 } from 'lucide-react'
 import { useAdminAccess } from '../access-context'
 import CraftIllustration from '@/components/ui/CraftIllustration'
+import MarkdownEditor from '../components/MarkdownEditor'
+import defaultAboutContent from '@/data/about-content.json'
 
 const VISUAL_OPTIONS = [
   { value: 'yarn', label: 'Yarn Ball' },
@@ -40,7 +42,7 @@ export default function AboutTab() {
         const res = await fetch('/api/admin/about', { cache: 'no-store' })
         const json = await res.json()
         if (!res.ok || !json.success) throw new Error(json.error || 'Failed to load about content.')
-        setForm(json.data)
+        setForm(json.data && typeof json.data === 'object' ? json.data : defaultAboutContent)
       } catch (err) {
         setError(err.message)
       } finally {
@@ -185,17 +187,13 @@ export default function AboutTab() {
             </div>
           </div>
           <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-muted">
-              Header Subtitle / Description
-            </label>
-            <textarea
-              rows={2}
+            <MarkdownEditor
+              id="about-header-description"
+              label="Header Subtitle / Description"
               value={form.header?.description || ''}
               readOnly={!canManage}
-              onChange={(e) =>
-                setForm({ ...form, header: { ...form.header, description: e.target.value } })
-              }
-              className="mt-1.5 w-full min-w-0 rounded-xl border border-sand bg-white px-3.5 py-2.5 text-sm text-plum outline-none focus:border-bloom"
+              onChange={(value) => setForm({ ...form, header: { ...form.header, description: value } })}
+              rows={3}
             />
           </div>
         </div>
@@ -228,60 +226,28 @@ export default function AboutTab() {
                 <label className="block text-xs font-semibold uppercase tracking-wider text-muted">
                   Story Subtitle / Catchphrase
                 </label>
-                <input
-                  type="text"
-                  value={form.story?.description || ''}
-                  readOnly={!canManage}
-                  onChange={(e) =>
-                    setForm({ ...form, story: { ...form.story, description: e.target.value } })
-                  }
-                  className="mt-1.5 w-full min-w-0 rounded-xl border border-sand bg-white px-3.5 py-2.5 text-sm text-plum outline-none focus:border-bloom"
-                />
+                <MarkdownEditor id="about-story-description" label="Story Subtitle / Catchphrase" value={form.story?.description || ''} readOnly={!canManage} onChange={(value) => setForm({ ...form, story: { ...form.story, description: value } })} rows={2} />
               </div>
 
               <div>
                 <label className="block text-xs font-semibold uppercase tracking-wider text-muted">
                   Paragraph 1
                 </label>
-                <textarea
-                  rows={3}
-                  value={form.story?.paragraph1 || ''}
-                  readOnly={!canManage}
-                  onChange={(e) =>
-                    setForm({ ...form, story: { ...form.story, paragraph1: e.target.value } })
-                  }
-                  className="mt-1.5 w-full min-w-0 rounded-xl border border-sand bg-white px-3.5 py-2 text-sm text-plum outline-none focus:border-bloom"
-                />
+                <MarkdownEditor id="about-story-paragraph-1" value={form.story?.paragraph1 || ''} readOnly={!canManage} onChange={(value) => setForm({ ...form, story: { ...form.story, paragraph1: value } })} rows={4} />
               </div>
 
               <div>
                 <label className="block text-xs font-semibold uppercase tracking-wider text-muted">
                   Paragraph 2
                 </label>
-                <textarea
-                  rows={3}
-                  value={form.story?.paragraph2 || ''}
-                  readOnly={!canManage}
-                  onChange={(e) =>
-                    setForm({ ...form, story: { ...form.story, paragraph2: e.target.value } })
-                  }
-                  className="mt-1.5 w-full min-w-0 rounded-xl border border-sand bg-white px-3.5 py-2 text-sm text-plum outline-none focus:border-bloom"
-                />
+                <MarkdownEditor id="about-story-paragraph-2" value={form.story?.paragraph2 || ''} readOnly={!canManage} onChange={(value) => setForm({ ...form, story: { ...form.story, paragraph2: value } })} rows={4} />
               </div>
 
               <div>
                 <label className="block text-xs font-semibold uppercase tracking-wider text-muted">
                   Highlight Quote Box
                 </label>
-                <textarea
-                  rows={3}
-                  value={form.story?.quote || ''}
-                  readOnly={!canManage}
-                  onChange={(e) =>
-                    setForm({ ...form, story: { ...form.story, quote: e.target.value } })
-                  }
-                  className="mt-1.5 w-full min-w-0 rounded-xl border border-sand bg-white px-3.5 py-2 text-sm text-plum outline-none focus:border-bloom"
-                />
+                <MarkdownEditor id="about-story-quote" value={form.story?.quote || ''} readOnly={!canManage} onChange={(value) => setForm({ ...form, story: { ...form.story, quote: value } })} rows={4} />
               </div>
             </div>
 
@@ -424,15 +390,7 @@ export default function AboutTab() {
               <label className="block text-xs font-semibold uppercase tracking-wider text-muted">
                 Makers Description / Subheading
               </label>
-              <input
-                type="text"
-                value={form.makersHeading?.description || ''}
-                readOnly={!canManage}
-                onChange={(e) =>
-                  setForm({ ...form, makersHeading: { ...form.makersHeading, description: e.target.value } })
-                }
-                className="mt-1 w-full min-w-0 rounded-xl border border-sand bg-white px-3 py-2 text-sm text-plum outline-none"
-              />
+              <MarkdownEditor id="about-makers-description" value={form.makersHeading?.description || ''} readOnly={!canManage} onChange={(value) => setForm({ ...form, makersHeading: { ...form.makersHeading, description: value } })} rows={3} />
             </div>
           </div>
 
@@ -581,16 +539,16 @@ export default function AboutTab() {
 
                 <div>
                   <label className="block text-xs font-medium text-muted">Maker Bio / Story</label>
-                  <textarea
-                    rows={4}
+                  <MarkdownEditor
+                    id={`about-maker-${maker.id || idx}-bio`}
                     value={maker.bio || ''}
                     readOnly={!canManage}
-                    onChange={(e) => {
+                    rows={4}
+                    onChange={(value) => {
                       const next = [...form.makers]
-                      next[idx] = { ...next[idx], bio: e.target.value }
+                      next[idx] = { ...next[idx], bio: value }
                       setForm({ ...form, makers: next })
                     }}
-                    className="mt-1 w-full min-w-0 rounded-xl border border-sand bg-white px-3 py-2 text-xs leading-relaxed text-plum outline-none focus:border-bloom"
                   />
                 </div>
               </div>
@@ -623,16 +581,16 @@ export default function AboutTab() {
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-muted">Description</label>
-                  <textarea
-                    rows={3}
+                  <MarkdownEditor
+                    id={`about-value-${idx}`}
                     value={val.text || ''}
                     readOnly={!canManage}
-                    onChange={(e) => {
+                    rows={3}
+                    onChange={(value) => {
                       const next = [...form.values]
-                      next[idx] = { ...next[idx], text: e.target.value }
+                      next[idx] = { ...next[idx], text: value }
                       setForm({ ...form, values: next })
                     }}
-                    className="mt-1 w-full min-w-0 rounded-xl border border-sand bg-ivory/50 px-3 py-1.5 text-xs text-plum outline-none"
                   />
                 </div>
               </div>
@@ -673,15 +631,7 @@ export default function AboutTab() {
                   }
                   className="mt-1 w-full min-w-0 rounded-xl border border-sand bg-white px-3 py-1.5 text-xs font-semibold text-plum outline-none"
                 />
-                <input
-                  type="text"
-                  value={form.crafting?.step1Text || ''}
-                  readOnly={!canManage}
-                  onChange={(e) =>
-                    setForm({ ...form, crafting: { ...form.crafting, step1Text: e.target.value } })
-                  }
-                  className="mt-1 w-full min-w-0 rounded-xl border border-sand bg-white px-3 py-1.5 text-xs text-plum outline-none"
-                />
+                <MarkdownEditor id="about-crafting-step-1" value={form.crafting?.step1Text || ''} readOnly={!canManage} onChange={(value) => setForm({ ...form, crafting: { ...form.crafting, step1Text: value } })} rows={2} />
               </div>
 
               <div>
@@ -695,15 +645,7 @@ export default function AboutTab() {
                   }
                   className="mt-1 w-full min-w-0 rounded-xl border border-sand bg-white px-3 py-1.5 text-xs font-semibold text-plum outline-none"
                 />
-                <input
-                  type="text"
-                  value={form.crafting?.step2Text || ''}
-                  readOnly={!canManage}
-                  onChange={(e) =>
-                    setForm({ ...form, crafting: { ...form.crafting, step2Text: e.target.value } })
-                  }
-                  className="mt-1 w-full min-w-0 rounded-xl border border-sand bg-white px-3 py-1.5 text-xs text-plum outline-none"
-                />
+                <MarkdownEditor id="about-crafting-step-2" value={form.crafting?.step2Text || ''} readOnly={!canManage} onChange={(value) => setForm({ ...form, crafting: { ...form.crafting, step2Text: value } })} rows={2} />
               </div>
 
               <div>
@@ -717,15 +659,7 @@ export default function AboutTab() {
                   }
                   className="mt-1 w-full min-w-0 rounded-xl border border-sand bg-white px-3 py-1.5 text-xs font-semibold text-plum outline-none"
                 />
-                <input
-                  type="text"
-                  value={form.crafting?.step3Text || ''}
-                  readOnly={!canManage}
-                  onChange={(e) =>
-                    setForm({ ...form, crafting: { ...form.crafting, step3Text: e.target.value } })
-                  }
-                  className="mt-1 w-full min-w-0 rounded-xl border border-sand bg-white px-3 py-1.5 text-xs text-plum outline-none"
-                />
+                <MarkdownEditor id="about-crafting-step-3" value={form.crafting?.step3Text || ''} readOnly={!canManage} onChange={(value) => setForm({ ...form, crafting: { ...form.crafting, step3Text: value } })} rows={2} />
               </div>
             </div>
 

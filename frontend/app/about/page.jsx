@@ -6,6 +6,7 @@ import ProductImage from '@/components/ui/ProductImage'
 import ScrollReveal from '@/components/ui/ScrollReveal'
 import SectionHeading from '@/components/ui/SectionHeading'
 import { getAboutContent } from '@/lib/about'
+import MarkdownContent from '@/components/content/MarkdownContent'
 
 export const dynamic = 'force-dynamic'
 
@@ -20,7 +21,7 @@ export default async function About() {
       <PageHeader
         eyebrow={header?.eyebrow || 'The people behind the yarn'}
         title={header?.title || 'A home-grown craft table in Siliguri.'}
-        description={header?.description || "Jamae's Craftopia is a handmade crochet and craft practice run by two sisters — creating soft things meant to be gifted, kept, and smiled at."}
+        description={<MarkdownContent>{header?.description || "Jamae's Craftopia is a handmade crochet and craft practice run by two sisters — creating soft things meant to be gifted, kept, and smiled at."}</MarkdownContent>}
       />
 
       <section className="container-page grid items-center gap-12 pb-8 lg:grid-cols-2">
@@ -43,19 +44,17 @@ export default async function About() {
           <SectionHeading
             align="left"
             title={story?.title || 'Our story'}
-            description={story?.description || 'Two sisters, one practice. A home-grown craft table in Siliguri, where handmade pieces carry stories, names, and care.'}
+            description={<MarkdownContent>{story?.description || 'Two sisters, one practice. A home-grown craft table in Siliguri, where handmade pieces carry stories, names, and care.'}</MarkdownContent>}
           />
           <div className="mt-6 space-y-4 leading-relaxed text-muted">
-            <p>
-              {story?.paragraph1 || "Jamae's Craftopia began as a home-grown handmade business in Siliguri, India. Two sisters, a shared craft table, and a love of turning yarn into something someone can hold."}
-            </p>
-            <p>
-              {story?.paragraph2 || "The work is slow on purpose: amigurumi friends, flowers that do not wilt, initial keychains, hair pieces, and gifts that carry a name. Nothing here is meant to feel factory-made."}
-            </p>
+            <MarkdownContent>{story?.paragraph1 || "Jamae's Craftopia began as a home-grown handmade business in Siliguri, India. Two sisters, a shared craft table, and a love of turning yarn into something someone can hold."}</MarkdownContent>
+            <MarkdownContent>{story?.paragraph2 || "The work is slow on purpose: amigurumi friends, flowers that do not wilt, initial keychains, hair pieces, and gifts that carry a name. Nothing here is meant to feel factory-made."}</MarkdownContent>
             {story?.quote && (
-              <p className="rounded-2xl bg-ivory px-4 py-3 text-sm italic text-plum">
+              <div className="rounded-2xl bg-ivory px-4 py-3 text-sm italic text-plum">
+                <MarkdownContent>
                 {story.quote}
-              </p>
+                </MarkdownContent>
+              </div>
             )}
           </div>
         </ScrollReveal>
@@ -64,7 +63,7 @@ export default async function About() {
       <section className="container-page mt-16">
         <SectionHeading
           title={makersHeading?.title || 'Meet the makers'}
-          description={makersHeading?.description || 'Two sisters, one shared craft table. Handcrafting every piece with patience, warmth, and personal care.'}
+          description={<MarkdownContent>{makersHeading?.description || 'Two sisters, one shared craft table. Handcrafting every piece with patience, warmth, and personal care.'}</MarkdownContent>}
         />
         <div className="mt-10 grid gap-6 md:grid-cols-2">
           {(makers || []).map((person, i) => (
@@ -86,7 +85,7 @@ export default async function About() {
                     {person.role || 'Maker'}
                   </p>
                   <h3 className="mt-1 font-display text-3xl text-plum">{person.name}</h3>
-                  <p className="mt-2 text-muted leading-relaxed">{person.bio}</p>
+                  <MarkdownContent className="mt-2 text-muted">{person.bio}</MarkdownContent>
                 </div>
               </article>
             </ScrollReveal>
@@ -104,7 +103,7 @@ export default async function About() {
                 <article className="paper-card h-full p-6">
                   <IconComponent className="h-6 w-6 text-bloom" aria-hidden="true" />
                   <h3 className="mt-4 font-display text-2xl text-plum">{v.title}</h3>
-                  <p className="mt-2 text-muted">{v.text}</p>
+                  <MarkdownContent className="mt-2 text-muted">{v.text}</MarkdownContent>
                 </article>
               </ScrollReveal>
             )
@@ -120,16 +119,16 @@ export default async function About() {
             </h2>
             <ol className="mt-6 space-y-4 text-muted">
               <li>
-                <strong className="text-plum">{crafting?.step1Title || '1. Yarn and a quiet idea.'}</strong>{' '}
-                {crafting?.step1Text || 'Colours are chosen to match a mood, a dress, or a memory.'}
+                <strong className="text-plum">{crafting?.step1Title || '1. Yarn and a quiet idea.'}</strong>
+                <MarkdownContent>{crafting?.step1Text || 'Colours are chosen to match a mood, a dress, or a memory.'}</MarkdownContent>
               </li>
               <li>
-                <strong className="text-plum">{crafting?.step2Title || '2. Stitch by stitch.'}</strong>{' '}
-                {crafting?.step2Text || 'Toys, petals, and letters take shape on the hook — never rushed.'}
+                <strong className="text-plum">{crafting?.step2Title || '2. Stitch by stitch.'}</strong>
+                <MarkdownContent>{crafting?.step2Text || 'Toys, petals, and letters take shape on the hook — never rushed.'}</MarkdownContent>
               </li>
               <li>
-                <strong className="text-plum">{crafting?.step3Title || '3. The small finishing.'}</strong>{' '}
-                {crafting?.step3Text || 'Embroidered faces, ribbons, wrapping, and a last look before it leaves the table.'}
+                <strong className="text-plum">{crafting?.step3Title || '3. The small finishing.'}</strong>
+                <MarkdownContent>{crafting?.step3Text || 'Embroidered faces, ribbons, wrapping, and a last look before it leaves the table.'}</MarkdownContent>
               </li>
             </ol>
             <Button as={Link} href="/custom-orders" className="mt-8">

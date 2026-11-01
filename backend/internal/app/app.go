@@ -141,6 +141,7 @@ func Setup(cfg *config.Config, db *database.DB) *App {
 	mux.Handle("GET /api/admin/orders/{id}", adminAuth(orderHandler.GetOrder))
 
 	mux.Handle("GET /api/admin/products", adminAuth(adminHandler.ListProducts))
+	mux.Handle("GET /api/admin/products/{id}", adminAuth(adminHandler.GetProduct))
 	mux.Handle("POST /api/admin/products", adminAuth(adminHandler.CreateProduct))
 	mux.Handle("PATCH /api/admin/products", adminAuth(adminHandler.UpdateProduct))
 	mux.Handle("PATCH /api/admin/products/{id}", adminAuth(adminHandler.UpdateProduct))

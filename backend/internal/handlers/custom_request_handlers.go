@@ -59,7 +59,12 @@ func (h *CustomRequestHandler) Create(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *CustomRequestHandler) List(w http.ResponseWriter, r *http.Request) {
-	requests, err := h.repo.List(r.Context())
+	page, pageSize, err := parseAdminPagination(r)
+	if err != nil {
+		utils.Error(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	requests, err := h.repo.List(r.Context(), page, pageSize, adminSearch(r), strings.ToUpper(strings.TrimSpace(r.URL.Query().Get("status"))))
 	if err != nil {
 		utils.Error(w, http.StatusInternalServerError, "Failed to load custom requests")
 		return

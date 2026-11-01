@@ -105,15 +105,42 @@ func (r *UserRepository) VerifyPassword(hashedPassword, plainPassword string) bo
 	return bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(plainPassword)) == nil
 }
 
-// ListAllUsersAdmin returns customers for the admin dashboard
-func (r *UserRepository) ListAllUsersAdmin(ctx context.Context) ([]models.User, error) {
+// ListAllUsersAdmin returns one searchable page of customers with order counts
+// aggregated in SQL, avoiding a per-customer order-count query.
+func (r *UserRepository) ListAllUsersAdmin(ctx context.Context, page, pageSize int, search string) (*PageResult[models.User], error) {
+	pattern := "%" + search + "%"
+	var total int64
+	if err := r.db.Pool.QueryRow(ctx, `
+		SELECT COUNT(*) FROM "User" u
+		WHERE u.role = 'CUSTOMER'
+		  AND ($1 = '' OR u.email ILIKE $2 OR COALESCE(u.name, '') ILIKE $2 OR COALESCE(u.phone, '') ILIKE $2);
+	`, search, pattern).Scan(&total); err != nil {
+		return nil, fmt.Errorf("failed to count admin customers: %w", err)
+	}
+	offset := (page - 1) * pageSize
 	query := `
-		SELECT id, email, name, phone, role, "adminActive", active, "createdAt", "updatedAt"
-		FROM "User" WHERE role = 'CUSTOMER' ORDER BY "createdAt" DESC;
+		WITH user_page AS MATERIALIZED (
+			SELECT u.id, u.email, u.name, u.phone, u.role, u."adminActive", u.active, u."createdAt", u."updatedAt"
+			FROM "User" u
+			WHERE u.role = 'CUSTOMER'
+			  AND ($1 = '' OR u.email ILIKE $2 OR COALESCE(u.name, '') ILIKE $2 OR COALESCE(u.phone, '') ILIKE $2)
+			ORDER BY u."createdAt" DESC, u.id DESC
+			LIMIT $3 OFFSET $4
+		), order_counts AS (
+			SELECT o."userId", COUNT(*) AS order_count
+			FROM "Order" o
+			JOIN user_page u ON u.id = o."userId"
+			GROUP BY o."userId"
+		)
+		SELECT u.id, u.email, u.name, u.phone, u.role, u."adminActive", u.active,
+		       u."createdAt", u."updatedAt", COALESCE(orders.order_count, 0)
+		FROM user_page u
+		LEFT JOIN order_counts orders ON orders."userId" = u.id
+		ORDER BY u."createdAt" DESC, u.id DESC;
 	`
-	rows, err := r.db.Pool.Query(ctx, query)
+	rows, err := r.db.Pool.Query(ctx, query, search, pattern, pageSize, offset)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to query admin customers: %w", err)
 	}
 	defer rows.Close()
 
@@ -121,16 +148,16 @@ func (r *UserRepository) ListAllUsersAdmin(ctx context.Context) ([]models.User, 
 	for rows.Next() {
 		var u models.User
 		if err := rows.Scan(
-			&u.ID, &u.Email, &u.Name, &u.Phone, &u.Role, &u.AdminActive, &u.Active, &u.CreatedAt, &u.UpdatedAt,
+			&u.ID, &u.Email, &u.Name, &u.Phone, &u.Role, &u.AdminActive, &u.Active, &u.CreatedAt, &u.UpdatedAt, &u.OrderCount,
 		); err != nil {
-			return nil, fmt.Errorf("failed to scan customer: %w", err)
+			return nil, fmt.Errorf("failed to scan admin customer: %w", err)
 		}
 		users = append(users, u)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("failed while reading customers: %w", err)
+		return nil, fmt.Errorf("failed while reading admin customers: %w", err)
 	}
-	return users, nil
+	return newPage(users, page, pageSize, total), nil
 }
 
 // ToggleUserActive enables or disables user login

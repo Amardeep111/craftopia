@@ -413,15 +413,30 @@ func (r *OrderRepository) GetOrderByOrderNumber(ctx context.Context, orderNumber
 	return &o, nil
 }
 
-// GetAllOrdersAdmin returns all orders with their items for the admin dashboard
-func (r *OrderRepository) GetAllOrdersAdmin(ctx context.Context) ([]models.Order, error) {
+// GetAllOrdersAdmin returns a filtered page. Item and refund rows are batch-loaded
+// only for orders on that page, avoiding both unbounded payloads and N+1 queries.
+func (r *OrderRepository) GetAllOrdersAdmin(ctx context.Context, page, pageSize int, search, status, paymentStatus, customerEmail string) (*PageResult[models.Order], error) {
+	pattern := "%" + search + "%"
+	var total int64
+	filterSQL := `
+		WHERE ($1 = '' OR "orderNumber" ILIKE $2 OR "customerName" ILIKE $2 OR "customerEmail" ILIKE $2 OR COALESCE("customerPhone", '') ILIKE $2)
+		  AND ($3 = '' OR status::text = $3)
+		  AND ($4 = '' OR "paymentStatus"::text = $4)
+		  AND ($5 = '' OR LOWER("customerEmail") = LOWER($5))
+	`
+	if err := r.db.Pool.QueryRow(ctx, `SELECT COUNT(*) FROM "Order" `+filterSQL, search, pattern, status, paymentStatus, customerEmail).Scan(&total); err != nil {
+		return nil, fmt.Errorf("failed to count admin orders: %w", err)
+	}
+	offset := (page - 1) * pageSize
 	rows, err := r.db.Pool.Query(ctx, `
 		SELECT id, "orderNumber", "userId", "customerName", "customerEmail", "customerPhone",
 		       "shippingAddress", status, "paymentMethod", "paymentStatus", "paymentReference",
 		       "totalAmount", subtotal, discount, shipping, fee, notes, "trackingNumber",
 		       "shippingPartner", "estimatedDelivery", "createdAt", "updatedAt"
-		FROM "Order" ORDER BY "createdAt" DESC;
-	`)
+		FROM "Order" `+filterSQL+`
+		ORDER BY "createdAt" DESC, id DESC
+		LIMIT $6 OFFSET $7;
+	`, search, pattern, status, paymentStatus, customerEmail, pageSize, offset)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query admin orders: %w", err)
 	}
@@ -443,10 +458,64 @@ func (r *OrderRepository) GetAllOrdersAdmin(ctx context.Context) ([]models.Order
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("failed while reading admin orders: %w", err)
 	}
+	orderIndexes := make(map[string]int, len(orders))
+	orderIDs := make([]string, 0, len(orders))
+	for i := range orders {
+		orders[i].Items = make([]models.OrderItem, 0)
+		orderIndexes[orders[i].ID] = i
+		orderIDs = append(orderIDs, orders[i].ID)
+	}
+	if len(orders) > 0 {
+
+		itemRows, err := r.db.Pool.Query(ctx, `
+			SELECT oi.id, oi."orderId", oi."productId", oi.quantity, oi."unitPrice", oi."gstPercent",
+			       oi."gstAmount", oi."codFee", oi."otherCharge", oi.customization, oi."createdAt",
+			       p.name, p.slug
+			FROM "OrderItem" oi
+			LEFT JOIN "Product" p ON oi."productId" = p.id
+			WHERE oi."orderId" = ANY($1::text[])
+			ORDER BY oi."createdAt" ASC;
+		`, orderIDs)
+		if err != nil {
+			return nil, fmt.Errorf("failed to query admin order items: %w", err)
+		}
+		for itemRows.Next() {
+			var item models.OrderItem
+			var product models.Product
+			var productName, productSlug *string
+			if scanErr := itemRows.Scan(
+				&item.ID, &item.OrderID, &item.ProductID, &item.Quantity, &item.UnitPrice, &item.GSTPercent,
+				&item.GSTAmount, &item.CODFee, &item.OtherCharge, &item.Customization, &item.CreatedAt,
+				&productName, &productSlug,
+			); scanErr != nil {
+				itemRows.Close()
+				return nil, fmt.Errorf("failed to scan admin order item: %w", scanErr)
+			}
+			if productName != nil {
+				product.Name = *productName
+			}
+			if productSlug != nil {
+				product.Slug = *productSlug
+			}
+			if product.Name == "" {
+				product.Name = "Product unavailable"
+			}
+			item.Product = &product
+			index, exists := orderIndexes[item.OrderID]
+			if exists {
+				orders[index].Items = append(orders[index].Items, item)
+			}
+		}
+		if err := itemRows.Err(); err != nil {
+			itemRows.Close()
+			return nil, fmt.Errorf("failed while reading admin order items: %w", err)
+		}
+		itemRows.Close()
+	}
 	refundRows, err := r.db.Pool.Query(ctx, `
 		SELECT id, "orderId", reason, amount, "refundUpiId", status, "adminNote", "reviewedBy", "reviewedAt", "createdAt", "updatedAt"
-		FROM "RefundRequest" ORDER BY "createdAt" DESC;
-	`)
+		FROM "RefundRequest" WHERE "orderId" = ANY($1::text[]) ORDER BY "createdAt" DESC;
+	`, orderIDs)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query refund requests: %w", err)
 	}
@@ -465,7 +534,7 @@ func (r *OrderRepository) GetAllOrdersAdmin(ctx context.Context) ([]models.Order
 	for i := range orders {
 		orders[i].RefundRequests = byOrder[orders[i].ID]
 	}
-	return orders, nil
+	return newPage(orders, page, pageSize, total), nil
 }
 
 // UpdateOrderStatus updates order status and tracking fields
@@ -486,10 +555,16 @@ func (r *OrderRepository) UpdateOrderStatus(ctx context.Context, orderID string,
 // GetDashboardStats aggregates total counts for admin dashboard
 func (r *OrderRepository) GetDashboardStats(ctx context.Context) (*models.AdminDashboardStats, error) {
 	var stats models.AdminDashboardStats
-	_ = r.db.Pool.QueryRow(ctx, `SELECT COUNT(*) FROM "Order"`).Scan(&stats.Orders)
-	_ = r.db.Pool.QueryRow(ctx, `SELECT COUNT(*) FROM "User" WHERE role = 'CUSTOMER'`).Scan(&stats.Users)
-	_ = r.db.Pool.QueryRow(ctx, `SELECT COUNT(*) FROM "Product" WHERE published = true`).Scan(&stats.Products)
-	_ = r.db.Pool.QueryRow(ctx, `SELECT COUNT(*) FROM "Order" WHERE status = 'PENDING'`).Scan(&stats.Pending)
+	err := r.db.Pool.QueryRow(ctx, `
+		SELECT
+			(SELECT COUNT(*) FROM "Order"),
+			(SELECT COUNT(*) FROM "User" WHERE role = 'CUSTOMER'),
+			(SELECT COUNT(*) FROM "Product" WHERE published = true),
+			(SELECT COUNT(*) FROM "Order" WHERE status = 'PENDING');
+	`).Scan(&stats.Orders, &stats.Users, &stats.Products, &stats.Pending)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load admin dashboard stats: %w", err)
+	}
 	return &stats, nil
 }
 

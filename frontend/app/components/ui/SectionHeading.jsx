@@ -22,7 +22,7 @@ export default function SectionHeading({
       ) : null}
       <h2 className="heading-display text-3xl leading-tight sm:text-4xl md:text-5xl">{title}</h2>
       {description ? (
-        <p className="mt-4 text-base leading-relaxed text-muted sm:text-lg">{description}</p>
+        <div className="mt-4 text-base leading-relaxed text-muted sm:text-lg">{description}</div>
       ) : null}
     </div>
   )
