@@ -171,6 +171,11 @@ function LoginStep({ onSwitchToSignup, onVerified }) {
         />
       </div>
       <Input label="Password" type="password" autoComplete="current-password" placeholder="Enter your password" value={password} onChange={(e) => { setPassword(e.target.value); setErrors((prev) => ({ ...prev, password: '', form: '' })) }} error={errors.password} className="text-base" />
+      <div className="-mt-2 text-right">
+        <Link href="/account/forgot-password" className="text-sm font-semibold text-plum underline underline-offset-4 decoration-bloom/40 hover:decoration-bloom transition">
+          Forgot password?
+        </Link>
+      </div>
       {errors.form ? <p role="alert" className="text-sm text-bloom">{errors.form}</p> : null}
       <Button type="submit" className="w-full" disabled={loading}>
         {loading ? 'Signing in…' : 'Sign in'}
