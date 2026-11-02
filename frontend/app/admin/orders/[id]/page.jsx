@@ -4,14 +4,15 @@ import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { useAdminAccess } from '../../access-context'
+import { QRCodeSVG } from 'qrcode.react'
 
 const STATUSES = ['PENDING', 'CONFIRMED', 'IN_PROGRESS', 'SHIPPED', 'DELIVERED', 'CANCELLED', 'RETURN_REQUESTED', 'RETURN_APPROVED', 'RETURN_IN_TRANSIT', 'RETURNED']
 const label = (value = '') => value.replaceAll('_', ' ').toLowerCase().replace(/\b\w/g, (letter) => letter.toUpperCase())
 const money = (amount) => `₹${Number(amount || 0).toLocaleString('en-IN')}`
 
 function paymentBadgeStyle(status) {
-  if (status === 'PAID' || status === 'COD_COLLECTED') return 'bg-sage/20 text-emerald-800 border-sage/40'
-  if (status === 'AWAITING_VERIFICATION') return 'bg-amber-100 text-amber-800 border-amber-300'
+  if (status === 'PAID' || status === 'COD_COLLECTED' || status === 'REFUNDED') return 'bg-sage/20 text-emerald-800 border-sage/40'
+  if (status === 'AWAITING_VERIFICATION' || status === 'REFUND_REQUESTED') return 'bg-amber-100 text-amber-800 border-amber-300'
   if (status === 'COD_PENDING_COLLECTION') return 'bg-sky-100 text-sky-800 border-sky-300'
   if (status === 'FAILED' || status === 'CANCELLED') return 'bg-rose-100 text-rose-800 border-rose-300'
   return 'bg-sand/40 text-plum border-sand'
@@ -24,8 +25,11 @@ export default function AdminOrderDetail() {
   const [order, setOrder] = useState(null)
   const [draft, setDraft] = useState({ trackingNumber: '', shippingPartner: '', estimatedDelivery: '' })
   const [paymentRefDraft, setPaymentRefDraft] = useState('')
+  const [refundReferenceDraft, setRefundReferenceDraft] = useState('')
+  const [refundAdminNoteDraft, setRefundAdminNoteDraft] = useState('')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
 
@@ -49,6 +53,10 @@ export default function AdminOrderDetail() {
   }
 
   useEffect(() => {
+    const userAgent = navigator.userAgent || ''
+    const mobileAgent = /Android|iPhone|iPad|iPod|Mobile|IEMobile|Windows Phone/i.test(userAgent)
+    const touchDevice = navigator.maxTouchPoints > 0 && window.matchMedia('(max-width: 1024px)').matches
+    setIsMobile((mobileAgent && window.matchMedia('(max-width: 1200px)').matches) || touchDevice)
     if (id) load()
   }, [id])
 
@@ -102,11 +110,11 @@ export default function AdminOrderDetail() {
       const response = await fetch('/api/admin/orders', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ refundRequestId: refund.id, refundStatus }),
+        body: JSON.stringify({ refundRequestId: refund.id, refundStatus, refundReference: refundReferenceDraft.trim(), adminNote: refundAdminNoteDraft.trim() }),
       })
       const result = await response.json()
       if (!response.ok || !result.success) throw new Error(result.error || 'Could not update refund request.')
-      setNotice('Refund request updated.')
+      setNotice(refundStatus === 'COMPLETED' ? 'Refund marked complete and recorded in payment activity.' : `Refund ${label(refundStatus).toLowerCase()}.`)
       await load()
     } catch (e) {
       setError(e.message)
@@ -146,6 +154,7 @@ export default function AdminOrderDetail() {
   }
 
   const isUpi = order.paymentMethod === 'UPI' || order.paymentMethod?.toLowerCase().includes('upi')
+  const refundUpiUri = (refund) => `upi://pay?${new URLSearchParams({ pa: refund.refundUpiId, pn: order.customerName || 'Customer', am: (Number(refund.amount) || 0).toFixed(2), cu: 'INR', tn: `Refund ${order.orderNumber}` })}`
 
   return (
     <section className="min-w-0 space-y-5 sm:space-y-6">
@@ -319,30 +328,68 @@ export default function AdminOrderDetail() {
               <p className="mt-2 text-sm text-muted">No refund requests for this order.</p>
             ) : (
               <div className="mt-3 space-y-3">
-                {order.refundRequests.map((refund) => (
-                  <div key={refund.id} className="rounded-xl border border-sand bg-white p-3 sm:p-4">
-                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                      <strong className="text-plum">{label(refund.status)} · {money(refund.amount)}</strong>
-                      {canManage && !['COMPLETED', 'REJECTED'].includes(refund.status) && (
-                        <select
-                          aria-label={`Refund status ${refund.id}`}
-                          disabled={saving}
-                          value={refund.status}
-                          onChange={(event) => updateRefund(refund, event.target.value)}
-                          className="min-h-11 w-full rounded-lg border border-sand px-3 sm:w-auto"
-                        >
-                          <option value={refund.status} disabled>{label(refund.status)}</option>
-                          {({ REQUESTED: ['APPROVED', 'REJECTED'], APPROVED: ['PROCESSING', 'REJECTED'], PROCESSING: ['COMPLETED'] }[refund.status] || []).map((value) => (
-                            <option key={value} value={value}>{label(value)}</option>
-                          ))}
-                        </select>
+                {order.refundRequests.map((refund) => {
+                  const refundUri = refundUpiUri(refund)
+                  const isTerminal = ['COMPLETED', 'REJECTED'].includes(refund.status)
+                  const isCOD = order.paymentMethod?.toLowerCase().includes('cash') || order.paymentMethod?.toLowerCase().includes('cod')
+                  const canApprove = !isCOD || ['RETURN_APPROVED', 'RETURNED'].includes(order.status)
+                  return (
+                    <div key={refund.id} className="rounded-xl border border-sand bg-white p-3 sm:p-4">
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                        <strong className="text-plum">{label(refund.status)} · {money(refund.amount)}</strong>
+                        {isTerminal && <span className="text-xs text-muted">This request is closed.</span>}
+                      </div>
+                      <p className="mt-2 break-all text-sm text-muted">Refund UPI: <strong className="text-plum">{refund.refundUpiId || 'Not provided'}</strong></p>
+                      <p className="mt-1 break-words text-sm text-muted">{refund.reason}</p>
+                      <p className="mt-1 text-xs text-muted">Requested {new Date(refund.createdAt).toLocaleString()}</p>
+                      {refund.adminNote && <p className="mt-2 rounded-lg bg-ivory px-3 py-2 text-sm text-muted">Admin note: {refund.adminNote}</p>}
+
+                      {canManage && !isTerminal && (
+                        <div className="mt-4 space-y-3 border-t border-sand pt-4">
+                          <label className="block text-xs font-medium text-plum">
+                            Admin note <span className="font-normal text-muted">(optional)</span>
+                            <textarea value={refundAdminNoteDraft} onChange={(event) => setRefundAdminNoteDraft(event.target.value)} maxLength={1000} rows={2} className="mt-1 w-full rounded-xl border border-sand bg-white p-3 text-sm" placeholder="Add a reason or update for the customer" />
+                          </label>
+
+                          {refund.status === 'REQUESTED' && (
+                            <>
+                              <div className="flex flex-col gap-2 sm:flex-row">
+                                <button type="button" disabled={saving || !canApprove} onClick={() => updateRefund(refund, 'APPROVED')} className="min-h-11 flex-1 rounded-full bg-plum px-4 py-2 text-sm font-semibold text-cream disabled:opacity-50">Approve refund</button>
+                                <button type="button" disabled={saving} onClick={() => updateRefund(refund, 'REJECTED')} className="min-h-11 rounded-full border border-sand px-4 py-2 text-sm font-semibold text-plum disabled:opacity-50">Reject request</button>
+                              </div>
+                              {!canApprove && <p className="text-xs text-amber-800">Approve this COD refund after the return is marked Return Approved or Returned.</p>}
+                            </>
+                          )}
+
+                          {['APPROVED', 'PROCESSING'].includes(refund.status) && (
+                            <div className="rounded-2xl border border-sage/30 bg-sage/5 p-3 sm:p-4">
+                              <p className="font-medium text-plum">Send {money(refund.amount)} to {refund.refundUpiId}</p>
+                              <p className="mt-1 text-xs text-muted">Check the recipient UPI ID and amount before approving the transfer in your UPI app.</p>
+                              <div className="mt-3 grid gap-3 sm:grid-cols-[auto_1fr] sm:items-center">
+                                <div className="mx-auto rounded-xl bg-white p-2 ring-1 ring-sand">
+                                  <QRCodeSVG value={refundUri} size={168} level="M" bgColor="#ffffff" fgColor="#4b3742" role="img" aria-label={`Refund payment QR for ${money(refund.amount)} to ${refund.refundUpiId}`} />
+                                </div>
+                                <div className="space-y-2 text-sm">
+                                  {isMobile && <a href={refundUri} className="inline-flex min-h-11 w-full items-center justify-center rounded-full bg-plum px-4 py-2 font-semibold text-cream">Open UPI app</a>}
+                                  {refund.status === 'APPROVED' && <button type="button" disabled={saving} onClick={() => updateRefund(refund, 'PROCESSING')} className="min-h-11 w-full rounded-full border border-plum px-4 py-2 font-semibold text-plum disabled:opacity-50">Mark transfer started</button>}
+                                  {refund.status === 'APPROVED' && <button type="button" disabled={saving} onClick={() => updateRefund(refund, 'REJECTED')} className="min-h-11 w-full rounded-full px-4 py-2 text-sm font-medium text-bloom underline underline-offset-2 disabled:opacity-50">Reject before transfer</button>}
+                                </div>
+                              </div>
+                              {refund.status === 'PROCESSING' && (
+                                <div className="mt-3 space-y-2 border-t border-sage/30 pt-3">
+                                  <label className="block text-xs font-medium text-plum">Refund transfer reference / UTR <span className="text-bloom">Required to complete</span>
+                                    <input value={refundReferenceDraft} onChange={(event) => setRefundReferenceDraft(event.target.value)} maxLength={80} autoComplete="off" placeholder="Enter the refund transaction reference" className="mt-1 min-h-11 w-full rounded-xl border border-sand bg-white px-3 text-sm" />
+                                  </label>
+                                  <button type="button" disabled={saving || !refundReferenceDraft.trim()} onClick={() => updateRefund(refund, 'COMPLETED')} className="min-h-11 w-full rounded-full bg-emerald-700 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">Confirm refund sent</button>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
                       )}
                     </div>
-                    <p className="mt-2 break-words text-sm text-muted">Refund UPI: {refund.refundUpiId || 'Not provided'}</p>
-                    <p className="mt-1 break-words text-sm text-muted">{refund.reason}</p>
-                    <p className="mt-1 text-xs text-muted">Requested {new Date(refund.createdAt).toLocaleString()}</p>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             )}
           </section>
@@ -409,7 +456,7 @@ export default function AdminOrderDetail() {
             {canManage && (
               <div className="mt-4 border-t border-sand pt-4 space-y-3">
                 {/* UTR / Reference Input */}
-                <div>
+                {isUpi && <div>
                   <label className="block text-xs font-semibold text-plum mb-1">
                     Payment Reference (UTR)
                     {isUpi && !paymentRefDraft.trim() && (
@@ -428,10 +475,10 @@ export default function AdminOrderDetail() {
                     />
                   </div>
                   <p className="mt-1 text-xs text-muted">The UTR is saved with the verification record.</p>
-                </div>
+                </div>}
 
                 {/* UPI Verification Quick Action */}
-                {isUpi && order.paymentStatus !== 'PAID' && (
+                {isUpi && ['AWAITING_VERIFICATION', 'MANUAL_REVIEW'].includes(order.paymentStatus) && (
                   <div className="rounded-xl border border-sage/40 bg-sage/10 p-3">
                     <p className="text-xs text-emerald-900 font-medium">Verify UPI Payment</p>
                     <p className="text-xs text-muted mt-0.5">
@@ -449,7 +496,7 @@ export default function AdminOrderDetail() {
                 )}
 
                 {/* COD Quick Action */}
-                {order.paymentMethod === 'Cash on Delivery' && order.paymentStatus === 'COD_PENDING_COLLECTION' && (
+                {order.paymentMethod?.toLowerCase().includes('cash') && order.paymentStatus === 'COD_PENDING_COLLECTION' && (
                   <button
                     type="button"
                     disabled={saving}

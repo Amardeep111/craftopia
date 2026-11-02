@@ -72,18 +72,24 @@ func (h *AdminHandler) UpdateOrder(w http.ResponseWriter, r *http.Request) {
 		EstimatedDelivery *string `json:"estimatedDelivery"`
 		RefundRequestID   string  `json:"refundRequestId"`
 		RefundStatus      string  `json:"refundStatus"`
+		RefundReference   string  `json:"refundReference"`
+		AdminNote         string  `json:"adminNote"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		utils.Error(w, http.StatusBadRequest, "Invalid order update payload")
 		return
 	}
 	if body.RefundRequestID != "" {
+		if len(body.RefundReference) > 80 || len(body.AdminNote) > 1000 {
+			utils.Error(w, http.StatusBadRequest, "Refund reference must be 80 characters or fewer and admin notes must be 1,000 characters or fewer")
+			return
+		}
 		claims, _ := middleware.GetUserFromContext(r.Context())
 		adminEmail := "admin@jamaescraftopia.com"
 		if claims != nil && claims.Email != "" {
 			adminEmail = claims.Email
 		}
-		if err := h.orderRepo.UpdateRefundRequest(r.Context(), body.RefundRequestID, body.RefundStatus, adminEmail); err != nil {
+		if err := h.orderRepo.UpdateRefundRequest(r.Context(), body.RefundRequestID, body.RefundStatus, adminEmail, body.RefundReference, body.AdminNote); err != nil {
 			utils.Error(w, http.StatusBadRequest, err.Error())
 			return
 		}

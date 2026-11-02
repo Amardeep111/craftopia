@@ -88,6 +88,30 @@ func (h *OrderHandler) GetOrder(w http.ResponseWriter, r *http.Request) {
 	utils.JSON(w, http.StatusOK, order)
 }
 
+func (h *OrderHandler) GetAdminOrder(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if id == "" {
+		utils.Error(w, http.StatusBadRequest, "Order ID is required")
+		return
+	}
+	order, err := h.repo.GetOrderByID(r.Context(), id)
+	if err != nil {
+		utils.Error(w, http.StatusInternalServerError, "Could not load order")
+		return
+	}
+	if order == nil {
+		utils.Error(w, http.StatusNotFound, "Order not found")
+		return
+	}
+	refunds, err := h.repo.GetRefundRequestsByOrderID(r.Context(), id)
+	if err != nil {
+		utils.Error(w, http.StatusInternalServerError, "Could not load refund requests")
+		return
+	}
+	order.RefundRequests = refunds
+	utils.Success(w, http.StatusOK, "Order loaded successfully", order)
+}
+
 func (h *OrderHandler) ListOrGetOrders(w http.ResponseWriter, r *http.Request) {
 	// If orderNumber query param is passed, allow guest lookup
 	if orderNumber := r.URL.Query().Get("orderNumber"); orderNumber != "" {

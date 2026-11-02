@@ -276,6 +276,29 @@ func (r *OrderRepository) GetOrderByID(ctx context.Context, id string) (*models.
 	return &o, nil
 }
 
+func (r *OrderRepository) GetRefundRequestsByOrderID(ctx context.Context, orderID string) ([]models.RefundRequest, error) {
+	refundRows, err := r.db.Pool.Query(ctx, `
+		SELECT id, "orderId", reason, amount, "refundUpiId", status, "adminNote", "reviewedBy", "reviewedAt", "createdAt", "updatedAt"
+		FROM "RefundRequest" WHERE "orderId" = $1 ORDER BY "createdAt" DESC;
+	`, orderID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query refund requests: %w", err)
+	}
+	defer refundRows.Close()
+	refunds := make([]models.RefundRequest, 0)
+	for refundRows.Next() {
+		var refund models.RefundRequest
+		if err := refundRows.Scan(&refund.ID, &refund.OrderID, &refund.Reason, &refund.Amount, &refund.RefundUPIID, &refund.Status, &refund.AdminNote, &refund.ReviewedBy, &refund.ReviewedAt, &refund.CreatedAt, &refund.UpdatedAt); err != nil {
+			return nil, fmt.Errorf("failed to scan refund request: %w", err)
+		}
+		refunds = append(refunds, refund)
+	}
+	if err := refundRows.Err(); err != nil {
+		return nil, fmt.Errorf("failed while reading refund requests: %w", err)
+	}
+	return refunds, nil
+}
+
 func (r *OrderRepository) GetOrdersByEmail(ctx context.Context, email string) ([]models.Order, error) {
 	rows, err := r.db.Pool.Query(ctx, `
 		SELECT id, "orderNumber", "customerName", "customerEmail", status, "paymentMethod",
@@ -336,6 +359,9 @@ func (r *OrderRepository) VerifyUPIPayment(ctx context.Context, orderID string, 
 	}
 	if paymentStatus == string(models.PaymentStatusPaid) {
 		return nil, errors.New("this UPI order is already marked Paid")
+	}
+	if paymentStatus != string(models.PaymentStatusAwaitingVerification) && paymentStatus != string(models.PaymentStatusManualReview) {
+		return nil, fmt.Errorf("UPI payment cannot be verified while its status is %s", paymentStatus)
 	}
 
 	now := time.Now()
@@ -776,7 +802,7 @@ func (r *OrderRepository) RequestRefund(ctx context.Context, orderID, userEmail,
 	return &req, nil
 }
 
-func (r *OrderRepository) UpdateRefundRequest(ctx context.Context, id, status, adminEmail string) error {
+func (r *OrderRepository) UpdateRefundRequest(ctx context.Context, id, status, adminEmail, refundReference, adminNote string) error {
 	valid := map[string]map[string]bool{
 		"REQUESTED":  {"APPROVED": true, "REJECTED": true},
 		"APPROVED":   {"PROCESSING": true, "REJECTED": true},
@@ -788,27 +814,42 @@ func (r *OrderRepository) UpdateRefundRequest(ctx context.Context, id, status, a
 		return err
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
-	var orderID, current string
+	var orderID, current, orderStatus, orderPaymentStatus string
+	var amount int
 	var paymentMethod *string
 	if err := tx.QueryRow(ctx, `
-		SELECT rr."orderId", rr.status, o."paymentMethod"
+		SELECT rr."orderId", rr.status, o."paymentMethod", o.status, rr.amount, o."paymentStatus"
 		FROM "RefundRequest" rr JOIN "Order" o ON o.id = rr."orderId"
 		WHERE rr.id = $1 FOR UPDATE OF rr, o;
-	`, id).Scan(&orderID, &current, &paymentMethod); err != nil {
+	`, id).Scan(&orderID, &current, &paymentMethod, &orderStatus, &amount, &orderPaymentStatus); err != nil {
 		return errors.New("Refund request not found.")
 	}
 	if !valid[current][status] {
 		return fmt.Errorf("refund status cannot change from %s to %s", current, status)
 	}
-	_, err = tx.Exec(ctx, `UPDATE "RefundRequest" SET status = $1, "reviewedBy" = $2, "reviewedAt" = NOW(), "updatedAt" = NOW() WHERE id = $3;`, status, adminEmail, id)
+	isCOD := paymentMethod != nil && (strings.Contains(strings.ToLower(*paymentMethod), "cash") || strings.Contains(strings.ToLower(*paymentMethod), "cod"))
+	if orderPaymentStatus != string(models.PaymentStatusRefundRequested) {
+		return fmt.Errorf("cannot move refund to %s while order payment status is %s", strings.ToLower(status), orderPaymentStatus)
+	}
+	if status == "APPROVED" && isCOD && orderStatus != "RETURN_APPROVED" && orderStatus != "RETURNED" {
+		return errors.New("approve this COD refund after the return is marked Return Approved or Returned")
+	}
+	refundReference = strings.TrimSpace(refundReference)
+	if status == "COMPLETED" && refundReference == "" {
+		return errors.New("enter the refund UPI transaction reference before marking the refund complete")
+	}
+	_, err = tx.Exec(ctx, `UPDATE "RefundRequest" SET status = $1, "adminNote" = COALESCE(NULLIF($2, ''), "adminNote"), "reviewedBy" = $3, "reviewedAt" = NOW(), "updatedAt" = NOW() WHERE id = $4;`, status, strings.TrimSpace(adminNote), adminEmail, id)
 	if err != nil {
 		return err
 	}
 	if status == "COMPLETED" {
 		_, err = tx.Exec(ctx, `UPDATE "Order" SET "paymentStatus" = 'REFUNDED', "updatedAt" = NOW() WHERE id = $1;`, orderID)
+		if err == nil {
+			_, err = tx.Exec(ctx, `INSERT INTO "PaymentLog" (id, "orderId", amount, status, provider, "providerReference", method, utr, "verifiedBy", "verifiedAt", "createdAt") VALUES ($1, $2, $3, 'REFUNDED', 'UPI', $4, 'ADMIN_REFUND', $5, $6, NOW(), NOW())`, generateID("plog"), orderID, amount, id, refundReference, adminEmail)
+		}
 	} else if status == "REJECTED" {
 		paymentStatus := "PAID"
-		if paymentMethod != nil && strings.Contains(strings.ToLower(*paymentMethod), "cash") {
+		if isCOD {
 			paymentStatus = "COD_COLLECTED"
 		}
 		_, err = tx.Exec(ctx, `UPDATE "Order" SET "paymentStatus" = $1, "updatedAt" = NOW() WHERE id = $2;`, paymentStatus, orderID)

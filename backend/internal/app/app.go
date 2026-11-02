@@ -139,7 +139,7 @@ func Setup(cfg *config.Config, db *database.DB) *App {
 	mux.Handle("GET /api/admin/dashboard", adminAuth(adminHandler.GetDashboard))
 	mux.Handle("GET /api/admin/orders", adminAuth(adminHandler.ListOrders))
 	mux.Handle("PATCH /api/admin/orders", adminAuth(adminHandler.UpdateOrder))
-	mux.Handle("GET /api/admin/orders/{id}", adminAuth(orderHandler.GetOrder))
+	mux.Handle("GET /api/admin/orders/{id}", adminAuth(orderHandler.GetAdminOrder))
 
 	mux.Handle("GET /api/admin/products", adminAuth(adminHandler.ListProducts))
 	mux.Handle("GET /api/admin/products/{id}", adminAuth(adminHandler.GetProduct))
