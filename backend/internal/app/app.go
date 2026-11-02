@@ -119,6 +119,7 @@ func Setup(cfg *config.Config, db *database.DB) *App {
 	mux.Handle("POST /api/orders/cancel", auth(http.HandlerFunc(orderHandler.CancelOrder)))
 	mux.Handle("POST /api/orders/refund", auth(http.HandlerFunc(orderHandler.RequestRefund)))
 	mux.Handle("PATCH /api/orders/{id}/verify-payment", adminAuth(orderHandler.VerifyUPIPayment))
+	mux.Handle("PATCH /api/admin/orders/{id}/collect-cod", adminAuth(orderHandler.MarkCODPaymentCollected))
 	mux.HandleFunc("GET /api/payment/upi-details", paymentHandler.GetUPIDetails)
 	mux.HandleFunc("POST /api/payment/initialize", paymentHandler.Initialize)
 	mux.HandleFunc("POST /api/payment/confirm", paymentHandler.Confirm)

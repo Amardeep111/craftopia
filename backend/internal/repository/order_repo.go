@@ -19,6 +19,11 @@ type OrderRepository struct {
 	db *database.DB
 }
 
+var (
+	ErrOrderNotFound               = errors.New("order not found")
+	ErrUnpaidUPIOrderCannotConfirm = errors.New("cannot confirm a UPI order before payment is verified and marked Paid")
+)
+
 func NewOrderRepository(db *database.DB) *OrderRepository {
 	return &OrderRepository{db: db}
 }
@@ -305,25 +310,33 @@ func (r *OrderRepository) GetOrdersByEmail(ctx context.Context, email string) ([
 // 3. Auto-advances fulfillment to CONFIRMED when paid.
 // 4. Inserts audit payment log with admin email.
 func (r *OrderRepository) VerifyUPIPayment(ctx context.Context, orderID string, utr string, adminEmail string) (*models.Order, error) {
-	current, err := r.GetOrderByID(ctx, orderID)
-	if err != nil || current == nil {
-		return nil, fmt.Errorf("order not found: %w", err)
-	}
-
-	cleanUTR := strings.TrimSpace(utr)
-	if cleanUTR == "" && current.PaymentReference != nil {
-		cleanUTR = *current.PaymentReference
-	}
-
-	if cleanUTR == "" {
-		return nil, errors.New("enter the UPI transaction reference (UTR) before confirming payment")
-	}
-
 	tx, err := r.db.Pool.Begin(ctx)
 	if err != nil {
 		return nil, err
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
+	var paymentMethod, paymentStatus string
+	var amount int
+	var storedReference *string
+	if err := tx.QueryRow(ctx, `SELECT "paymentMethod", "paymentStatus", "paymentReference", "totalAmount" FROM "Order" WHERE id = $1 FOR UPDATE`, orderID).Scan(&paymentMethod, &paymentStatus, &storedReference, &amount); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrOrderNotFound
+		}
+		return nil, fmt.Errorf("failed to load order for payment verification: %w", err)
+	}
+	if !strings.Contains(strings.ToLower(paymentMethod), "upi") {
+		return nil, errors.New("UPI verification can only be used for UPI orders")
+	}
+	cleanUTR := strings.TrimSpace(utr)
+	if cleanUTR == "" && storedReference != nil {
+		cleanUTR = strings.TrimSpace(*storedReference)
+	}
+	if cleanUTR == "" {
+		return nil, errors.New("enter the UPI transaction reference (UTR) before confirming payment")
+	}
+	if paymentStatus == string(models.PaymentStatusPaid) {
+		return nil, errors.New("this UPI order is already marked Paid")
+	}
 
 	now := time.Now()
 	_, err = tx.Exec(ctx, `
@@ -346,7 +359,7 @@ func (r *OrderRepository) VerifyUPIPayment(ctx context.Context, orderID string, 
 		INSERT INTO "PaymentLog" (
 			id, "orderId", amount, status, provider, "providerReference", method, utr, "verifiedBy", "verifiedAt", "createdAt"
 		) VALUES ($1, $2, $3, 'PAID', $4, $5, $6, $7, $8, $9, $10);
-	`, logID, orderID, current.TotalAmount, provider, cleanUTR, method, cleanUTR, adminEmail, now, now)
+	`, logID, orderID, amount, provider, cleanUTR, method, cleanUTR, adminEmail, now, now)
 	if err != nil {
 		return nil, fmt.Errorf("failed to insert audit payment log: %w", err)
 	}
@@ -539,6 +552,21 @@ func (r *OrderRepository) GetAllOrdersAdmin(ctx context.Context, page, pageSize 
 
 // UpdateOrderStatus updates order status and tracking fields
 func (r *OrderRepository) UpdateOrderStatus(ctx context.Context, orderID string, status string, trackingNumber, partner, estDelivery *string) error {
+	tx, err := r.db.Pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to begin order update: %w", err)
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	var paymentMethod, paymentStatus string
+	if err := tx.QueryRow(ctx, `SELECT "paymentMethod", "paymentStatus" FROM "Order" WHERE id = $1 FOR UPDATE`, orderID).Scan(&paymentMethod, &paymentStatus); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ErrOrderNotFound
+		}
+		return fmt.Errorf("failed to load order before update: %w", err)
+	}
+	if status == string(models.OrderStatusConfirmed) && strings.Contains(strings.ToLower(paymentMethod), "upi") && paymentStatus != string(models.PaymentStatusPaid) {
+		return ErrUnpaidUPIOrderCannotConfirm
+	}
 	query := `
 		UPDATE "Order"
 		SET status = COALESCE(NULLIF($1, '')::"OrderStatus", status),
@@ -548,8 +576,42 @@ func (r *OrderRepository) UpdateOrderStatus(ctx context.Context, orderID string,
 		    "updatedAt" = NOW()
 		WHERE id = $5;
 	`
-	_, err := r.db.Pool.Exec(ctx, query, status, trackingNumber, partner, estDelivery, orderID)
-	return err
+	if _, err := tx.Exec(ctx, query, status, trackingNumber, partner, estDelivery, orderID); err != nil {
+		return err
+	}
+	return tx.Commit(ctx)
+}
+
+// MarkCODPaymentCollected records cash collection as an audited payment transition.
+func (r *OrderRepository) MarkCODPaymentCollected(ctx context.Context, orderID, adminEmail string) error {
+	tx, err := r.db.Pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to begin COD collection: %w", err)
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	var method, status string
+	var amount int
+	if err := tx.QueryRow(ctx, `SELECT "paymentMethod", "paymentStatus", "totalAmount" FROM "Order" WHERE id = $1 FOR UPDATE`, orderID).Scan(&method, &status, &amount); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return errors.New("order not found")
+		}
+		return fmt.Errorf("failed to load COD order: %w", err)
+	}
+	if !strings.Contains(strings.ToLower(method), "cash") && !strings.Contains(strings.ToLower(method), "cod") {
+		return errors.New("cash collection can only be recorded for COD orders")
+	}
+	if status != string(models.PaymentStatusCODPendingCollection) {
+		return errors.New("this order is not awaiting COD collection")
+	}
+	now := time.Now()
+	if _, err := tx.Exec(ctx, `UPDATE "Order" SET "paymentStatus" = 'COD_COLLECTED', "updatedAt" = $1 WHERE id = $2`, now, orderID); err != nil {
+		return fmt.Errorf("failed to update COD payment: %w", err)
+	}
+	_, err = tx.Exec(ctx, `INSERT INTO "PaymentLog" (id, "orderId", amount, status, provider, method, "verifiedBy", "verifiedAt", "createdAt") VALUES ($1, $2, $3, 'COD_COLLECTED', 'CASH_ON_DELIVERY', 'ADMIN_COD_COLLECTED', $4, $5, $5)`, generateID("plog"), orderID, amount, adminEmail, now)
+	if err != nil {
+		return fmt.Errorf("failed to record COD collection: %w", err)
+	}
+	return tx.Commit(ctx)
 }
 
 // GetDashboardStats aggregates total counts for admin dashboard

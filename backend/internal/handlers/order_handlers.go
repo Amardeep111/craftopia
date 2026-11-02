@@ -148,6 +148,24 @@ func (h *OrderHandler) VerifyUPIPayment(w http.ResponseWriter, r *http.Request) 
 	utils.Success(w, http.StatusOK, "Payment verified and order confirmed successfully", order)
 }
 
+func (h *OrderHandler) MarkCODPaymentCollected(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if id == "" {
+		utils.Error(w, http.StatusBadRequest, "Order ID is required")
+		return
+	}
+	claims, _ := middleware.GetUserFromContext(r.Context())
+	adminEmail := "admin@jamaescraftopia.com"
+	if claims != nil && claims.Email != "" {
+		adminEmail = claims.Email
+	}
+	if err := h.repo.MarkCODPaymentCollected(r.Context(), id, adminEmail); err != nil {
+		utils.Error(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	utils.Success(w, http.StatusOK, "Cash collection recorded", nil)
+}
+
 type CancelOrderRequest struct {
 	OrderNumber string `json:"orderNumber"`
 }

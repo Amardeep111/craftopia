@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"strings"
@@ -100,6 +101,10 @@ func (h *AdminHandler) UpdateOrder(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.orderRepo.UpdateOrderStatus(r.Context(), id, body.Status, body.TrackingNumber, body.ShippingPartner, body.EstimatedDelivery); err != nil {
+		if errors.Is(err, repository.ErrUnpaidUPIOrderCannotConfirm) || errors.Is(err, repository.ErrOrderNotFound) {
+			utils.Error(w, http.StatusBadRequest, err.Error())
+			return
+		}
 		utils.Error(w, http.StatusInternalServerError, "Failed to update order")
 		return
 	}

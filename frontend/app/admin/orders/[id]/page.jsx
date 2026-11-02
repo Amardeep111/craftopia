@@ -73,6 +73,27 @@ export default function AdminOrderDetail() {
     }
   }
 
+  async function runPaymentAction(path, body, successMessage) {
+    setError('')
+    setNotice('')
+    setSaving(true)
+    try {
+      const response = await fetch(path, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        ...(body ? { body: JSON.stringify(body) } : {}),
+      })
+      const result = await response.json()
+      if (!response.ok || !result.success) throw new Error(result.error || 'Could not update payment.')
+      await load()
+      setNotice(successMessage)
+    } catch (e) {
+      setError(e.message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
   async function updateRefund(refund, refundStatus) {
     setError('')
     setNotice('')
@@ -174,6 +195,12 @@ export default function AdminOrderDetail() {
 
       {error && <p role="alert" className="rounded-xl bg-bloom/10 p-3 text-sm text-bloom">{error}</p>}
       {notice && <p role="status" className="rounded-xl bg-sage/20 p-3 text-sm">{notice}</p>}
+      {canManage && isUpi && order.status === 'CONFIRMED' && order.paymentStatus !== 'PAID' && (
+        <div role="status" className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+          <p className="font-semibold">Order confirmed · payment not verified</p>
+          <p className="mt-1 text-amber-900">This order was confirmed before its UPI payment was recorded. Verify the transfer below to update the payment status to Paid.</p>
+        </div>
+      )}
 
       <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1.5fr)_minmax(280px,1fr)]">
         <div className="min-w-0 space-y-4">
@@ -393,22 +420,14 @@ export default function AdminOrderDetail() {
                     <input
                       type="text"
                       value={paymentRefDraft}
+                      disabled={saving || order.paymentStatus === 'PAID'}
                       onChange={(e) => setPaymentRefDraft(e.target.value)}
-                      placeholder="Enter UPI UTR or reference"
+                      placeholder={order.paymentStatus === 'PAID' ? 'Payment verified' : 'Enter UPI UTR or reference'}
                       maxLength={80}
                       className="min-h-10 flex-1 rounded-xl border border-sand bg-white px-3 text-sm text-plum"
                     />
-                    {paymentRefDraft.trim() !== (order.paymentReference || '') && (
-                      <button
-                        type="button"
-                        disabled={saving}
-                        onClick={() => patchOrder({ paymentReference: paymentRefDraft.trim() })}
-                        className="rounded-xl bg-plum px-3 text-xs font-semibold text-cream hover:bg-ink transition"
-                      >
-                        Save UTR
-                      </button>
-                    )}
                   </div>
+                  <p className="mt-1 text-xs text-muted">The UTR is saved with the verification record.</p>
                 </div>
 
                 {/* UPI Verification Quick Action */}
@@ -420,21 +439,11 @@ export default function AdminOrderDetail() {
                     </p>
                     <button
                       type="button"
-                      disabled={saving}
-                      onClick={() => {
-                        if (!paymentRefDraft.trim() && !order.paymentReference?.trim()) {
-                          setError('Enter the UPI transaction reference (UTR) before confirming payment.')
-                          return
-                        }
-                        patchOrder({
-                          paymentStatus: 'PAID',
-                          paymentReference: paymentRefDraft.trim() || order.paymentReference || null,
-                          status: order.status === 'PENDING' ? 'CONFIRMED' : undefined,
-                        })
-                      }}
+                      disabled={saving || !paymentRefDraft.trim()}
+                      onClick={() => runPaymentAction(`/api/orders/${encodeURIComponent(id)}/verify-payment`, { utr: paymentRefDraft.trim() }, 'Payment verified and marked Paid.')}
                       className="mt-2.5 w-full rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-semibold text-sm py-2 px-3 transition shadow-sm"
                     >
-                      {saving ? 'Verifying…' : '✓ Verify & Mark as Paid'}
+                      {saving ? 'Verifying…' : '✓ Verify transfer and mark Paid'}
                     </button>
                   </div>
                 )}
@@ -444,49 +453,13 @@ export default function AdminOrderDetail() {
                   <button
                     type="button"
                     disabled={saving}
-                    onClick={() => patchOrder({ paymentStatus: 'COD_COLLECTED' })}
+                    onClick={() => runPaymentAction(`/api/admin/orders/${encodeURIComponent(id)}/collect-cod`, null, 'Cash collection recorded.')}
                     className="w-full rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-semibold text-sm py-2 px-3 transition shadow-sm"
                   >
                     ✓ Mark Cash Collected
                   </button>
                 )}
 
-                {/* Manual Payment Status Dropdown */}
-                <div>
-                  <label className="block text-xs font-medium text-muted mb-1">Update payment status</label>
-                  <select
-                    aria-label="Payment status"
-                    value={order.paymentStatus}
-                    disabled={saving}
-                    onChange={(e) => {
-                      const nextPaymentStatus = e.target.value
-                      if (nextPaymentStatus === 'PAID' && isUpi && !paymentRefDraft.trim() && !order.paymentReference?.trim()) {
-                        setError('Enter the UPI transaction reference (UTR) before marking payment as Paid.')
-                        return
-                      }
-                      patchOrder({
-                        paymentStatus: nextPaymentStatus,
-                        paymentReference: paymentRefDraft.trim() || order.paymentReference || null,
-                        status: nextPaymentStatus === 'PAID' && order.status === 'PENDING' ? 'CONFIRMED' : undefined,
-                      })
-                    }}
-                    className="min-h-11 w-full rounded-xl border border-sand bg-white px-3 text-sm text-plum"
-                  >
-                    {[
-                      'AWAITING_VERIFICATION',
-                      'PAID',
-                      'MANUAL_REVIEW',
-                      'COD_PENDING_COLLECTION',
-                      'COD_COLLECTED',
-                      'FAILED',
-                      'CANCELLED',
-                    ].map((st) => (
-                      <option key={st} value={st}>
-                        {label(st)}
-                      </option>
-                    ))}
-                  </select>
-                </div>
               </div>
             )}
           </section>
