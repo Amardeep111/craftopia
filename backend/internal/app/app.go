@@ -35,7 +35,7 @@ func Setup(cfg *config.Config, db *database.DB) *App {
 	productHandler := handlers.NewProductHandler(productRepo)
 	orderHandler := handlers.NewOrderHandler(orderRepo)
 	customReqHandler := handlers.NewCustomRequestHandler(customReqRepo)
-	paymentHandler := handlers.NewPaymentHandler(cfg)
+	paymentHandler := handlers.NewPaymentHandler(cfg, settingRepo)
 	authHandler := handlers.NewAuthHandler(userRepo, sessionRepo, cfg)
 	extraHandler := handlers.NewExtraHandlers(cartRepo, couponRepo, addressRepo, reviewRepo, contactRepo, orderRepo, userRepo)
 	adminHandler := handlers.NewAdminHandler(orderRepo, productRepo, userRepo, couponRepo, settingRepo)

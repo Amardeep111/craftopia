@@ -1,22 +1,30 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"strings"
 	"time"
 
 	"craftopia-backend/internal/config"
+	"craftopia-backend/internal/repository"
 	"craftopia-backend/internal/utils"
 )
 
-type PaymentHandler struct {
-	cfg *config.Config
+type paymentSettingsRepository interface {
+	GetSettings(context.Context) (*repository.StoreSettingsData, error)
 }
 
-func NewPaymentHandler(cfg *config.Config) *PaymentHandler {
-	return &PaymentHandler{cfg: cfg}
+type PaymentHandler struct {
+	cfg         *config.Config
+	settingRepo paymentSettingsRepository
+}
+
+func NewPaymentHandler(cfg *config.Config, settingRepo paymentSettingsRepository) *PaymentHandler {
+	return &PaymentHandler{cfg: cfg, settingRepo: settingRepo}
 }
 
 // GetUPIDetails returns merchant UPI details and generates a deep-link
@@ -24,6 +32,22 @@ func (h *PaymentHandler) GetUPIDetails(w http.ResponseWriter, r *http.Request) {
 	vpa := strings.TrimSpace(h.cfg.MerchantUPIID)
 	name := strings.TrimSpace(h.cfg.MerchantPayeeName)
 	whatsapp := strings.TrimSpace(h.cfg.WhatsAppNumber)
+	if h.settingRepo != nil {
+		settings, err := h.settingRepo.GetSettings(r.Context())
+		if err != nil {
+			slog.Error("Failed to load merchant payment settings", "error", err)
+		} else if settings != nil {
+			if settings.MerchantVPA != nil && strings.TrimSpace(*settings.MerchantVPA) != "" {
+				vpa = strings.TrimSpace(*settings.MerchantVPA)
+			}
+			if strings.TrimSpace(settings.MerchantName) != "" {
+				name = strings.TrimSpace(settings.MerchantName)
+			}
+			if settings.WhatsAppNumber != nil && strings.TrimSpace(*settings.WhatsAppNumber) != "" {
+				whatsapp = strings.TrimSpace(*settings.WhatsAppNumber)
+			}
+		}
+	}
 
 	if vpa == "" {
 		utils.Error(w, http.StatusServiceUnavailable, "UPI payments are not configured yet.")

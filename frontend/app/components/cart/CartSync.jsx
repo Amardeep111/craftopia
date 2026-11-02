@@ -3,22 +3,7 @@
 import { useEffect, useRef } from 'react'
 import { useCartStore } from '@/lib/cart'
 import { useUserStore } from '@/lib/user'
-
-function mergeCartItems(savedItems, guestItems) {
-  const merged = new Map(savedItems.map((item) => [item.id, { ...item }]))
-  for (const item of guestItems) {
-    const current = merged.get(item.id)
-    if (current) {
-      current.quantity = Math.min(99, Number(current.quantity || 0) + Number(item.quantity || 0))
-      if (!current.image && item.image) current.image = item.image
-      if (!current.imageUrl && item.imageUrl) current.imageUrl = item.imageUrl
-      if (!current.visual && item.visual) current.visual = item.visual
-    } else {
-      merged.set(item.id, { ...item, quantity: Math.min(99, Number(item.quantity || 1)) })
-    }
-  }
-  return [...merged.values()]
-}
+import { resolveCartItems } from '@/lib/cart-sync-utils'
 
 function normalizeCartItems(items) {
   if (!Array.isArray(items)) return []
@@ -89,6 +74,12 @@ export default function CartSync({ initialUser = null, initialCart = null }) {
       return () => { active = false }
     }
 
+    // Root layouts may refresh with new server props after product/admin updates.
+    // Once this user is initialized, do not merge the same saved cart again.
+    if (initializedUserId.current === userId && readyUserId.current === userId) {
+      return () => { active = false }
+    }
+
     readyUserId.current = null
 
     async function initialize() {
@@ -104,21 +95,26 @@ export default function CartSync({ initialUser = null, initialCart = null }) {
         }
         if (!active) return
 
-        const currentLocal = useCartStore.getState().items || []
-        // Merge server cart and local cart so any newly added items (like Buy Now) are never wiped out
-        const items = mergeCartItems(normalizeCartItems(serverItems), normalizeCartItems(currentLocal))
+        const localCart = useCartStore.getState()
+        const localItems = normalizeCartItems(localCart.items || [])
+        const savedItems = normalizeCartItems(serverItems)
+        // Only merge an anonymous guest cart. An owned local cart already mirrors
+        // the signed-in user's saved cart; adding both quantities inflates it on
+        // every root-layout refresh. Never carry one account's cart into another.
+        const items = resolveCartItems(savedItems, localItems, localCart.ownerUserId)
 
         useCartStore.getState().replaceItems(items)
         useCartStore.getState().setOwnerUserId(userId)
         initializedUserId.current = userId
         readyUserId.current = userId
 
-        // If local had items not yet in server cart, sync them immediately to server
-        if (items.length > 0 && (items.length !== serverItems.length || JSON.stringify(items) !== JSON.stringify(serverItems))) {
+        // Persist only guest items merged during sign-in.
+        const cartPayload = (cartItems) => cartItems.map(({ id, quantity }) => ({ productId: id, quantity }))
+        if (localCart.ownerUserId === null && JSON.stringify(cartPayload(items)) !== JSON.stringify(cartPayload(savedItems))) {
           fetch('/api/cart', {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ items: items.map((item) => ({ productId: item.id, quantity: item.quantity })) }),
+            body: JSON.stringify({ items: cartPayload(items) }),
           }).catch(() => {})
         }
       } catch {

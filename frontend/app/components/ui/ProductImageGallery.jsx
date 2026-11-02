@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { ChevronLeft, ChevronRight, X } from 'lucide-react'
 import { getOptimizedImageUrl } from '@/lib/images'
 import ProductImage from './ProductImage'
@@ -27,10 +27,12 @@ export default function ProductImageGallery({ product, loading = false }) {
   const [viewerOpen, setViewerOpen] = useState(false)
   const [selected, setSelected] = useState(0)
   const [loadedPhotos, setLoadedPhotos] = useState({})
+  const [failedPhotos, setFailedPhotos] = useState({})
+  const mainImageRef = useRef(null)
+  const thumbnailsRef = useRef(null)
 
   useEffect(() => {
     setSelected(0)
-    setLoadedPhotos({})
   }, [product?.id, product?.slug, product?.imageUrl])
 
   const photos = useMemo(() => {
@@ -54,7 +56,34 @@ export default function ProductImageGallery({ product, loading = false }) {
   const visual = product?.visual || 'yarn'
   const name = product?.name || 'Product image'
   const imageCount = photos.length || 3
-  const isCurrentLoaded = Boolean(loadedPhotos[selected])
+  const currentPhoto = photos[selected]
+  const currentPhotoSrc = currentPhoto ? optimized(currentPhoto) : null
+  const isCurrentLoaded = !currentPhotoSrc || Boolean(loadedPhotos[currentPhotoSrc] || failedPhotos[currentPhotoSrc])
+
+  useEffect(() => {
+    const image = mainImageRef.current
+    if (!image || !currentPhotoSrc || !image.complete) return
+    if (image.naturalWidth > 0) {
+      setLoadedPhotos((previous) => ({ ...previous, [currentPhotoSrc]: true }))
+    } else {
+      setFailedPhotos((previous) => ({ ...previous, [currentPhotoSrc]: true }))
+    }
+  }, [currentPhotoSrc])
+
+  useEffect(() => {
+    const images = thumbnailsRef.current?.querySelectorAll('img[data-gallery-thumb]')
+    if (!images?.length) return
+    const loaded = {}
+    const failed = {}
+    images.forEach((image) => {
+      if (!image.complete) return
+      const source = image.dataset.galleryThumb
+      if (image.naturalWidth > 0) loaded[source] = true
+      else failed[source] = true
+    })
+    if (Object.keys(loaded).length) setLoadedPhotos((previous) => ({ ...previous, ...loaded }))
+    if (Object.keys(failed).length) setFailedPhotos((previous) => ({ ...previous, ...failed }))
+  }, [photos])
 
   function changeImage(delta) {
     setSelected((index) => (index + delta + imageCount) % imageCount)
@@ -71,7 +100,9 @@ export default function ProductImageGallery({ product, loading = false }) {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [viewerOpen, imageCount])
 
-  const optimized = (url, width = 1400, quality = 85) => getOptimizedImageUrl(url, { width, quality })
+  function optimized(url, width = 1400, quality = 85) {
+    return getOptimizedImageUrl(url, { width, quality })
+  }
 
   // Image collage skeleton loader
   if (loading || (!product && photos.length === 0)) {
@@ -100,21 +131,35 @@ export default function ProductImageGallery({ product, loading = false }) {
             </div>
           )}
 
-          {photos.length ? (
+          {currentPhoto ? (
             <button
               type="button"
               onClick={() => setViewerOpen(true)}
               aria-label={`Open full-size ${name} photo ${selected + 1}`}
               className="absolute inset-0 z-10 flex h-full w-full items-center justify-center focus:outline-none focus-visible:ring-4 focus-visible:ring-inset focus-visible:ring-bloom"
             >
-              <img
-                src={optimized(photos[selected])}
-                alt={`${name}, photo ${selected + 1} of ${photos.length}`}
-                onLoad={() => setLoadedPhotos((prev) => ({ ...prev, [selected]: true }))}
-                className={`h-full w-full object-cover transition-opacity duration-300 ${
-                  isCurrentLoaded ? 'opacity-100' : 'opacity-0'
-                }`}
-              />
+              {failedPhotos[currentPhotoSrc] ? (
+                <ProductImage
+                  visual={visual}
+                  palette={product?.palette}
+                  view={selected + 1}
+                  alt={`${name}, photo unavailable`}
+                  className="h-full w-full"
+                />
+              ) : (
+                <img
+                  ref={mainImageRef}
+                  src={currentPhotoSrc}
+                  alt={`${name}, photo ${selected + 1} of ${photos.length}`}
+                  loading={selected === 0 ? 'eager' : 'lazy'}
+                  fetchPriority={selected === 0 ? 'high' : 'auto'}
+                  onLoad={() => setLoadedPhotos((previous) => ({ ...previous, [currentPhotoSrc]: true }))}
+                  onError={() => setFailedPhotos((previous) => ({ ...previous, [currentPhotoSrc]: true }))}
+                  className={`h-full w-full object-cover transition-opacity duration-300 ${
+                    isCurrentLoaded ? 'opacity-100' : 'opacity-0'
+                  }`}
+                />
+              )}
             </button>
           ) : (
             <button
@@ -160,9 +205,10 @@ export default function ProductImageGallery({ product, loading = false }) {
 
         {/* Thumbnail collage row */}
         {photos.length > 1 && (
-          <div className="flex gap-2 overflow-x-auto pb-1" aria-label="Product photos">
+          <div ref={thumbnailsRef} className="flex gap-2 overflow-x-auto pb-1" aria-label="Product photos">
             {photos.map((url, index) => {
-              const isThumbLoaded = Boolean(loadedPhotos[`thumb_${index}`])
+              const thumbSrc = optimized(url, 160, 75)
+              const isThumbLoaded = Boolean(loadedPhotos[thumbSrc] || failedPhotos[thumbSrc])
               return (
                 <button
                   key={url}
@@ -179,16 +225,17 @@ export default function ProductImageGallery({ product, loading = false }) {
                   {!isThumbLoaded && (
                     <div className="absolute inset-0 bg-sand/40 animate-pulse" />
                   )}
-                  <img
-                    src={optimized(url, 160, 75)}
+                  {!failedPhotos[thumbSrc] && <img
+                    src={thumbSrc}
+                    data-gallery-thumb={thumbSrc}
                     alt=""
-                    onLoad={() =>
-                      setLoadedPhotos((prev) => ({ ...prev, [`thumb_${index}`]: true }))
-                    }
+                    loading="lazy"
+                    onLoad={() => setLoadedPhotos((previous) => ({ ...previous, [thumbSrc]: true }))}
+                    onError={() => setFailedPhotos((previous) => ({ ...previous, [thumbSrc]: true }))}
                     className={`h-full w-full object-cover transition-opacity duration-200 ${
                       isThumbLoaded ? 'opacity-100' : 'opacity-0'
                     }`}
-                  />
+                  />}
                 </button>
               )
             })}
