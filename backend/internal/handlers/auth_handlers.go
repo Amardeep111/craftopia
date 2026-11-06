@@ -51,13 +51,15 @@ func NewAuthHandler(userRepo *repository.UserRepository, sessionRepo *repository
 }
 
 type AuthRequest struct {
-	Email             string  `json:"email"`
-	Password          string  `json:"password,omitempty"`
-	EncryptedPassword any     `json:"encryptedPassword,omitempty"`
-	AdminOnly         bool    `json:"adminOnly,omitempty"`
-	Name              *string `json:"name,omitempty"`
-	Phone             *string `json:"phone,omitempty"`
-	Mobile            *string `json:"mobile,omitempty"`
+	Email                    string  `json:"email"`
+	Password                 string  `json:"password,omitempty"`
+	ConfirmPassword          string  `json:"confirmPassword,omitempty"`
+	EncryptedPassword        any     `json:"encryptedPassword,omitempty"`
+	EncryptedConfirmPassword any     `json:"encryptedConfirmPassword,omitempty"`
+	AdminOnly                bool    `json:"adminOnly,omitempty"`
+	Name                     *string `json:"name,omitempty"`
+	Phone                    *string `json:"phone,omitempty"`
+	Mobile                   *string `json:"mobile,omitempty"`
 }
 
 type LogoutRequest struct {
@@ -92,8 +94,23 @@ func (h *AuthHandler) Signup(w http.ResponseWriter, r *http.Request) {
 		password = decrypted
 	}
 
-	if len(password) < 6 {
-		utils.Error(w, http.StatusBadRequest, "Password must be at least 6 characters")
+	confirmPassword := req.ConfirmPassword
+	if confirmPassword == "" && req.EncryptedConfirmPassword != nil {
+		decrypted, err := utils.DecryptRSAEnvelope(req.EncryptedConfirmPassword, h.cfg.PasswordEncryptionPrivateKey)
+		if err != nil {
+			utils.Error(w, http.StatusBadRequest, "Could not securely process your confirm password. Please try again.")
+			return
+		}
+		confirmPassword = decrypted
+	}
+
+	if len(password) < 8 {
+		utils.Error(w, http.StatusBadRequest, "Password must be at least 8 characters long.")
+		return
+	}
+
+	if (req.ConfirmPassword != "" || req.EncryptedConfirmPassword != nil) && password != confirmPassword {
+		utils.Error(w, http.StatusBadRequest, "Passwords do not match.")
 		return
 	}
 
