@@ -146,6 +146,48 @@ func TestUPIDetailsPreferDatabaseMerchantSettings(t *testing.T) {
 func TestDetectLocationFallback(t *testing.T) {
 	extraHandler := handlers.NewExtraHandlers(nil, nil, nil, nil, nil, nil, nil, nil)
 
+	// Use RFC 5737 reserved test IP (192.0.2.1) so IP lookup cannot resolve coordinates,
+	// verifying the safe country-only fallback regardless of runner's geographic location.
+	req, err := http.NewRequest("GET", "/api/location/detect", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("x-forwarded-for", "192.0.2.1")
+
+	rr := httptest.NewRecorder()
+	extraHandler.DetectLocation(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", rr.Code)
+	}
+
+	var resp struct {
+		Success bool `json:"success"`
+		Data    struct {
+			Source  string  `json:"source"`
+			Country string  `json:"country"`
+			City    string  `json:"city"`
+			Lat     float64 `json:"lat"`
+			Lng     float64 `json:"lng"`
+		} `json:"data"`
+	}
+	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
+		t.Fatal(err)
+	}
+	if !resp.Success {
+		t.Fatalf("expected success true, got %+v", resp)
+	}
+	if resp.Data.Source != "country-default" || resp.Data.Country != "India" {
+		t.Errorf("expected source country-default with country India, got %+v", resp)
+	}
+	if resp.Data.Lat != 0 || resp.Data.Lng != 0 || resp.Data.City != "" {
+		t.Errorf("expected no fake coordinates or city in fallback, got %+v", resp)
+	}
+}
+
+func TestDetectLocationIPLookupOrFallback(t *testing.T) {
+	extraHandler := handlers.NewExtraHandlers(nil, nil, nil, nil, nil, nil, nil, nil)
+
 	req, err := http.NewRequest("GET", "/api/location/detect", nil)
 	if err != nil {
 		t.Fatal(err)
@@ -171,11 +213,19 @@ func TestDetectLocationFallback(t *testing.T) {
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
 		t.Fatal(err)
 	}
-	if !resp.Success || resp.Data.Country != "India" {
-		t.Errorf("expected default country India, got %+v", resp)
+	if !resp.Success {
+		t.Fatalf("expected success true, got %+v", resp)
 	}
-	if resp.Data.Source == "country-default" && (resp.Data.Lat != 0 || resp.Data.Lng != 0) {
-		t.Errorf("expected no fake coordinates in country-default fallback, got %+v", resp)
+	if resp.Data.Source == "ipwhois" {
+		if resp.Data.Country == "" || resp.Data.Lat == 0 || resp.Data.Lng == 0 {
+			t.Errorf("expected valid ipwhois geolocation, got %+v", resp)
+		}
+	} else if resp.Data.Source == "country-default" {
+		if resp.Data.Country != "India" {
+			t.Errorf("expected default country India, got %+v", resp)
+		}
+	} else {
+		t.Errorf("unexpected source: %q", resp.Data.Source)
 	}
 }
 
