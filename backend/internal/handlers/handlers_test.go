@@ -381,7 +381,7 @@ func TestLoginTempEmailBlocked(t *testing.T) {
 func TestSignupConfirmPasswordMismatch(t *testing.T) {
 	authHandler := handlers.NewAuthHandler(nil, nil, &config.Config{}, nil)
 
-	req, err := http.NewRequest("POST", "/api/auth/signup", strings.NewReader(`{"email": "valid@gmail.com", "password": "Password123", "confirmPassword": "DifferentPassword456"}`))
+	req, err := http.NewRequest("POST", "/api/auth/signup", strings.NewReader(`{"email": "valid@gmail.com", "name": "Test User", "mobile": "9876543210", "password": "Password123", "confirmPassword": "DifferentPassword456"}`))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -395,6 +395,28 @@ func TestSignupConfirmPasswordMismatch(t *testing.T) {
 	}
 	if !strings.Contains(rr.Body.String(), "match") {
 		t.Errorf("expected mismatch error message, got %s", rr.Body.String())
+	}
+}
+
+func TestSignupValidationNameAndMobile(t *testing.T) {
+	authHandler := handlers.NewAuthHandler(nil, nil, &config.Config{}, nil)
+
+	// Missing name
+	req1, _ := http.NewRequest("POST", "/api/auth/signup", strings.NewReader(`{"email": "valid@gmail.com", "mobile": "9876543210", "password": "Password123", "confirmPassword": "Password123"}`))
+	req1.Header.Set("Content-Type", "application/json")
+	rr1 := httptest.NewRecorder()
+	authHandler.Signup(rr1, req1)
+	if rr1.Code != http.StatusBadRequest || !strings.Contains(rr1.Body.String(), "full name") {
+		t.Errorf("expected 400 for missing name, got %d: %s", rr1.Code, rr1.Body.String())
+	}
+
+	// Missing mobile
+	req2, _ := http.NewRequest("POST", "/api/auth/signup", strings.NewReader(`{"email": "valid@gmail.com", "name": "Test User", "password": "Password123", "confirmPassword": "Password123"}`))
+	req2.Header.Set("Content-Type", "application/json")
+	rr2 := httptest.NewRecorder()
+	authHandler.Signup(rr2, req2)
+	if rr2.Code != http.StatusBadRequest || !strings.Contains(rr2.Body.String(), "mobile number") {
+		t.Errorf("expected 400 for missing mobile, got %d: %s", rr2.Code, rr2.Body.String())
 	}
 }
 

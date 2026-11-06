@@ -84,6 +84,24 @@ func (h *AuthHandler) Signup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if req.Name == nil || strings.TrimSpace(*req.Name) == "" || len(strings.TrimSpace(*req.Name)) < 2 {
+		utils.Error(w, http.StatusBadRequest, "Please enter your full name.")
+		return
+	}
+	trimmedName := strings.TrimSpace(*req.Name)
+	req.Name = &trimmedName
+
+	phone := req.Phone
+	if phone == nil && req.Mobile != nil {
+		phone = req.Mobile
+	}
+	if phone == nil || strings.TrimSpace(*phone) == "" {
+		utils.Error(w, http.StatusBadRequest, "Please enter your mobile number.")
+		return
+	}
+	trimmedPhone := strings.TrimSpace(*phone)
+	phone = &trimmedPhone
+
 	password := req.Password
 	if password == "" && req.EncryptedPassword != nil {
 		decrypted, err := utils.DecryptRSAEnvelope(req.EncryptedPassword, h.cfg.PasswordEncryptionPrivateKey)
@@ -112,11 +130,6 @@ func (h *AuthHandler) Signup(w http.ResponseWriter, r *http.Request) {
 	if (req.ConfirmPassword != "" || req.EncryptedConfirmPassword != nil) && password != confirmPassword {
 		utils.Error(w, http.StatusBadRequest, "Passwords do not match.")
 		return
-	}
-
-	phone := req.Phone
-	if phone == nil && req.Mobile != nil {
-		phone = req.Mobile
 	}
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
