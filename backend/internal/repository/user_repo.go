@@ -340,7 +340,7 @@ func (r *UserRepository) CreateEmailVerification(ctx context.Context, email, cod
 		RETURNING id, email, "codeHash", payload, attempts, resends, "expiresAt", "consumedAt", "createdAt", "updatedAt";
 	`
 	var ev models.EmailVerification
-	err = r.db.Pool.QueryRow(ctx, query, id, email, codeHash, payloadBytes, expiresAt).Scan(
+	err = r.db.Pool.QueryRow(ctx, query, id, email, codeHash, string(payloadBytes), expiresAt).Scan(
 		&ev.ID, &ev.Email, &ev.CodeHash, &ev.Payload, &ev.Attempts, &ev.Resends,
 		&ev.ExpiresAt, &ev.ConsumedAt, &ev.CreatedAt, &ev.UpdatedAt,
 	)
