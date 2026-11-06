@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"craftopia-backend/internal/config"
@@ -139,6 +140,191 @@ func TestUPIDetailsPreferDatabaseMerchantSettings(t *testing.T) {
 	}
 	if !contains(result.Data.DeepLink, "pa="+dbVPA) {
 		t.Errorf("deep link %q does not use database VPA %q", result.Data.DeepLink, dbVPA)
+	}
+}
+
+func TestDetectLocationFallback(t *testing.T) {
+	extraHandler := handlers.NewExtraHandlers(nil, nil, nil, nil, nil, nil, nil, nil)
+
+	req, err := http.NewRequest("GET", "/api/location/detect", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rr := httptest.NewRecorder()
+	extraHandler.DetectLocation(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", rr.Code)
+	}
+
+	var resp struct {
+		Success bool `json:"success"`
+		Data    struct {
+			Source  string  `json:"source"`
+			Country string  `json:"country"`
+			City    string  `json:"city"`
+			Lat     float64 `json:"lat"`
+			Lng     float64 `json:"lng"`
+		} `json:"data"`
+	}
+	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
+		t.Fatal(err)
+	}
+	if !resp.Success || resp.Data.Country != "India" {
+		t.Errorf("expected default country India, got %+v", resp)
+	}
+	if resp.Data.Source == "country-default" && (resp.Data.Lat != 0 || resp.Data.Lng != 0) {
+		t.Errorf("expected no fake coordinates in country-default fallback, got %+v", resp)
+	}
+}
+
+func TestDetectLocationVercelHeaders(t *testing.T) {
+	extraHandler := handlers.NewExtraHandlers(nil, nil, nil, nil, nil, nil, nil, nil)
+
+	req, err := http.NewRequest("GET", "/api/location/detect", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("x-vercel-ip-latitude", "12.9716")
+	req.Header.Set("x-vercel-ip-longitude", "77.5946")
+	req.Header.Set("x-vercel-ip-city", "Bengaluru")
+	req.Header.Set("x-vercel-ip-country", "India")
+	req.Header.Set("x-vercel-ip-country-region", "Karnataka")
+
+	rr := httptest.NewRecorder()
+	extraHandler.DetectLocation(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", rr.Code)
+	}
+
+	var resp struct {
+		Success bool `json:"success"`
+		Data    struct {
+			Source  string  `json:"source"`
+			Country string  `json:"country"`
+			City    string  `json:"city"`
+			Lat     float64 `json:"lat"`
+			Lng     float64 `json:"lng"`
+		} `json:"data"`
+	}
+	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
+		t.Fatal(err)
+	}
+	if !resp.Success || resp.Data.Source != "vercel-ip" || resp.Data.City != "Bengaluru" || resp.Data.Lat != 12.9716 {
+		t.Errorf("expected vercel-ip Bengaluru data, got %+v", resp)
+	}
+}
+
+func TestGeocodeInvalidCoords(t *testing.T) {
+	extraHandler := handlers.NewExtraHandlers(nil, nil, nil, nil, nil, nil, nil, nil)
+
+	req, err := http.NewRequest("POST", "/api/geocode", strings.NewReader(`{"lat": 0, "lng": 0}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	rr := httptest.NewRecorder()
+	extraHandler.Geocode(rr, req)
+
+	if rr.Code != http.StatusBadRequest {
+		t.Fatalf("expected status 400 for 0,0 invalid coords, got %d", rr.Code)
+	}
+}
+
+func TestForgotPasswordValidation(t *testing.T) {
+	authHandler := handlers.NewAuthHandler(nil, nil, &config.Config{}, nil)
+
+	// Empty body
+	req, err := http.NewRequest("POST", "/api/auth/forgot-password", strings.NewReader(`{}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	rr := httptest.NewRecorder()
+	authHandler.ForgotPassword(rr, req)
+
+	if rr.Code != http.StatusBadRequest {
+		t.Errorf("expected status 400 for empty email, got %d", rr.Code)
+	}
+}
+
+func TestResetPasswordValidation(t *testing.T) {
+	authHandler := handlers.NewAuthHandler(nil, nil, &config.Config{}, nil)
+
+	// Short OTP
+	req, err := http.NewRequest("POST", "/api/auth/reset-password", strings.NewReader(`{"challengeId": "test", "otp": "123", "password": "Password123"}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	rr := httptest.NewRecorder()
+	authHandler.ResetPassword(rr, req)
+
+	if rr.Code != http.StatusBadRequest {
+		t.Errorf("expected status 400 for short OTP, got %d", rr.Code)
+	}
+}
+
+func TestVerifyOTPValidation(t *testing.T) {
+	authHandler := handlers.NewAuthHandler(nil, nil, &config.Config{}, nil)
+
+	// Missing challenge ID
+	req, err := http.NewRequest("POST", "/api/auth/verify", strings.NewReader(`{"challengeId": "", "otp": "123456"}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	rr := httptest.NewRecorder()
+	authHandler.VerifyOTP(rr, req)
+
+	if rr.Code != http.StatusBadRequest {
+		t.Errorf("expected status 400 for empty challengeId, got %d", rr.Code)
+	}
+}
+
+func TestSignupTempEmailBlocked(t *testing.T) {
+	authHandler := handlers.NewAuthHandler(nil, nil, &config.Config{}, nil)
+
+	req, err := http.NewRequest("POST", "/api/auth/signup", strings.NewReader(`{"email": "scammer@mailinator.com", "password": "Password123"}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	rr := httptest.NewRecorder()
+	authHandler.Signup(rr, req)
+
+	if rr.Code != http.StatusBadRequest {
+		t.Fatalf("expected status 400 for temp mail signup, got %d", rr.Code)
+	}
+	if !strings.Contains(rr.Body.String(), "disposable") {
+		t.Errorf("expected disposable email error message, got %s", rr.Body.String())
+	}
+}
+
+func TestLoginTempEmailBlocked(t *testing.T) {
+	authHandler := handlers.NewAuthHandler(nil, nil, &config.Config{}, nil)
+
+	req, err := http.NewRequest("POST", "/api/auth/login", strings.NewReader(`{"email": "user@10minutemail.com", "password": "Password123"}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	rr := httptest.NewRecorder()
+	authHandler.Login(rr, req)
+
+	if rr.Code != http.StatusBadRequest {
+		t.Fatalf("expected status 400 for temp mail login, got %d", rr.Code)
+	}
+	if !strings.Contains(rr.Body.String(), "disposable") {
+		t.Errorf("expected disposable email error message, got %s", rr.Body.String())
 	}
 }
 

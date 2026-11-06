@@ -23,14 +23,14 @@ func NewUserRepository(db *database.DB) *UserRepository {
 
 func (r *UserRepository) GetByEmail(ctx context.Context, email string) (*models.User, error) {
 	query := `
-		SELECT id, email, password, name, phone, role, "adminActive", "adminPermissions", active, "createdAt", "updatedAt"
+		SELECT id, email, password, name, phone, role, COALESCE("emailVerified", false), "adminActive", "adminPermissions", active, "createdAt", "updatedAt"
 		FROM "User" WHERE email = $1 LIMIT 1;
 	`
 	var u models.User
 	var permissionsJSON []byte
 	err := r.db.Pool.QueryRow(ctx, query, email).Scan(
 		&u.ID, &u.Email, &u.Password, &u.Name, &u.Phone, &u.Role,
-		&u.AdminActive, &permissionsJSON, &u.Active, &u.CreatedAt, &u.UpdatedAt,
+		&u.EmailVerified, &u.AdminActive, &permissionsJSON, &u.Active, &u.CreatedAt, &u.UpdatedAt,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -54,9 +54,9 @@ func (r *UserRepository) FindByID(ctx context.Context, id string) (*models.User,
 	var u models.User
 	var permissionsJSON []byte
 	err := r.db.Pool.QueryRow(ctx, `
-		SELECT id, email, password, name, phone, role, "adminActive", "adminPermissions", active, "createdAt", "updatedAt"
+		SELECT id, email, password, name, phone, role, COALESCE("emailVerified", false), "adminActive", "adminPermissions", active, "createdAt", "updatedAt"
 		FROM "User" WHERE id = $1;
-	`, id).Scan(&u.ID, &u.Email, &u.Password, &u.Name, &u.Phone, &u.Role, &u.AdminActive, &permissionsJSON, &u.Active, &u.CreatedAt, &u.UpdatedAt)
+	`, id).Scan(&u.ID, &u.Email, &u.Password, &u.Name, &u.Phone, &u.Role, &u.EmailVerified, &u.AdminActive, &permissionsJSON, &u.Active, &u.CreatedAt, &u.UpdatedAt)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, nil
@@ -87,13 +87,13 @@ func (r *UserRepository) Create(ctx context.Context, email, plainPassword string
 
 	query := `
 		INSERT INTO "User" (
-			id, email, password, name, phone, role, "adminActive", active, "createdAt", "updatedAt"
-		) VALUES ($1, $2, $3, $4, $5, 'CUSTOMER', false, true, $6, $7)
-		RETURNING id, email, name, phone, role, active, "createdAt", "updatedAt";
+			id, email, password, name, phone, role, "emailVerified", "adminActive", active, "createdAt", "updatedAt"
+		) VALUES ($1, $2, $3, $4, $5, 'CUSTOMER', false, false, true, $6, $7)
+		RETURNING id, email, name, phone, role, "emailVerified", active, "createdAt", "updatedAt";
 	`
 	var u models.User
 	err = r.db.Pool.QueryRow(ctx, query, id, email, string(hashed), name, phone, now, now).Scan(
-		&u.ID, &u.Email, &u.Name, &u.Phone, &u.Role, &u.Active, &u.CreatedAt, &u.UpdatedAt,
+		&u.ID, &u.Email, &u.Name, &u.Phone, &u.Role, &u.EmailVerified, &u.Active, &u.CreatedAt, &u.UpdatedAt,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to insert user: %w", err)
@@ -284,5 +284,121 @@ func (r *UserRepository) RemoveAdminRole(ctx context.Context, id string) error {
 		UPDATE "User" SET role = 'CUSTOMER', "adminActive" = false, "updatedAt" = NOW()
 		WHERE id = $1;
 	`, id)
+	return err
+}
+
+func (r *UserRepository) CreateWithHashedPassword(ctx context.Context, email, hashedPassword string, name, phone *string, emailVerified bool) (*models.User, error) {
+	id := generateID("usr")
+	now := time.Now()
+
+	query := `
+		INSERT INTO "User" (
+			id, email, password, name, phone, role, "emailVerified", "adminActive", active, "createdAt", "updatedAt"
+		) VALUES ($1, $2, $3, $4, $5, 'CUSTOMER', $6, false, true, $7, $8)
+		RETURNING id, email, name, phone, role, "emailVerified", active, "createdAt", "updatedAt";
+	`
+	var u models.User
+	err := r.db.Pool.QueryRow(ctx, query, id, email, hashedPassword, name, phone, emailVerified, now, now).Scan(
+		&u.ID, &u.Email, &u.Name, &u.Phone, &u.Role, &u.EmailVerified, &u.Active, &u.CreatedAt, &u.UpdatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to insert user: %w", err)
+	}
+	return &u, nil
+}
+
+func (r *UserRepository) SetEmailVerified(ctx context.Context, userID string, verified bool) error {
+	_, err := r.db.Pool.Exec(ctx, `UPDATE "User" SET "emailVerified" = $1, "updatedAt" = NOW() WHERE id = $2;`, verified, userID)
+	return err
+}
+
+func (r *UserRepository) SetEmailVerifiedByEmail(ctx context.Context, email string, verified bool) error {
+	_, err := r.db.Pool.Exec(ctx, `UPDATE "User" SET "emailVerified" = $1, "updatedAt" = NOW() WHERE email = $2;`, verified, email)
+	return err
+}
+
+func (r *UserRepository) UpdateUserSignupDetails(ctx context.Context, id, hashedPassword string, name, phone *string) error {
+	_, err := r.db.Pool.Exec(ctx, `
+		UPDATE "User" 
+		SET password = $1, name = COALESCE($2, name), phone = COALESCE($3, phone), "updatedAt" = NOW()
+		WHERE id = $4;
+	`, hashedPassword, name, phone, id)
+	return err
+}
+
+func (r *UserRepository) CreateEmailVerification(ctx context.Context, email, codeHash string, payload any, expiresAt time.Time) (*models.EmailVerification, error) {
+	payloadBytes, err := json.Marshal(payload)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal payload: %w", err)
+	}
+
+	id := generateID("emv")
+	query := `
+		INSERT INTO "EmailVerification" (
+			id, email, "codeHash", payload, attempts, resends, "expiresAt", "createdAt", "updatedAt"
+		) VALUES ($1, $2, $3, $4, 0, 0, $5, NOW(), NOW())
+		RETURNING id, email, "codeHash", payload, attempts, resends, "expiresAt", "consumedAt", "createdAt", "updatedAt";
+	`
+	var ev models.EmailVerification
+	err = r.db.Pool.QueryRow(ctx, query, id, email, codeHash, payloadBytes, expiresAt).Scan(
+		&ev.ID, &ev.Email, &ev.CodeHash, &ev.Payload, &ev.Attempts, &ev.Resends,
+		&ev.ExpiresAt, &ev.ConsumedAt, &ev.CreatedAt, &ev.UpdatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to insert email verification: %w", err)
+	}
+	return &ev, nil
+}
+
+func (r *UserRepository) GetEmailVerification(ctx context.Context, id string) (*models.EmailVerification, error) {
+	query := `
+		SELECT id, email, "codeHash", payload, attempts, resends, "expiresAt", "consumedAt", "createdAt", "updatedAt"
+		FROM "EmailVerification" WHERE id = $1;
+	`
+	var ev models.EmailVerification
+	err := r.db.Pool.QueryRow(ctx, query, id).Scan(
+		&ev.ID, &ev.Email, &ev.CodeHash, &ev.Payload, &ev.Attempts, &ev.Resends,
+		&ev.ExpiresAt, &ev.ConsumedAt, &ev.CreatedAt, &ev.UpdatedAt,
+	)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("failed to query email verification: %w", err)
+	}
+	return &ev, nil
+}
+
+func (r *UserRepository) IncrementEmailVerificationAttempts(ctx context.Context, id string) error {
+	_, err := r.db.Pool.Exec(ctx, `UPDATE "EmailVerification" SET attempts = attempts + 1, "updatedAt" = NOW() WHERE id = $1;`, id)
+	return err
+}
+
+func (r *UserRepository) UpdateEmailVerificationCode(ctx context.Context, id, newCodeHash string, expiresAt time.Time) error {
+	_, err := r.db.Pool.Exec(ctx, `
+		UPDATE "EmailVerification" 
+		SET "codeHash" = $1, attempts = 0, resends = resends + 1, "expiresAt" = $2, "updatedAt" = NOW()
+		WHERE id = $3;
+	`, newCodeHash, expiresAt, id)
+	return err
+}
+
+func (r *UserRepository) ConsumeEmailVerification(ctx context.Context, id string) error {
+	tag, err := r.db.Pool.Exec(ctx, `
+		UPDATE "EmailVerification" 
+		SET "consumedAt" = NOW(), "updatedAt" = NOW()
+		WHERE id = $1 AND "consumedAt" IS NULL;
+	`, id)
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+		return errors.New("verification already consumed")
+	}
+	return nil
+}
+
+func (r *UserRepository) DeleteEmailVerification(ctx context.Context, id string) error {
+	_, err := r.db.Pool.Exec(ctx, `DELETE FROM "EmailVerification" WHERE id = $1;`, id)
 	return err
 }

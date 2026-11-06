@@ -1,13 +1,21 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log/slog"
 	"math"
+	"net"
 	"net/http"
+	"net/url"
+	"os"
 	"strconv"
+	"strings"
+	"time"
 
+	"craftopia-backend/internal/email"
 	"craftopia-backend/internal/middleware"
 	"craftopia-backend/internal/repository"
 	"craftopia-backend/internal/utils"
@@ -21,6 +29,7 @@ type ExtraHandlers struct {
 	contactRepo *repository.ContactRepository
 	orderRepo   *repository.OrderRepository
 	userRepo    *repository.UserRepository
+	mailer      *email.Mailer
 }
 
 func NewExtraHandlers(
@@ -31,6 +40,7 @@ func NewExtraHandlers(
 	contact *repository.ContactRepository,
 	order *repository.OrderRepository,
 	user *repository.UserRepository,
+	mailer *email.Mailer,
 ) *ExtraHandlers {
 	return &ExtraHandlers{
 		cartRepo:    cart,
@@ -40,6 +50,7 @@ func NewExtraHandlers(
 		contactRepo: contact,
 		orderRepo:   order,
 		userRepo:    user,
+		mailer:      mailer,
 	}
 }
 
@@ -252,8 +263,17 @@ func (h *ExtraHandlers) CreateContactMessage(w http.ResponseWriter, r *http.Requ
 		utils.Error(w, http.StatusBadRequest, "Invalid contact payload")
 		return
 	}
+	body.Name = strings.TrimSpace(body.Name)
+	body.Email = strings.TrimSpace(strings.ToLower(body.Email))
+	body.Message = strings.TrimSpace(body.Message)
+
 	if body.Name == "" || body.Email == "" || body.Message == "" {
 		utils.Error(w, http.StatusBadRequest, "Name, email, and message are required")
+		return
+	}
+
+	if utils.IsDisposableEmail(body.Email) {
+		utils.Error(w, http.StatusBadRequest, "Temporary or disposable email addresses are not permitted. Please use a valid personal or work email.")
 		return
 	}
 	id, err := h.contactRepo.SaveMessage(r.Context(), body.Name, body.Email, body.Message)
@@ -261,6 +281,16 @@ func (h *ExtraHandlers) CreateContactMessage(w http.ResponseWriter, r *http.Requ
 		utils.Error(w, http.StatusInternalServerError, err.Error())
 		return
 	}
+
+	if h.mailer != nil {
+		h.mailer.SendEmailBestEffort("contact-receipt", func() error {
+			return h.mailer.SendContactReceipt(body.Email, body.Name)
+		})
+		h.mailer.SendEmailBestEffort("contact-support-alert", func() error {
+			return h.mailer.SendContactSupportAlert(body.Name, body.Email, body.Message)
+		})
+	}
+
 	utils.Success(w, http.StatusCreated, "Message received. We will get back to you soon!", map[string]string{"id": id})
 }
 
@@ -288,9 +318,15 @@ func (h *ExtraHandlers) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 
 // DetectLocation handles GET /api/location/detect
 func (h *ExtraHandlers) DetectLocation(w http.ResponseWriter, r *http.Request) {
+	// 1. Check for Vercel GeoIP headers (instant, 0ms, zero external calls)
 	latStr := r.Header.Get("x-vercel-ip-latitude")
 	lngStr := r.Header.Get("x-vercel-ip-longitude")
 	city := r.Header.Get("x-vercel-ip-city")
+	if city != "" {
+		if unescaped, err := url.QueryUnescape(city); err == nil {
+			city = unescaped
+		}
+	}
 	region := r.Header.Get("x-vercel-ip-country-region")
 	country := r.Header.Get("x-vercel-ip-country")
 	if country == "" {
@@ -301,28 +337,105 @@ func (h *ExtraHandlers) DetectLocation(w http.ResponseWriter, r *http.Request) {
 	if latStr != "" && lngStr != "" {
 		lat, latErr := strconv.ParseFloat(latStr, 64)
 		lng, lngErr := strconv.ParseFloat(lngStr, 64)
-		if latErr != nil || lngErr != nil || math.IsNaN(lat) || math.IsNaN(lng) || math.IsInf(lat, 0) || math.IsInf(lng, 0) || lat < -90 || lat > 90 || lng < -180 || lng > 180 {
-			utils.Error(w, http.StatusBadGateway, "Location data from the platform was invalid")
+		if latErr == nil && lngErr == nil && !math.IsNaN(lat) && !math.IsNaN(lng) && !math.IsInf(lat, 0) && !math.IsInf(lng, 0) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180 {
+			utils.JSON(w, http.StatusOK, map[string]any{
+				"source":  "vercel-ip",
+				"lat":     lat,
+				"lng":     lng,
+				"city":    city,
+				"state":   region,
+				"country": country,
+				"pinCode": postal,
+			})
 			return
 		}
-		utils.JSON(w, http.StatusOK, map[string]any{
-			"source":  "vercel-ip",
-			"lat":     lat,
-			"lng":     lng,
-			"city":    city,
-			"state":   region,
-			"country": country,
-			"pinCode": postal,
-		})
-		return
 	}
 
-	utils.Error(w, http.StatusServiceUnavailable, "IP location is unavailable. Please enable browser location or enter your address manually.")
+	// 2. IP lookup fallback via ipwho.is with 2.5s timeout
+	forwarded := r.Header.Get("x-forwarded-for")
+	clientIP := ""
+	if forwarded != "" {
+		parts := strings.Split(forwarded, ",")
+		clientIP = strings.TrimSpace(parts[0])
+	}
+	if clientIP == "" || clientIP == "127.0.0.1" || clientIP == "::1" {
+		if host, _, err := net.SplitHostPort(r.RemoteAddr); err == nil {
+			clientIP = host
+		}
+	}
+
+	isLocal := clientIP == "" || clientIP == "127.0.0.1" || clientIP == "::1" || strings.HasPrefix(clientIP, "192.168.") || strings.HasPrefix(clientIP, "10.") || strings.HasPrefix(clientIP, "172.16.")
+	targetURL := "https://ipwho.is/"
+	if !isLocal {
+		targetURL = fmt.Sprintf("https://ipwho.is/%s", url.PathEscape(clientIP))
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), 2500*time.Millisecond)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, targetURL, nil)
+	if err == nil {
+		req.Header.Set("User-Agent", "JamaesCraftopia/1.0 (contact@jamaescraftopia.com)")
+		client := &http.Client{Timeout: 2500 * time.Millisecond}
+		res, err := client.Do(req)
+		if err == nil {
+			defer res.Body.Close()
+			if res.StatusCode == http.StatusOK {
+				var data struct {
+					Success   *bool   `json:"success"`
+					Latitude  float64 `json:"latitude"`
+					Longitude float64 `json:"longitude"`
+					City      string  `json:"city"`
+					Region    string  `json:"region"`
+					Country   string  `json:"country"`
+					Postal    string  `json:"postal"`
+				}
+				if err := json.NewDecoder(res.Body).Decode(&data); err == nil {
+					if (data.Success == nil || *data.Success) && data.Latitude != 0 && data.Longitude != 0 {
+						c := data.Country
+						if c == "" {
+							c = "India"
+						}
+						utils.JSON(w, http.StatusOK, map[string]any{
+							"source":  "ipwhois",
+							"lat":     data.Latitude,
+							"lng":     data.Longitude,
+							"city":    data.City,
+							"state":   data.Region,
+							"country": c,
+							"pinCode": data.Postal,
+						})
+						return
+					}
+				}
+			}
+		}
+	}
+
+	// 3. Fallback when coordinates cannot be determined:
+	// Only default country without fake coordinates or city
+	utils.JSON(w, http.StatusOK, map[string]any{
+		"source":  "country-default",
+		"country": "India",
+	})
 }
 
 type GeocodeRequest struct {
 	Lat any `json:"lat"`
 	Lng any `json:"lng"`
+}
+
+type GeocodeAddress struct {
+	Street           string             `json:"street"`
+	AreaStreet       string             `json:"areaStreet"`
+	Area             string             `json:"area"`
+	City             string             `json:"city"`
+	State            string             `json:"state"`
+	Country          string             `json:"country"`
+	PinCode          string             `json:"pinCode"`
+	FormattedAddress string             `json:"formattedAddress"`
+	Coordinates      map[string]float64 `json:"coordinates"`
+	Provider         string             `json:"provider"`
 }
 
 // Geocode handles POST /api/geocode
@@ -338,7 +451,7 @@ func (h *ExtraHandlers) Geocode(w http.ResponseWriter, r *http.Request) {
 	case float64:
 		lat = v
 	case string:
-		parsed, err := strconv.ParseFloat(v, 64)
+		parsed, err := strconv.ParseFloat(strings.TrimSpace(v), 64)
 		if err != nil {
 			utils.Error(w, http.StatusBadRequest, "Invalid coordinates.")
 			return
@@ -349,7 +462,7 @@ func (h *ExtraHandlers) Geocode(w http.ResponseWriter, r *http.Request) {
 	case float64:
 		lng = v
 	case string:
-		parsed, err := strconv.ParseFloat(v, 64)
+		parsed, err := strconv.ParseFloat(strings.TrimSpace(v), 64)
 		if err != nil {
 			utils.Error(w, http.StatusBadRequest, "Invalid coordinates.")
 			return
@@ -362,5 +475,210 @@ func (h *ExtraHandlers) Geocode(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	utils.Error(w, http.StatusServiceUnavailable, "Reverse geocoding is not configured. Please enter your address manually.")
+	// 1. Try Mapbox if token configured
+	mapboxToken := strings.TrimSpace(os.Getenv("MAPBOX_ACCESS_TOKEN"))
+	if mapboxToken != "" {
+		addr, err := reverseGeocodeMapbox(r.Context(), lat, lng, mapboxToken)
+		if err == nil && addr != nil {
+			utils.JSON(w, http.StatusOK, map[string]any{
+				"success": true,
+				"address": addr,
+			})
+			return
+		}
+		slog.Warn("Mapbox reverse geocode failed, falling back to Nominatim", "error", err)
+	}
+
+	// 2. OpenStreetMap Nominatim reverse geocode fallback (free, no token required)
+	addr, err := reverseGeocodeNominatim(r.Context(), lat, lng)
+	if err != nil {
+		slog.Error("Nominatim reverse geocode failed", "error", err)
+		utils.Error(w, http.StatusBadGateway, "Geocoding service unavailable. Please enter your address manually.")
+		return
+	}
+
+	utils.JSON(w, http.StatusOK, map[string]any{
+		"success": true,
+		"address": addr,
+	})
+}
+
+func reverseGeocodeNominatim(ctx context.Context, lat, lng float64) (*GeocodeAddress, error) {
+	nominatimURL := fmt.Sprintf("https://nominatim.openstreetmap.org/reverse?format=json&lat=%s&lon=%s&accept-language=en&addressdetails=1",
+		url.QueryEscape(strconv.FormatFloat(lat, 'f', 6, 64)),
+		url.QueryEscape(strconv.FormatFloat(lng, 'f', 6, 64)))
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, nominatimURL, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("User-Agent", "JamaesCraftopia/1.0 (contact@jamaescraftopia.com)")
+	req.Header.Set("Accept-Language", "en")
+
+	client := &http.Client{Timeout: 6 * time.Second}
+	res, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer res.Body.Close()
+
+	if res.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("nominatim returned status %d", res.StatusCode)
+	}
+
+	var data struct {
+		DisplayName string `json:"display_name"`
+		Address     struct {
+			Road          string `json:"road"`
+			HouseNumber   string `json:"house_number"`
+			Suburb        string `json:"suburb"`
+			Neighbourhood string `json:"neighbourhood"`
+			Quarter       string `json:"quarter"`
+			Village       string `json:"village"`
+			City          string `json:"city"`
+			Town          string `json:"town"`
+			Municipality  string `json:"municipality"`
+			State         string `json:"state"`
+			Country       string `json:"country"`
+			Postcode      string `json:"postcode"`
+		} `json:"address"`
+	}
+
+	if err := json.NewDecoder(res.Body).Decode(&data); err != nil {
+		return nil, err
+	}
+
+	streetParts := make([]string, 0, 2)
+	if data.Address.Road != "" {
+		streetParts = append(streetParts, data.Address.Road)
+	}
+	if data.Address.HouseNumber != "" {
+		streetParts = append(streetParts, data.Address.HouseNumber)
+	}
+	street := strings.Join(streetParts, ", ")
+
+	area := data.Address.Suburb
+	if area == "" {
+		area = data.Address.Neighbourhood
+	}
+	if area == "" {
+		area = data.Address.Quarter
+	}
+	if area == "" {
+		area = data.Address.Village
+	}
+	if area == "" {
+		area = street
+	}
+
+	city := data.Address.City
+	if city == "" {
+		city = data.Address.Town
+	}
+	if city == "" {
+		city = data.Address.Municipality
+	}
+	if city == "" {
+		city = data.Address.Village
+	}
+
+	country := data.Address.Country
+	if country == "" {
+		country = "India"
+	}
+
+	return &GeocodeAddress{
+		Street:           street,
+		AreaStreet:       street,
+		Area:             area,
+		City:             city,
+		State:            data.Address.State,
+		Country:          country,
+		PinCode:          data.Address.Postcode,
+		FormattedAddress: data.DisplayName,
+		Coordinates:      map[string]float64{"lat": lat, "lng": lng},
+		Provider:         "nominatim",
+	}, nil
+}
+
+func reverseGeocodeMapbox(ctx context.Context, lat, lng float64, token string) (*GeocodeAddress, error) {
+	mapboxURL := fmt.Sprintf("https://api.mapbox.com/geocoding/v5/mapbox.places/%f,%f.json?access_token=%s&types=address,place,locality,neighborhood,poi&language=en&country=in&limit=3",
+		lng, lat, url.QueryEscape(token))
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, mapboxURL, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	client := &http.Client{Timeout: 5 * time.Second}
+	res, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer res.Body.Close()
+
+	if res.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("mapbox returned status %d", res.StatusCode)
+	}
+
+	var data struct {
+		Features []struct {
+			PlaceName string `json:"place_name"`
+			Text      string `json:"text"`
+			Address   string `json:"address"`
+			Context   []struct {
+				ID   string `json:"id"`
+				Text string `json:"text"`
+			} `json:"context"`
+		} `json:"features"`
+	}
+
+	if err := json.NewDecoder(res.Body).Decode(&data); err != nil || len(data.Features) == 0 {
+		return nil, errors.New("no features returned from mapbox")
+	}
+
+	primary := data.Features[0]
+	getContext := func(prefix string) string {
+		for _, item := range primary.Context {
+			if strings.HasPrefix(item.ID, prefix) {
+				return item.Text
+			}
+		}
+		return ""
+	}
+
+	street := primary.Address
+	if street != "" && primary.Text != "" {
+		street = street + " " + primary.Text
+	} else if street == "" {
+		street = primary.Text
+	}
+
+	city := getContext("place.")
+	if city == "" {
+		city = getContext("locality.")
+	}
+	state := getContext("region.")
+	pinCode := getContext("postcode.")
+	country := getContext("country.")
+	if country == "" {
+		country = "India"
+	}
+	area := getContext("neighborhood.")
+	if area == "" {
+		area = getContext("locality.")
+	}
+
+	return &GeocodeAddress{
+		Street:           street,
+		AreaStreet:       street,
+		Area:             area,
+		City:             city,
+		State:            state,
+		Country:          country,
+		PinCode:          pinCode,
+		FormattedAddress: primary.PlaceName,
+		Coordinates:      map[string]float64{"lat": lat, "lng": lng},
+		Provider:         "mapbox",
+	}, nil
 }

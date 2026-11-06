@@ -89,6 +89,7 @@ CREATE TABLE IF NOT EXISTS "User" (
     name TEXT,
     phone TEXT,
     role TEXT DEFAULT 'CUSTOMER',
+    "emailVerified" BOOLEAN DEFAULT false,
     "adminActive" BOOLEAN DEFAULT false,
     "adminPermissions" JSONB NOT NULL DEFAULT '[]'::JSONB,
     active BOOLEAN DEFAULT true,
@@ -96,6 +97,7 @@ CREATE TABLE IF NOT EXISTS "User" (
     "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "emailVerified" BOOLEAN DEFAULT false;
 ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "adminPermissions" JSONB NOT NULL DEFAULT '[]'::JSONB;
 
 -- Shopping cart (required by the authenticated cart endpoints)

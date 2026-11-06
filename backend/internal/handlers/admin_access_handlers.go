@@ -77,6 +77,10 @@ func (h *AdminAccessHandler) Create(w http.ResponseWriter, r *http.Request) {
 		utils.Error(w, http.StatusBadRequest, "A valid email and permission list are required")
 		return
 	}
+	if utils.IsDisposableEmail(req.Email) {
+		utils.Error(w, http.StatusBadRequest, "Temporary or disposable email addresses are not permitted.")
+		return
+	}
 	user, err := h.users.GetByEmail(r.Context(), req.Email)
 	if err != nil {
 		utils.Error(w, http.StatusInternalServerError, "Could not look up the account")

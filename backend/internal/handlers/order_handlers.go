@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strings"
 
+	"craftopia-backend/internal/email"
 	"craftopia-backend/internal/middleware"
 	"craftopia-backend/internal/models"
 	"craftopia-backend/internal/repository"
@@ -12,11 +13,12 @@ import (
 )
 
 type OrderHandler struct {
-	repo *repository.OrderRepository
+	repo   *repository.OrderRepository
+	mailer *email.Mailer
 }
 
-func NewOrderHandler(repo *repository.OrderRepository) *OrderHandler {
-	return &OrderHandler{repo: repo}
+func NewOrderHandler(repo *repository.OrderRepository, mailer *email.Mailer) *OrderHandler {
+	return &OrderHandler{repo: repo, mailer: mailer}
 }
 
 func (h *OrderHandler) CreateOrder(w http.ResponseWriter, r *http.Request) {
@@ -26,8 +28,16 @@ func (h *OrderHandler) CreateOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	req.CustomerName = strings.TrimSpace(req.CustomerName)
+	req.CustomerEmail = strings.TrimSpace(strings.ToLower(req.CustomerEmail))
+
 	if req.CustomerName == "" || req.CustomerEmail == "" || len(req.Items) == 0 {
 		utils.Error(w, http.StatusBadRequest, "Customer name, email, and at least one item are required.")
+		return
+	}
+
+	if utils.IsDisposableEmail(req.CustomerEmail) {
+		utils.Error(w, http.StatusBadRequest, "Temporary or disposable email addresses are not permitted. Please use a valid personal or work email.")
 		return
 	}
 
@@ -40,6 +50,14 @@ func (h *OrderHandler) CreateOrder(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		utils.Error(w, http.StatusBadRequest, err.Error())
 		return
+	}
+
+	if h.mailer != nil {
+		h.mailer.SendEmailBestEffort("order-placed", func() error {
+			_ = h.mailer.SendOrderPlacedEmail(order)
+			_ = h.mailer.SendNewOrderSupportAlert(order)
+			return nil
+		})
 	}
 
 	utils.Success(w, http.StatusCreated, "Order created successfully", order)
@@ -169,6 +187,12 @@ func (h *OrderHandler) VerifyUPIPayment(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	if h.mailer != nil {
+		h.mailer.SendEmailBestEffort("order-payment-verified", func() error {
+			return h.mailer.SendOrderUpdateEmail(order.CustomerEmail, order.CustomerName, order.OrderNumber, string(order.Status), string(order.PaymentStatus), "")
+		})
+	}
+
 	utils.Success(w, http.StatusOK, "Payment verified and order confirmed successfully", order)
 }
 
@@ -214,6 +238,12 @@ func (h *OrderHandler) CancelOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if h.mailer != nil {
+		h.mailer.SendEmailBestEffort("order-cancelled", func() error {
+			return h.mailer.SendOrderUpdateEmail(order.CustomerEmail, order.CustomerName, order.OrderNumber, string(order.Status), string(order.PaymentStatus), "")
+		})
+	}
+
 	utils.Success(w, http.StatusOK, "Order cancelled. Stock released.", order)
 }
 
@@ -257,6 +287,14 @@ func (h *OrderHandler) RequestRefund(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		utils.Error(w, http.StatusBadRequest, err.Error())
 		return
+	}
+
+	if h.mailer != nil {
+		h.mailer.SendEmailBestEffort("refund-requested", func() error {
+			_ = h.mailer.SendOrderUpdateEmail(claims.Email, "", req.OrderID, "", "REFUND_REQUESTED", "")
+			_ = h.mailer.SendRefundRequestedSupportAlert(&models.Order{OrderNumber: req.OrderID, CustomerEmail: claims.Email}, req.Reason, upi)
+			return nil
+		})
 	}
 
 	utils.Success(w, http.StatusCreated, "Refund request submitted for review.", refundReq)

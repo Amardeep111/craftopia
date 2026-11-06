@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strings"
 
+	"craftopia-backend/internal/email"
 	"craftopia-backend/internal/middleware"
 	"craftopia-backend/internal/models"
 	"craftopia-backend/internal/repository"
@@ -19,6 +20,7 @@ type AdminHandler struct {
 	userRepo    *repository.UserRepository
 	couponRepo  *repository.CouponRepository
 	settingRepo *repository.SettingRepository
+	mailer      *email.Mailer
 }
 
 func NewAdminHandler(
@@ -27,6 +29,7 @@ func NewAdminHandler(
 	userRepo *repository.UserRepository,
 	couponRepo *repository.CouponRepository,
 	settingRepo *repository.SettingRepository,
+	mailer *email.Mailer,
 ) *AdminHandler {
 	return &AdminHandler{
 		orderRepo:   orderRepo,
@@ -34,6 +37,7 @@ func NewAdminHandler(
 		userRepo:    userRepo,
 		couponRepo:  couponRepo,
 		settingRepo: settingRepo,
+		mailer:      mailer,
 	}
 }
 
@@ -113,6 +117,25 @@ func (h *AdminHandler) UpdateOrder(w http.ResponseWriter, r *http.Request) {
 		}
 		utils.Error(w, http.StatusInternalServerError, "Failed to update order")
 		return
+	}
+
+	if h.mailer != nil {
+		if updatedOrder, err := h.orderRepo.GetOrderByID(r.Context(), id); err == nil && updatedOrder != nil {
+			var tracking string
+			if updatedOrder.TrackingNumber != nil {
+				tracking = *updatedOrder.TrackingNumber
+			}
+			h.mailer.SendEmailBestEffort("admin-order-update", func() error {
+				return h.mailer.SendOrderUpdateEmail(
+					updatedOrder.CustomerEmail,
+					updatedOrder.CustomerName,
+					updatedOrder.OrderNumber,
+					string(updatedOrder.Status),
+					string(updatedOrder.PaymentStatus),
+					tracking,
+				)
+			})
+		}
 	}
 
 	utils.Success(w, http.StatusOK, "Order updated successfully", nil)

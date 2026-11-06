@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 
+	"craftopia-backend/internal/email"
 	"craftopia-backend/internal/middleware"
 	"craftopia-backend/internal/models"
 	"craftopia-backend/internal/repository"
@@ -13,11 +14,12 @@ import (
 )
 
 type CustomRequestHandler struct {
-	repo *repository.CustomRequestRepository
+	repo   *repository.CustomRequestRepository
+	mailer *email.Mailer
 }
 
-func NewCustomRequestHandler(repo *repository.CustomRequestRepository) *CustomRequestHandler {
-	return &CustomRequestHandler{repo: repo}
+func NewCustomRequestHandler(repo *repository.CustomRequestRepository, mailer *email.Mailer) *CustomRequestHandler {
+	return &CustomRequestHandler{repo: repo, mailer: mailer}
 }
 
 type CreateCustomRequestBody struct {
@@ -44,6 +46,12 @@ func (h *CustomRequestHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	trimmedContact := strings.TrimSpace(strings.ToLower(body.Contact))
+	if strings.Contains(trimmedContact, "@") && utils.IsDisposableEmail(trimmedContact) {
+		utils.Error(w, http.StatusBadRequest, "Temporary or disposable email addresses are not permitted. Please use a valid personal or work email.")
+		return
+	}
+
 	var userID *string
 	if claims, err := middleware.GetUserFromContext(r.Context()); err == nil && claims != nil {
 		userID = &claims.UserID
@@ -53,6 +61,15 @@ func (h *CustomRequestHandler) Create(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		utils.Error(w, http.StatusInternalServerError, err.Error())
 		return
+	}
+
+	if h.mailer != nil {
+		h.mailer.SendEmailBestEffort("custom-request-receipt", func() error {
+			return h.mailer.SendCustomRequestReceipt(body.Contact, body.Name)
+		})
+		h.mailer.SendEmailBestEffort("custom-request-support-alert", func() error {
+			return h.mailer.SendCustomRequestSupportAlert(body.Name, body.Contact, body.Idea)
+		})
 	}
 
 	utils.Success(w, http.StatusCreated, "Custom request submitted successfully", created)
