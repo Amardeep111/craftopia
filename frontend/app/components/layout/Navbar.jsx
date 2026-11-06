@@ -62,6 +62,10 @@ export default function Navbar({ initialUser = null }) {
     return pathname?.startsWith(path)
   }
 
+  const loginHref = pathname && pathname !== '/' && !pathname.startsWith('/account')
+    ? `/account/login?redirect=${encodeURIComponent(pathname)}`
+    : '/account/login'
+
   return (
     <header
       className={cn(
@@ -93,7 +97,7 @@ export default function Navbar({ initialUser = null }) {
         {/* Right side: Account + Cart */}
         <div className="flex items-center gap-1">
           <Link
-            href={isLoggedIn ? '/account/profile' : '/account/login'}
+            href={isLoggedIn ? '/account/profile' : loginHref}
             className="hidden items-center gap-1.5 rounded-full px-3 py-2 text-sm font-semibold text-plum transition hover:bg-ivory lg:flex"
             aria-label={isLoggedIn ? 'My profile' : 'Login'}
           >
@@ -152,7 +156,7 @@ export default function Navbar({ initialUser = null }) {
               ))}
               <div className="mt-3 flex flex-col gap-2 border-t border-sand/60 pt-4">
                 <Link
-                  href={isLoggedIn ? '/account/profile' : '/account/login'}
+                  href={isLoggedIn ? '/account/profile' : loginHref}
                   onClick={() => setOpen(false)}
                   className="flex items-center gap-2 rounded-2xl px-4 py-3 text-base font-semibold text-plum hover:bg-ivory/80"
                   aria-label={isLoggedIn ? 'My profile' : 'Login'}

@@ -1,13 +1,17 @@
 package handlers
 
 import (
+	"crypto/hmac"
+	crand "crypto/rand"
 	"crypto/rsa"
 	"crypto/sha256"
 	"crypto/x509"
 	"encoding/base64"
+	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log/slog"
 	"math/big"
 	"net/http"
@@ -15,15 +19,20 @@ import (
 	"time"
 
 	"craftopia-backend/internal/config"
+	"craftopia-backend/internal/email"
 	"craftopia-backend/internal/middleware"
+	"craftopia-backend/internal/models"
 	"craftopia-backend/internal/repository"
 	"craftopia-backend/internal/utils"
+
+	"golang.org/x/crypto/bcrypt"
 )
 
 type AuthHandler struct {
 	userRepo    *repository.UserRepository
 	sessionRepo *repository.SessionRepository
 	cfg         *config.Config
+	mailer      *email.Mailer
 }
 
 const (
@@ -32,11 +41,12 @@ const (
 	adminSessionRenewWindow = 15 * time.Minute
 )
 
-func NewAuthHandler(userRepo *repository.UserRepository, sessionRepo *repository.SessionRepository, cfg *config.Config) *AuthHandler {
+func NewAuthHandler(userRepo *repository.UserRepository, sessionRepo *repository.SessionRepository, cfg *config.Config, mailer *email.Mailer) *AuthHandler {
 	return &AuthHandler{
 		userRepo:    userRepo,
 		sessionRepo: sessionRepo,
 		cfg:         cfg,
+		mailer:      mailer,
 	}
 }
 
@@ -62,8 +72,13 @@ func (h *AuthHandler) Signup(w http.ResponseWriter, r *http.Request) {
 	}
 
 	req.Email = strings.TrimSpace(strings.ToLower(req.Email))
-	if req.Email == "" {
-		utils.Error(w, http.StatusBadRequest, "Valid email is required")
+	if req.Email == "" || !strings.Contains(req.Email, "@") {
+		utils.Error(w, http.StatusBadRequest, "Please enter a valid email address")
+		return
+	}
+
+	if utils.IsDisposableEmail(req.Email) {
+		utils.Error(w, http.StatusBadRequest, "Temporary or disposable email addresses are not permitted. Please use a valid personal or work email.")
 		return
 	}
 
@@ -87,48 +102,62 @@ func (h *AuthHandler) Signup(w http.ResponseWriter, r *http.Request) {
 		phone = req.Mobile
 	}
 
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		slog.Error("Failed to hash password during signup", "error", err)
+		utils.Error(w, http.StatusInternalServerError, "Failed to secure password")
+		return
+	}
+
 	existing, err := h.userRepo.GetByEmail(r.Context(), req.Email)
 	if err != nil {
 		slog.Error("Signup user lookup failed", "error", err)
 		utils.Error(w, http.StatusInternalServerError, "Unable to create account right now. Please try again.")
 		return
 	}
+
+	var userID string
 	if existing != nil {
-		utils.Error(w, http.StatusConflict, "An account with this email already exists")
-		return
+		if existing.EmailVerified {
+			utils.Error(w, http.StatusConflict, "An account with this email already exists")
+			return
+		}
+		// Existing unverified user: update their details
+		userID = existing.ID
+		_ = h.userRepo.UpdateUserSignupDetails(r.Context(), existing.ID, string(hashedPassword), req.Name, phone)
+	} else {
+		// Create new user with emailVerified = false
+		user, err := h.userRepo.Create(r.Context(), req.Email, password, req.Name, phone)
+		if err != nil {
+			slog.Error("Signup user creation failed", "error", err)
+			utils.Error(w, http.StatusInternalServerError, "Failed to create user account")
+			return
+		}
+		userID = user.ID
 	}
 
-	user, err := h.userRepo.Create(r.Context(), req.Email, password, req.Name, phone)
+	code := generateOTP()
+	codeHash := h.hashEmailOTP(req.Email, code)
+	payloadMap := map[string]any{
+		"userId":  userID,
+		"purpose": "signup",
+	}
+	expiresAt := time.Now().Add(10 * time.Minute)
+
+	challenge, err := h.userRepo.CreateEmailVerification(r.Context(), req.Email, codeHash, payloadMap, expiresAt)
 	if err != nil {
-		slog.Error("Signup user creation failed", "error", err)
-		utils.Error(w, http.StatusInternalServerError, "Failed to create user account")
+		slog.Error("Failed to create email verification challenge", "error", err)
+		utils.Error(w, http.StatusInternalServerError, "Failed to start signup verification")
 		return
 	}
 
-	// Create stateful session in PostgreSQL
-	session, err := h.sessionRepo.Create(r.Context(), user.ID, customerSessionDuration)
-	if err != nil {
-		slog.Error("Signup session creation failed", "user_id", user.ID, "error", err)
-		utils.Error(w, http.StatusInternalServerError, "Failed to create session")
-		return
+	if err := h.mailer.SendSignupVerification(req.Email, code); err != nil {
+		slog.Error("Failed to send signup verification email", "email", req.Email, "error", err)
 	}
 
-	encryptedCookie, err := utils.EncryptSessionCookie(session.Token, h.cfg.SessionCookieSecret)
-	if err != nil {
-		utils.Error(w, http.StatusInternalServerError, "Failed to secure session cookie")
-		return
-	}
-
-	h.setSessionCookie(w, encryptedCookie, customerSessionDuration)
-
-	utils.Success(w, http.StatusCreated, "Account created successfully", map[string]any{
-		"token": encryptedCookie,
-		"user": map[string]any{
-			"id":    user.ID,
-			"email": user.Email,
-			"name":  user.Name,
-			"role":  user.Role,
-		},
+	utils.Success(w, http.StatusCreated, "Verification code sent.", map[string]any{
+		"challengeId": challenge.ID,
+		"email":       req.Email,
 	})
 }
 
@@ -140,8 +169,13 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	req.Email = strings.TrimSpace(strings.ToLower(req.Email))
-	if req.Email == "" {
-		utils.Error(w, http.StatusBadRequest, "Email and password are required")
+	if req.Email == "" || !strings.Contains(req.Email, "@") {
+		utils.Error(w, http.StatusBadRequest, "Please enter a valid email address")
+		return
+	}
+
+	if utils.IsDisposableEmail(req.Email) {
+		utils.Error(w, http.StatusBadRequest, "Temporary or disposable email addresses are not permitted. Please use a valid personal or work email.")
 		return
 	}
 
@@ -183,6 +217,37 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Email verification gate
+	if !user.EmailVerified {
+		code := generateOTP()
+		codeHash := h.hashEmailOTP(user.Email, code)
+		payloadMap := map[string]any{
+			"userId":  user.ID,
+			"purpose": "login-verify",
+		}
+		expiresAt := time.Now().Add(10 * time.Minute)
+
+		challenge, _ := h.userRepo.CreateEmailVerification(r.Context(), user.Email, codeHash, payloadMap, expiresAt)
+		if challenge != nil {
+			_ = h.mailer.SendSignupVerification(user.Email, code)
+		}
+
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.WriteHeader(http.StatusForbidden)
+		challengeID := ""
+		if challenge != nil {
+			challengeID = challenge.ID
+		}
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"success":       false,
+			"emailVerified": false,
+			"challengeId":   challengeID,
+			"email":         user.Email,
+			"error":         "Your email is not verified yet. Please verify your email to continue.",
+		})
+		return
+	}
+
 	if req.AdminOnly && (user.Role != "ADMIN" && user.Role != "SUPERADMIN" || !user.AdminActive) {
 		utils.Error(w, http.StatusForbidden, "This account does not have administrator access.")
 		return
@@ -211,10 +276,11 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	utils.Success(w, http.StatusOK, "Logged in successfully", map[string]any{
 		"token": encryptedCookie,
 		"user": map[string]any{
-			"id":    user.ID,
-			"email": user.Email,
-			"name":  user.Name,
-			"role":  user.Role,
+			"id":            user.ID,
+			"email":         user.Email,
+			"name":          user.Name,
+			"role":          user.Role,
+			"emailVerified": user.EmailVerified,
 		},
 	})
 }
@@ -410,7 +476,42 @@ func (h *AuthHandler) RequestOTP(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewDecoder(r.Body).Decode(&body)
 
 	if body.ChallengeID != "" {
-		utils.Error(w, http.StatusNotImplemented, "Email verification codes are not configured. Please sign in with your password.")
+		challenge, err := h.userRepo.GetEmailVerification(r.Context(), body.ChallengeID)
+		if err != nil || challenge == nil || challenge.ConsumedAt != nil || challenge.ExpiresAt.Before(time.Now()) {
+			utils.Error(w, http.StatusGone, "This signup has expired. Please start again.")
+			return
+		}
+
+		if utils.IsDisposableEmail(challenge.Email) {
+			utils.Error(w, http.StatusBadRequest, "Temporary or disposable email addresses are not permitted. Please use a valid personal or work email.")
+			return
+		}
+
+		if challenge.Resends >= 3 {
+			utils.Error(w, http.StatusTooManyRequests, "You have reached the resend limit. Please start signup again.")
+			return
+		}
+
+		if time.Since(challenge.UpdatedAt) < 30*time.Second {
+			utils.Error(w, http.StatusTooManyRequests, "Please wait before requesting another code.")
+			return
+		}
+
+		newCode := generateOTP()
+		newHash := h.hashEmailOTP(challenge.Email, newCode)
+		newExpiresAt := time.Now().Add(10 * time.Minute)
+
+		if err := h.userRepo.UpdateEmailVerificationCode(r.Context(), challenge.ID, newHash, newExpiresAt); err != nil {
+			slog.Error("Failed to update email verification code", "error", err)
+			utils.Error(w, http.StatusInternalServerError, "Could not resend the code.")
+			return
+		}
+
+		if err := h.mailer.SendSignupVerification(challenge.Email, newCode); err != nil {
+			slog.Error("Failed to resend verification email", "email", challenge.Email, "error", err)
+		}
+
+		utils.Success(w, http.StatusOK, "Verification code resent.", nil)
 		return
 	}
 
@@ -439,12 +540,288 @@ type VerifyOTPRequest struct {
 // VerifyOTP handles POST /api/auth/verify
 func (h *AuthHandler) VerifyOTP(w http.ResponseWriter, r *http.Request) {
 	var req VerifyOTPRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.ChallengeID == "" || len(req.OTP) != 6 {
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.ChallengeID == "" || len(strings.TrimSpace(req.OTP)) != 6 {
 		utils.Error(w, http.StatusBadRequest, "Enter the six-digit email verification code.")
 		return
 	}
 
-	utils.Error(w, http.StatusGone, "Email verification is not enabled. Please use password sign-in.")
+	code := strings.TrimSpace(req.OTP)
+	challenge, err := h.userRepo.GetEmailVerification(r.Context(), req.ChallengeID)
+	if err != nil || challenge == nil || challenge.ConsumedAt != nil || challenge.ExpiresAt.Before(time.Now()) {
+		utils.Error(w, http.StatusGone, "This verification code expired. Start signup again.")
+		return
+	}
+
+	if utils.IsDisposableEmail(challenge.Email) {
+		utils.Error(w, http.StatusBadRequest, "Temporary or disposable email addresses are not permitted. Please use a valid personal or work email.")
+		return
+	}
+
+	if challenge.Attempts >= 5 {
+		utils.Error(w, http.StatusTooManyRequests, "Too many attempts. Start signup again.")
+		return
+	}
+
+	expectedHash := challenge.CodeHash
+	actualHash := h.hashEmailOTP(challenge.Email, code)
+	if !hmac.Equal([]byte(expectedHash), []byte(actualHash)) {
+		_ = h.userRepo.IncrementEmailVerificationAttempts(r.Context(), challenge.ID)
+		utils.Error(w, http.StatusBadRequest, "Incorrect verification code. Please try again.")
+		return
+	}
+
+	var payload struct {
+		UserID       string  `json:"userId"`
+		Purpose      string  `json:"purpose"`
+		Name         *string `json:"name"`
+		Mobile       *string `json:"mobile"`
+		PasswordHash string  `json:"passwordHash"`
+	}
+	if err := json.Unmarshal(challenge.Payload, &payload); err != nil {
+		slog.Error("Invalid email verification payload", "error", err)
+		utils.Error(w, http.StatusInternalServerError, "Failed to read verification data. Please try again.")
+		return
+	}
+
+	if err := h.userRepo.ConsumeEmailVerification(r.Context(), challenge.ID); err != nil {
+		utils.Error(w, http.StatusConflict, "This verification code has already been used.")
+		return
+	}
+
+	var user *models.User
+	if payload.UserID != "" {
+		user, _ = h.userRepo.FindByID(r.Context(), payload.UserID)
+	}
+	if user == nil {
+		user, _ = h.userRepo.GetByEmail(r.Context(), challenge.Email)
+	}
+
+	if user == nil {
+		if payload.PasswordHash != "" {
+			createdUser, err := h.userRepo.CreateWithHashedPassword(r.Context(), challenge.Email, payload.PasswordHash, payload.Name, payload.Mobile, true)
+			if err != nil {
+				slog.Error("User creation after verify failed", "error", err)
+				utils.Error(w, http.StatusInternalServerError, "Failed to complete account registration")
+				return
+			}
+			user = createdUser
+		} else {
+			utils.Error(w, http.StatusNotFound, "User account not found. Please sign up again.")
+			return
+		}
+	}
+
+	if err := h.userRepo.SetEmailVerified(r.Context(), user.ID, true); err != nil {
+		slog.Error("Failed to update emailVerified flag", "user_id", user.ID, "error", err)
+	}
+	user.EmailVerified = true
+
+	sessionDuration := customerSessionDuration
+	if user.Role == "ADMIN" || user.Role == "SUPERADMIN" {
+		sessionDuration = adminSessionDuration
+	}
+
+	session, err := h.sessionRepo.Create(r.Context(), user.ID, sessionDuration)
+	if err != nil {
+		slog.Error("Verification session creation failed", "user_id", user.ID, "error", err)
+		utils.Error(w, http.StatusInternalServerError, "Failed to create session")
+		return
+	}
+
+	encryptedCookie, err := utils.EncryptSessionCookie(session.Token, h.cfg.SessionCookieSecret)
+	if err != nil {
+		utils.Error(w, http.StatusInternalServerError, "Failed to secure session cookie")
+		return
+	}
+
+	h.setSessionCookie(w, encryptedCookie, sessionDuration)
+
+	utils.Success(w, http.StatusOK, "Account verified successfully", map[string]any{
+		"token": encryptedCookie,
+		"user": map[string]any{
+			"id":            user.ID,
+			"email":         user.Email,
+			"name":          user.Name,
+			"role":          user.Role,
+			"emailVerified": user.EmailVerified,
+		},
+	})
+}
+
+type ForgotPasswordRequest struct {
+	Email string `json:"email"`
+}
+
+// ForgotPassword handles POST /api/auth/forgot-password
+func (h *AuthHandler) ForgotPassword(w http.ResponseWriter, r *http.Request) {
+	var req ForgotPasswordRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		utils.Error(w, http.StatusBadRequest, "Invalid request payload")
+		return
+	}
+
+	req.Email = strings.TrimSpace(strings.ToLower(req.Email))
+	if req.Email == "" || !strings.Contains(req.Email, "@") {
+		utils.Error(w, http.StatusBadRequest, "Please enter a valid email address")
+		return
+	}
+
+	if utils.IsDisposableEmail(req.Email) {
+		utils.Error(w, http.StatusBadRequest, "Temporary or disposable email addresses are not permitted. Please use a valid personal or work email.")
+		return
+	}
+
+	user, err := h.userRepo.GetByEmail(r.Context(), req.Email)
+	if err != nil {
+		slog.Error("Forgot password user lookup error", "email", req.Email, "error", err)
+		utils.Error(w, http.StatusInternalServerError, "Unable to process request right now")
+		return
+	}
+
+	// Security: don't reveal whether user exists
+	if user == nil {
+		utils.Success(w, http.StatusOK, "If an account exists with this email, a verification code has been sent.", nil)
+		return
+	}
+
+	code := generateOTP()
+	codeHash := h.hashEmailOTP(user.Email, code)
+	payloadMap := map[string]any{
+		"purpose": "forgot-password",
+		"userId":  user.ID,
+	}
+	expiresAt := time.Now().Add(10 * time.Minute)
+
+	challenge, err := h.userRepo.CreateEmailVerification(r.Context(), user.Email, codeHash, payloadMap, expiresAt)
+	if err != nil {
+		slog.Error("Failed to create forgot password verification", "error", err)
+		utils.Error(w, http.StatusInternalServerError, "Failed to start password reset")
+		return
+	}
+
+	if err := h.mailer.SendPasswordReset(user.Email, code); err != nil {
+		slog.Error("Failed to send password reset email", "email", user.Email, "error", err)
+	}
+
+	utils.Success(w, http.StatusOK, "A reset code has been sent to your email.", map[string]any{
+		"challengeId": challenge.ID,
+		"email":       user.Email,
+	})
+}
+
+type ResetPasswordRequest struct {
+	ChallengeID       string `json:"challengeId"`
+	OTP               string `json:"otp"`
+	Password          string `json:"password,omitempty"`
+	EncryptedPassword any    `json:"encryptedPassword,omitempty"`
+}
+
+// ResetPassword handles POST /api/auth/reset-password
+func (h *AuthHandler) ResetPassword(w http.ResponseWriter, r *http.Request) {
+	var req ResetPasswordRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.ChallengeID == "" || len(strings.TrimSpace(req.OTP)) != 6 {
+		utils.Error(w, http.StatusBadRequest, "Enter the six-digit verification code.")
+		return
+	}
+
+	password := req.Password
+	if password == "" && req.EncryptedPassword != nil {
+		decrypted, err := utils.DecryptRSAEnvelope(req.EncryptedPassword, h.cfg.PasswordEncryptionPrivateKey)
+		if err != nil {
+			utils.Error(w, http.StatusBadRequest, "Could not securely process your password. Please try again.")
+			return
+		}
+		password = decrypted
+	}
+
+	if len(password) < 8 {
+		utils.Error(w, http.StatusBadRequest, "Password must be at least 8 characters long.")
+		return
+	}
+
+	code := strings.TrimSpace(req.OTP)
+	challenge, err := h.userRepo.GetEmailVerification(r.Context(), req.ChallengeID)
+	if err != nil || challenge == nil || challenge.ConsumedAt != nil || challenge.ExpiresAt.Before(time.Now()) {
+		utils.Error(w, http.StatusGone, "This reset code has expired. Please request a new one.")
+		return
+	}
+
+	if utils.IsDisposableEmail(challenge.Email) {
+		utils.Error(w, http.StatusBadRequest, "Temporary or disposable email addresses are not permitted. Please use a valid personal or work email.")
+		return
+	}
+
+	if challenge.Attempts >= 5 {
+		utils.Error(w, http.StatusTooManyRequests, "Too many failed attempts. Please start again.")
+		return
+	}
+
+	expectedHash := challenge.CodeHash
+	actualHash := h.hashEmailOTP(challenge.Email, code)
+	if !hmac.Equal([]byte(expectedHash), []byte(actualHash)) {
+		_ = h.userRepo.IncrementEmailVerificationAttempts(r.Context(), challenge.ID)
+		utils.Error(w, http.StatusBadRequest, "Incorrect verification code. Please try again.")
+		return
+	}
+
+	var payload struct {
+		Purpose string `json:"purpose"`
+		UserID  string `json:"userId"`
+	}
+	if err := json.Unmarshal(challenge.Payload, &payload); err != nil || payload.Purpose != "forgot-password" || payload.UserID == "" {
+		utils.Error(w, http.StatusBadRequest, "Invalid verification token")
+		return
+	}
+
+	user, err := h.userRepo.FindByID(r.Context(), payload.UserID)
+	if err != nil || user == nil {
+		utils.Error(w, http.StatusNotFound, "Account not found")
+		return
+	}
+
+	hashed, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		utils.Error(w, http.StatusInternalServerError, "Failed to secure new password")
+		return
+	}
+
+	if err := h.userRepo.UpdatePassword(r.Context(), user.ID, string(hashed)); err != nil {
+		slog.Error("Failed to update password", "error", err)
+		utils.Error(w, http.StatusInternalServerError, "Failed to update password")
+		return
+	}
+
+	// Invalidate all active sessions for security
+	_ = h.sessionRepo.InvalidateAll(r.Context(), user.ID)
+	_ = h.userRepo.ConsumeEmailVerification(r.Context(), challenge.ID)
+
+	name := ""
+	if user.Name != nil {
+		name = *user.Name
+	}
+	_ = h.mailer.SendPasswordChanged(user.Email, name)
+
+	utils.Success(w, http.StatusOK, "Password updated successfully. Please sign in with your new password.", nil)
+}
+
+func (h *AuthHandler) hashEmailOTP(email, code string) string {
+	secret := h.cfg.SessionCookieSecret
+	if secret == "" {
+		secret = h.cfg.JWTSecret
+	}
+	if secret == "" {
+		secret = "craftopia-default-email-otp-secret"
+	}
+	mac := hmac.New(sha256.New, []byte(secret))
+	mac.Write([]byte(fmt.Sprintf("%s:%s", strings.ToLower(strings.TrimSpace(email)), strings.TrimSpace(code))))
+	return hex.EncodeToString(mac.Sum(nil))
+}
+
+func generateOTP() string {
+	var b [4]byte
+	_, _ = crand.Read(b[:])
+	val := binary.BigEndian.Uint32(b[:]) % 1000000
+	return fmt.Sprintf("%06d", val)
 }
 
 type PasswordChangeRequest struct {

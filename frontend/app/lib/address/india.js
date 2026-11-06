@@ -176,19 +176,10 @@ export function getStateAndCityFromPin(pin) {
   return p2Map[p2] || null
 }
 
+import { isDisposableEmail, DISPOSABLE_EMAIL_DOMAINS } from '@/lib/auth/disposable-email'
+
 // Blocked email domains (disposable / temp / suspicious)
-export const BLOCKED_EMAIL_DOMAINS = [
-  'tempmail.com',
-  'throwawaymail.com',
-  '10minutemail.com',
-  'mailinator.com',
-  'guerrillamail.com',
-  'temp-mail.org',
-  'yopmail.com',
-  'sharklasers.com',
-  'spam4.me',
-  'dispostable.com',
-]
+export const BLOCKED_EMAIL_DOMAINS = Array.from(DISPOSABLE_EMAIL_DOMAINS)
 
 export const BLOCKED_EMAIL_PREFIXES = [
   'admin', 'postmaster', 'abuse', 'noreply', 'no-reply',
@@ -237,9 +228,8 @@ export function getStateNameFromCode(code) {
 // Email block list check
 export function isBlockedEmail(email) {
   if (!email || typeof email !== 'string') return true
+  if (isDisposableEmail(email)) return true
   const lower = email.toLowerCase().trim()
-  const domain = lower.split('@')[1]
-  if (BLOCKED_EMAIL_DOMAINS.includes(domain)) return true
   const prefix = lower.split('@')[0]
   if (BLOCKED_EMAIL_PREFIXES.includes(prefix)) return true
   return false

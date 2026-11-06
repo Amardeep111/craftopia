@@ -225,6 +225,7 @@ type User struct {
 	Name             *string   `json:"name,omitempty"`
 	Phone            *string   `json:"phone,omitempty"`
 	Role             string    `json:"role"`
+	EmailVerified    bool      `json:"emailVerified"`
 	AdminActive      bool      `json:"adminActive"`
 	AdminPermissions []string  `json:"adminPermissions"`
 	Active           bool      `json:"active"`
@@ -306,4 +307,17 @@ type PromotionProduct struct {
 	GSTPercent      int    `json:"gstPercent"`
 	CODFee          int    `json:"codFee"`
 	OtherCharge     int    `json:"otherCharge"`
+}
+
+type EmailVerification struct {
+	ID         string          `json:"id"`
+	Email      string          `json:"email"`
+	CodeHash   string          `json:"codeHash"`
+	Payload    json.RawMessage `json:"payload"`
+	Attempts   int             `json:"attempts"`
+	Resends    int             `json:"resends"`
+	ExpiresAt  time.Time       `json:"expiresAt"`
+	ConsumedAt *time.Time      `json:"consumedAt,omitempty"`
+	CreatedAt  time.Time       `json:"createdAt"`
+	UpdatedAt  time.Time       `json:"updatedAt"`
 }

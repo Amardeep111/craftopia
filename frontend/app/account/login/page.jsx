@@ -10,6 +10,7 @@ import Button from '@/components/ui/Button'
 import { cn } from '@/lib/cn'
 import { useUserStore } from '@/lib/user'
 import { encryptPassword } from '@/lib/auth/password-encryption-client'
+import { isDisposableEmail } from '@/lib/auth/disposable-email'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const OTP_LENGTH = 6
@@ -110,7 +111,7 @@ function AuthCard({ children }) {
 }
 
 // ─── Login step ───────────────────────────────────────────────────────────────
-function LoginStep({ onSwitchToSignup, onVerified }) {
+function LoginStep({ onSwitchToSignup, onVerified, onRequireVerify }) {
   const [value, setValue] = useState('')
   const [password, setPassword] = useState('')
   const [errors, setErrors] = useState({})
@@ -122,6 +123,10 @@ function LoginStep({ onSwitchToSignup, onVerified }) {
     const t = value.trim()
     if (!t) { setErrors({ email: 'Please enter your email address.' }); return }
     if (!isValidEmail(t)) { setErrors({ email: 'Please enter a valid email address.' }); return }
+    if (isDisposableEmail(t)) {
+      setErrors({ email: 'Temporary or disposable email addresses are not permitted. Please use a valid personal or work email.' })
+      return
+    }
     if (!password) { setErrors({ password: 'Please enter your password.' }); return }
 
     setLoading(true)
@@ -149,9 +154,16 @@ function LoginStep({ onSwitchToSignup, onVerified }) {
     if (res.ok && data.success) {
       setLoading(false)
       onVerified(data.data.user)
+    } else if (data && data.emailVerified === false && data.challengeId) {
+      setLoading(false)
+      onRequireVerify({
+        challengeId: data.challengeId,
+        email: data.email || t,
+        type: 'login-verify',
+      })
     } else {
       setLoading(false)
-      setErrors({ form: data.error || 'Something went wrong. Please try again.' })
+      setErrors({ form: data?.error || 'Something went wrong. Please try again.' })
     }
   }
 
@@ -214,6 +226,8 @@ function SignupStep({ onSwitchToLogin, onVerified }) {
       e.email = 'Please enter your email address.'
     } else if (!isValidEmail(email)) {
       e.email = 'Please enter a valid email address.'
+    } else if (isDisposableEmail(email)) {
+      e.email = 'Temporary or disposable email addresses are not permitted. Please use a valid personal or work email.'
     }
     if (!mobile.trim()) {
       e.mobile = 'Please enter your mobile number.'
@@ -342,7 +356,7 @@ function SignupStep({ onSwitchToLogin, onVerified }) {
 }
 
 // ─── Verify step ──────────────────────────────────────────────────────────────
-function VerifyStep({ challengeId, email, isSignup, onBack, onVerified }) {
+function VerifyStep({ challengeId, email, isSignup, notice, onBack, onVerified }) {
   const [otp, setOtp] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -414,6 +428,11 @@ function VerifyStep({ challengeId, email, isSignup, onBack, onVerified }) {
 
   return (
     <form onSubmit={handleVerify} className="space-y-6" noValidate>
+      {notice && (
+        <div role="alert" className="rounded-2xl border border-bloom/30 bg-bloom/10 p-4 text-sm font-medium text-bloom">
+          {notice}
+        </div>
+      )}
       <p className="text-muted">
         Enter the verification code sent to{' '}
         <span className="font-medium text-plum">{formatMasked(email)}</span>.
@@ -425,16 +444,27 @@ function VerifyStep({ challengeId, email, isSignup, onBack, onVerified }) {
         )}
       </div>
       <Button type="submit" className="w-full" disabled={loading}>
-        {loading ? 'Verifying...' : isSignup ? 'Verify & Create Account' : 'Verify & Log In'}
+        {loading ? 'Verifying...' : isSignup ? 'Verify & Create Account' : 'Verify & Continue'}
       </Button>
       <div className="flex flex-col items-center gap-3 text-center">
-        {resendCooldown > 0 ? <p className="text-sm text-muted">Resend in {resendCooldown}s</p> : <button type="button" onClick={handleResend} disabled={resendLoading} className="text-sm font-semibold text-bloom underline underline-offset-4 disabled:opacity-50">{resendLoading ? 'Sending…' : 'Resend code'}</button>}
+        {resendCooldown > 0 ? (
+          <p className="text-sm text-muted">Resend in {resendCooldown}s</p>
+        ) : (
+          <button
+            type="button"
+            onClick={handleResend}
+            disabled={resendLoading}
+            className="text-sm font-semibold text-bloom underline underline-offset-4 disabled:opacity-50"
+          >
+            {resendLoading ? 'Sending…' : 'Resend code'}
+          </button>
+        )}
         <button
           type="button"
           onClick={onBack}
           className="text-sm text-muted hover:text-plum transition"
         >
-          Change email or mobile
+          Use a different email
         </button>
       </div>
     </form>
@@ -461,8 +491,26 @@ export default function LoginPage() {
 
   function handleVerified(data) {
     userLogin({ email: data.email, name: data.name, userId: data.id })
-    const redirect = new URLSearchParams(window.location.search).get('redirect')
-    router.replace(redirect?.startsWith('/') ? redirect : data.role === 'ADMIN' ? '/admin' : '/orders/me')
+    const isAuthPath = (p) => !p || p.startsWith('/account/login') || p.startsWith('/account/signup') || p.startsWith('/account/verify') || p.startsWith('/account/forgot-password')
+    const redirectParam = new URLSearchParams(window.location.search).get('redirect')
+    let destination = '/'
+    if (redirectParam && redirectParam.startsWith('/') && !isAuthPath(redirectParam)) {
+      destination = redirectParam
+    } else if (typeof document !== 'undefined' && document.referrer) {
+      try {
+        const refUrl = new URL(document.referrer)
+        if (refUrl.origin === window.location.origin) {
+          const path = refUrl.pathname + refUrl.search
+          if (!isAuthPath(path)) {
+            destination = path
+          }
+        }
+      } catch {}
+    }
+    if (destination === '/' && (data.role === 'ADMIN' || data.role === 'SUPERADMIN')) {
+      destination = '/admin'
+    }
+    router.replace(destination)
   }
 
   function handleVerifyBack() {
@@ -472,6 +520,15 @@ export default function LoginPage() {
 
   function handleSignupStarted(data) {
     setVerifyData({ ...data, type: 'signup' })
+    setMode('verify')
+  }
+
+  function handleRequireVerify(data) {
+    setVerifyData({
+      ...data,
+      notice: 'Email not verified. Verify now to continue.',
+      type: 'login-verify',
+    })
     setMode('verify')
   }
 
@@ -511,11 +568,12 @@ export default function LoginPage() {
           {mode === 'login' && (
             <>
               <h1 className="heading-display text-3xl">Welcome Back</h1>
-              <p className="mt-2 text-muted">Enter your email or mobile number to continue.</p>
+              <p className="mt-2 text-muted">Enter your email and password to continue.</p>
               <div className="mt-8">
                 <LoginStep
                   onSwitchToSignup={handleSwitchToSignup}
                   onVerified={handleVerified}
+                  onRequireVerify={handleRequireVerify}
                 />
               </div>
             </>
@@ -537,13 +595,14 @@ export default function LoginPage() {
           {mode === 'verify' && verifyData && (
             <>
               <h1 className="heading-display text-3xl">
-                {isVerifySignup ? 'Verify your account' : 'Enter the OTP'}
+                {isVerifySignup ? 'Verify your account' : 'Verify your email'}
               </h1>
               <div className="mt-8">
                 <VerifyStep
                   challengeId={verifyData.challengeId}
                   email={verifyData.email}
                   isSignup={isVerifySignup}
+                  notice={verifyData.notice}
                   onBack={handleVerifyBack}
                   onVerified={handleVerified}
                 />

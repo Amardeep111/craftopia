@@ -5,6 +5,7 @@ import (
 
 	"craftopia-backend/internal/config"
 	"craftopia-backend/internal/database"
+	"craftopia-backend/internal/email"
 	"craftopia-backend/internal/handlers"
 	"craftopia-backend/internal/middleware"
 	"craftopia-backend/internal/repository"
@@ -30,15 +31,16 @@ func Setup(cfg *config.Config, db *database.DB) *App {
 	sessionRepo := repository.NewSessionRepository(db)
 	settingRepo := repository.NewSettingRepository(db)
 
-	// Initialize Handlers
+	// Initialize Mailer & Handlers
+	mailer := email.NewMailer(cfg)
 	healthHandler := handlers.NewHealthHandler(db)
 	productHandler := handlers.NewProductHandler(productRepo)
-	orderHandler := handlers.NewOrderHandler(orderRepo)
-	customReqHandler := handlers.NewCustomRequestHandler(customReqRepo)
+	orderHandler := handlers.NewOrderHandler(orderRepo, mailer)
+	customReqHandler := handlers.NewCustomRequestHandler(customReqRepo, mailer)
 	paymentHandler := handlers.NewPaymentHandler(cfg, settingRepo)
-	authHandler := handlers.NewAuthHandler(userRepo, sessionRepo, cfg)
-	extraHandler := handlers.NewExtraHandlers(cartRepo, couponRepo, addressRepo, reviewRepo, contactRepo, orderRepo, userRepo)
-	adminHandler := handlers.NewAdminHandler(orderRepo, productRepo, userRepo, couponRepo, settingRepo)
+	authHandler := handlers.NewAuthHandler(userRepo, sessionRepo, cfg, mailer)
+	extraHandler := handlers.NewExtraHandlers(cartRepo, couponRepo, addressRepo, reviewRepo, contactRepo, orderRepo, userRepo, mailer)
+	adminHandler := handlers.NewAdminHandler(orderRepo, productRepo, userRepo, couponRepo, settingRepo, mailer)
 	adminAccessHandler := handlers.NewAdminAccessHandler(userRepo, sessionRepo, cfg)
 	uploadHandler := handlers.NewUploadHandler(cfg)
 
@@ -72,6 +74,8 @@ func Setup(cfg *config.Config, db *database.DB) *App {
 	mux.Handle("POST /api/auth/heartbeat", adminAuth(authHandler.Heartbeat))
 	mux.HandleFunc("POST /api/auth/otp", authHandler.RequestOTP)
 	mux.HandleFunc("POST /api/auth/verify", authHandler.VerifyOTP)
+	mux.HandleFunc("POST /api/auth/forgot-password", authHandler.ForgotPassword)
+	mux.HandleFunc("POST /api/auth/reset-password", authHandler.ResetPassword)
 	mux.HandleFunc("GET /api/auth/password-key", authHandler.PasswordKey)
 	mux.Handle("GET /api/auth/me", auth(http.HandlerFunc(authHandler.Me)))
 
