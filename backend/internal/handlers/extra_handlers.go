@@ -316,6 +316,147 @@ func (h *ExtraHandlers) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 	utils.Success(w, http.StatusOK, "Profile updated successfully", nil)
 }
 
+var indianStateCodeMap = map[string]string{
+	"AN": "Andaman and Nicobar Islands",
+	"AP": "Andhra Pradesh",
+	"AR": "Arunachal Pradesh",
+	"AS": "Assam",
+	"BR": "Bihar",
+	"CH": "Chandigarh",
+	"CT": "Chhattisgarh",
+	"DN": "Dadra and Nagar Haveli",
+	"DD": "Daman and Diu",
+	"DL": "Delhi",
+	"GA": "Goa",
+	"GJ": "Gujarat",
+	"HR": "Haryana",
+	"HP": "Himachal Pradesh",
+	"JK": "Jammu and Kashmir",
+	"JH": "Jharkhand",
+	"KA": "Karnataka",
+	"KL": "Kerala",
+	"LA": "Ladakh",
+	"LD": "Lakshadweep",
+	"MP": "Madhya Pradesh",
+	"MH": "Maharashtra",
+	"MN": "Manipur",
+	"ML": "Meghalaya",
+	"MZ": "Mizoram",
+	"NL": "Nagaland",
+	"OR": "Odisha",
+	"PB": "Punjab",
+	"PY": "Puducherry",
+	"RJ": "Rajasthan",
+	"SK": "Sikkim",
+	"TN": "Tamil Nadu",
+	"TG": "Telangana",
+	"TR": "Tripura",
+	"UP": "Uttar Pradesh",
+	"UT": "Uttarakhand",
+	"WB": "West Bengal",
+}
+
+func normalizeCountry(c string) string {
+	c = strings.TrimSpace(c)
+	if strings.EqualFold(c, "IN") || strings.EqualFold(c, "IND") || strings.EqualFold(c, "India") || c == "" {
+		return "India"
+	}
+	return c
+}
+
+func normalizeState(s string) string {
+	s = strings.TrimSpace(s)
+	if full, ok := indianStateCodeMap[strings.ToUpper(s)]; ok {
+		return full
+	}
+	return s
+}
+
+func getStateFromPinPrefix(pin string) string {
+	pin = strings.TrimSpace(pin)
+	if len(pin) < 2 {
+		return ""
+	}
+	switch pin[:2] {
+	case "11":
+		return "Delhi"
+	case "12", "13":
+		return "Haryana"
+	case "14", "15":
+		return "Punjab"
+	case "16":
+		return "Chandigarh"
+	case "17":
+		return "Himachal Pradesh"
+	case "18", "19":
+		return "Jammu and Kashmir"
+	case "20", "21", "22", "23", "24", "25", "26", "27", "28":
+		return "Uttar Pradesh"
+	case "30", "31", "32", "33", "34":
+		return "Rajasthan"
+	case "36", "37", "38", "39":
+		return "Gujarat"
+	case "40", "41", "42", "43", "44":
+		return "Maharashtra"
+	case "45", "46", "47", "48":
+		return "Madhya Pradesh"
+	case "49":
+		return "Chhattisgarh"
+	case "50":
+		return "Telangana"
+	case "51", "52", "53":
+		return "Andhra Pradesh"
+	case "56", "57", "58", "59":
+		return "Karnataka"
+	case "60", "61", "62", "63", "64":
+		return "Tamil Nadu"
+	case "67", "68", "69":
+		return "Kerala"
+	case "70", "71", "72", "73", "74":
+		return "West Bengal"
+	case "75", "76", "77":
+		return "Odisha"
+	case "78":
+		return "Assam"
+	case "79":
+		if len(pin) >= 3 {
+			switch pin[:3] {
+			case "790", "791", "792":
+				return "Arunachal Pradesh"
+			case "793", "794":
+				return "Meghalaya"
+			case "795":
+				return "Manipur"
+			case "796":
+				return "Mizoram"
+			case "797":
+				return "Nagaland"
+			case "798", "799":
+				return "Tripura"
+			}
+		}
+		return "Assam"
+	case "80", "81", "82", "83", "84", "85":
+		if pin[:2] == "82" || pin[:2] == "83" {
+			return "Jharkhand"
+		}
+		return "Bihar"
+	}
+	return ""
+}
+
+func writeGeocodeResponse(w http.ResponseWriter, addr *GeocodeAddress) {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(w).Encode(map[string]any{
+		"success": true,
+		"address": addr,
+		"data": map[string]any{
+			"address": addr,
+		},
+	})
+}
+
 // DetectLocation handles GET /api/location/detect
 func (h *ExtraHandlers) DetectLocation(w http.ResponseWriter, r *http.Request) {
 	// 1. Check for Vercel GeoIP headers (instant, 0ms, zero external calls)
@@ -327,12 +468,12 @@ func (h *ExtraHandlers) DetectLocation(w http.ResponseWriter, r *http.Request) {
 			city = unescaped
 		}
 	}
-	region := r.Header.Get("x-vercel-ip-country-region")
-	country := r.Header.Get("x-vercel-ip-country")
-	if country == "" {
-		country = "India"
-	}
+	region := normalizeState(r.Header.Get("x-vercel-ip-country-region"))
+	country := normalizeCountry(r.Header.Get("x-vercel-ip-country"))
 	postal := r.Header.Get("x-vercel-ip-postal-code")
+	if region == "" && len(postal) >= 2 {
+		region = getStateFromPinPrefix(postal)
+	}
 
 	if latStr != "" && lngStr != "" {
 		lat, latErr := strconv.ParseFloat(latStr, 64)
@@ -392,16 +533,17 @@ func (h *ExtraHandlers) DetectLocation(w http.ResponseWriter, r *http.Request) {
 				}
 				if err := json.NewDecoder(res.Body).Decode(&data); err == nil {
 					if (data.Success == nil || *data.Success) && data.Latitude != 0 && data.Longitude != 0 {
-						c := data.Country
-						if c == "" {
-							c = "India"
+						c := normalizeCountry(data.Country)
+						st := normalizeState(data.Region)
+						if st == "" && len(data.Postal) >= 2 {
+							st = getStateFromPinPrefix(data.Postal)
 						}
 						utils.JSON(w, http.StatusOK, map[string]any{
 							"source":  "ipwhois",
 							"lat":     data.Latitude,
 							"lng":     data.Longitude,
 							"city":    data.City,
-							"state":   data.Region,
+							"state":   st,
 							"country": c,
 							"pinCode": data.Postal,
 						})
@@ -480,10 +622,12 @@ func (h *ExtraHandlers) Geocode(w http.ResponseWriter, r *http.Request) {
 	if mapboxToken != "" {
 		addr, err := reverseGeocodeMapbox(r.Context(), lat, lng, mapboxToken)
 		if err == nil && addr != nil {
-			utils.JSON(w, http.StatusOK, map[string]any{
-				"success": true,
-				"address": addr,
-			})
+			addr.Country = normalizeCountry(addr.Country)
+			addr.State = normalizeState(addr.State)
+			if addr.State == "" && len(addr.PinCode) >= 2 {
+				addr.State = getStateFromPinPrefix(addr.PinCode)
+			}
+			writeGeocodeResponse(w, addr)
 			return
 		}
 		slog.Warn("Mapbox reverse geocode failed, falling back to Nominatim", "error", err)
@@ -497,10 +641,13 @@ func (h *ExtraHandlers) Geocode(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	utils.JSON(w, http.StatusOK, map[string]any{
-		"success": true,
-		"address": addr,
-	})
+	addr.Country = normalizeCountry(addr.Country)
+	addr.State = normalizeState(addr.State)
+	if addr.State == "" && len(addr.PinCode) >= 2 {
+		addr.State = getStateFromPinPrefix(addr.PinCode)
+	}
+
+	writeGeocodeResponse(w, addr)
 }
 
 func reverseGeocodeNominatim(ctx context.Context, lat, lng float64) (*GeocodeAddress, error) {

@@ -239,8 +239,9 @@ func TestDetectLocationVercelHeaders(t *testing.T) {
 	req.Header.Set("x-vercel-ip-latitude", "12.9716")
 	req.Header.Set("x-vercel-ip-longitude", "77.5946")
 	req.Header.Set("x-vercel-ip-city", "Bengaluru")
-	req.Header.Set("x-vercel-ip-country", "India")
-	req.Header.Set("x-vercel-ip-country-region", "Karnataka")
+	req.Header.Set("x-vercel-ip-country", "IN")
+	req.Header.Set("x-vercel-ip-country-region", "KA")
+	req.Header.Set("x-vercel-ip-postal-code", "562114")
 
 	rr := httptest.NewRecorder()
 	extraHandler.DetectLocation(rr, req)
@@ -254,7 +255,9 @@ func TestDetectLocationVercelHeaders(t *testing.T) {
 		Data    struct {
 			Source  string  `json:"source"`
 			Country string  `json:"country"`
+			State   string  `json:"state"`
 			City    string  `json:"city"`
+			PinCode string  `json:"pinCode"`
 			Lat     float64 `json:"lat"`
 			Lng     float64 `json:"lng"`
 		} `json:"data"`
@@ -262,8 +265,8 @@ func TestDetectLocationVercelHeaders(t *testing.T) {
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
 		t.Fatal(err)
 	}
-	if !resp.Success || resp.Data.Source != "vercel-ip" || resp.Data.City != "Bengaluru" || resp.Data.Lat != 12.9716 {
-		t.Errorf("expected vercel-ip Bengaluru data, got %+v", resp)
+	if !resp.Success || resp.Data.Source != "vercel-ip" || resp.Data.City != "Bengaluru" || resp.Data.Country != "India" || resp.Data.State != "Karnataka" || resp.Data.PinCode != "562114" {
+		t.Errorf("expected normalized India / Karnataka Bengaluru data, got %+v", resp)
 	}
 }
 

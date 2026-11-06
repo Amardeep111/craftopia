@@ -10,7 +10,7 @@ import { cn } from '@/lib/cn'
 import Input from '@/components/ui/Input'
 import Select from '@/components/ui/Select'
 import { ADDRESS_TYPES, validateAddress, blankAddress } from '@/lib/address'
-import { STATE_OPTIONS, getStateAndCityFromPin } from '@/lib/address/india'
+import { STATE_OPTIONS, getStateAndCityFromPin, normalizeStateName, normalizeCountryName } from '@/lib/address/india'
 
 const InteractiveLocationPicker = dynamic(() => import('./InteractiveLocationPicker'), {
   ssr: false,
@@ -110,9 +110,9 @@ export default function AddressForm({ open, onClose, onSave, initial = null, sav
     const updates = {}
     if (locData.areaStreet || locData.street || locData.area) updates.areaStreet = locData.areaStreet || locData.street || locData.area || data.areaStreet || ''
     if (locData.city) updates.city = locData.city
-    if (locData.state) updates.state = locData.state
+    if (locData.state || locData.pinCode) updates.state = normalizeStateName(locData.state, locData.pinCode)
     if (locData.pinCode) updates.pinCode = locData.pinCode
-    if (locData.country) updates.country = locData.country || ''
+    updates.country = normalizeCountryName(locData.country) || 'India'
     if (locData.formattedAddress && !updates.areaStreet) updates.areaStreet = locData.formattedAddress
     if (locData.houseFlatBuilding) updates.houseFlatBuilding = locData.houseFlatBuilding
     if (locData.landmark) updates.landmark = locData.landmark
@@ -122,7 +122,11 @@ export default function AddressForm({ open, onClose, onSave, initial = null, sav
       updates.lng = locData.coordinates.lng
     }
     setData((d) => ({ ...d, ...updates }))
-    setConfirmedLocationData(locData)
+    setConfirmedLocationData({
+      ...locData,
+      state: updates.state || locData.state,
+      country: updates.country,
+    })
     setAddressMode('manual-after-location')
     setErrors({})
   }
