@@ -51,6 +51,33 @@ export const STATE_OPTIONS = INDIAN_STATES.map((s) => ({
   label: s.label,
 })).sort((a, b) => a.label.localeCompare(b.label))
 
+export function normalizeCountryName(country) {
+  if (!country) return 'India'
+  const t = String(country).trim()
+  if (!t || t.toUpperCase() === 'IN' || t.toUpperCase() === 'IND' || t.toLowerCase() === 'india') {
+    return 'India'
+  }
+  return t
+}
+
+export function normalizeStateName(state, pinCode) {
+  const t = state ? String(state).trim() : ''
+  if (t) {
+    const matched = INDIAN_STATES.find(
+      (s) => s.value.toUpperCase() === t.toUpperCase() || s.label.toLowerCase() === t.toLowerCase()
+    )
+    if (matched) return matched.label
+  }
+  if (pinCode) {
+    const cleanPin = String(pinCode).replace(/\D/g, '').slice(0, 6)
+    if (cleanPin.length >= 2) {
+      const pinInfo = getStateAndCityFromPin(cleanPin)
+      if (pinInfo?.state) return pinInfo.state
+    }
+  }
+  return t
+}
+
 export const PIN_MAP = {
   '400001': { city: 'Mumbai', state: 'Maharashtra' }, '400005': { city: 'Mumbai', state: 'Maharashtra' },
   '110001': { city: 'New Delhi', state: 'Delhi' }, '110010': { city: 'New Delhi', state: 'Delhi' },

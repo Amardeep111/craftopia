@@ -208,9 +208,9 @@ function LoginStep({ onSwitchToSignup, onVerified, onRequireVerify }) {
 
 // ─── Signup step ──────────────────────────────────────────────────────────────
 function SignupStep({ onSwitchToLogin, onVerified }) {
+  const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [mobile, setMobile] = useState('')
-  const [name, setName] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [errors, setErrors] = useState({})
@@ -218,6 +218,11 @@ function SignupStep({ onSwitchToLogin, onVerified }) {
 
   function validate() {
     const e = {}
+    if (!name.trim() || name.trim().length < 2) {
+      e.name = 'Please enter your full name.'
+    } else if (!/^[a-zA-Z\s'.-]+$/.test(name.trim())) {
+      e.name = 'Please enter a valid name.'
+    }
     if (!email.trim()) {
       e.email = 'Please enter your email address.'
     } else if (!isValidEmail(email)) {
@@ -229,9 +234,6 @@ function SignupStep({ onSwitchToLogin, onVerified }) {
       e.mobile = 'Please enter your mobile number.'
     } else if (!isValidMobile(mobile)) {
       e.mobile = 'Please enter a valid mobile number (10–15 digits).'
-    }
-    if (name.trim() && name.trim().length < 2) {
-      e.name = 'Please enter a valid name.'
     }
     if (password.length < 8 || !/[A-Z]/.test(password) || !/[a-z]/.test(password) || !/[0-9]/.test(password)) {
       e.password = 'Use at least 8 characters with uppercase, lowercase, and a number.'
@@ -255,9 +257,9 @@ function SignupStep({ onSwitchToLogin, onVerified }) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          name: name.trim(),
           email: email.trim(),
           mobile: mobile.replace(/\D/g, ''),
-          name: name.trim() || undefined,
           encryptedPassword: await encryptPassword(password),
           encryptedConfirmPassword: await encryptPassword(confirmPassword),
         }),
@@ -302,6 +304,18 @@ function SignupStep({ onSwitchToLogin, onVerified }) {
     <form onSubmit={handleSubmit} className="space-y-4" noValidate>
       <div>
         <Input
+          label="Full name"
+          type="text"
+          autoComplete="name"
+          placeholder="Enter your full name"
+          value={name}
+          onChange={(e) => { setName(e.target.value); clearError('name') }}
+          error={errors.name}
+          className="text-base"
+        />
+      </div>
+      <div>
+        <Input
           label="Email address"
           type="email"
           autoComplete="email"
@@ -322,18 +336,6 @@ function SignupStep({ onSwitchToLogin, onVerified }) {
           value={mobile}
           onChange={(e) => { setMobile(e.target.value); clearError('mobile') }}
           error={errors.mobile}
-          className="text-base"
-        />
-      </div>
-      <div>
-        <Input
-          label="Full name (optional)"
-          type="text"
-          autoComplete="name"
-          placeholder="Enter your full name"
-          value={name}
-          onChange={(e) => { setName(e.target.value); clearError('name') }}
-          error={errors.name}
           className="text-base"
         />
       </div>

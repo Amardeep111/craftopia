@@ -239,8 +239,9 @@ func TestDetectLocationVercelHeaders(t *testing.T) {
 	req.Header.Set("x-vercel-ip-latitude", "12.9716")
 	req.Header.Set("x-vercel-ip-longitude", "77.5946")
 	req.Header.Set("x-vercel-ip-city", "Bengaluru")
-	req.Header.Set("x-vercel-ip-country", "India")
-	req.Header.Set("x-vercel-ip-country-region", "Karnataka")
+	req.Header.Set("x-vercel-ip-country", "IN")
+	req.Header.Set("x-vercel-ip-country-region", "KA")
+	req.Header.Set("x-vercel-ip-postal-code", "562114")
 
 	rr := httptest.NewRecorder()
 	extraHandler.DetectLocation(rr, req)
@@ -254,7 +255,9 @@ func TestDetectLocationVercelHeaders(t *testing.T) {
 		Data    struct {
 			Source  string  `json:"source"`
 			Country string  `json:"country"`
+			State   string  `json:"state"`
 			City    string  `json:"city"`
+			PinCode string  `json:"pinCode"`
 			Lat     float64 `json:"lat"`
 			Lng     float64 `json:"lng"`
 		} `json:"data"`
@@ -262,8 +265,8 @@ func TestDetectLocationVercelHeaders(t *testing.T) {
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
 		t.Fatal(err)
 	}
-	if !resp.Success || resp.Data.Source != "vercel-ip" || resp.Data.City != "Bengaluru" || resp.Data.Lat != 12.9716 {
-		t.Errorf("expected vercel-ip Bengaluru data, got %+v", resp)
+	if !resp.Success || resp.Data.Source != "vercel-ip" || resp.Data.City != "Bengaluru" || resp.Data.Country != "India" || resp.Data.State != "Karnataka" || resp.Data.PinCode != "562114" {
+		t.Errorf("expected normalized India / Karnataka Bengaluru data, got %+v", resp)
 	}
 }
 
@@ -381,7 +384,7 @@ func TestLoginTempEmailBlocked(t *testing.T) {
 func TestSignupConfirmPasswordMismatch(t *testing.T) {
 	authHandler := handlers.NewAuthHandler(nil, nil, &config.Config{}, nil)
 
-	req, err := http.NewRequest("POST", "/api/auth/signup", strings.NewReader(`{"email": "valid@gmail.com", "password": "Password123", "confirmPassword": "DifferentPassword456"}`))
+	req, err := http.NewRequest("POST", "/api/auth/signup", strings.NewReader(`{"email": "valid@gmail.com", "name": "Test User", "mobile": "9876543210", "password": "Password123", "confirmPassword": "DifferentPassword456"}`))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -395,6 +398,28 @@ func TestSignupConfirmPasswordMismatch(t *testing.T) {
 	}
 	if !strings.Contains(rr.Body.String(), "match") {
 		t.Errorf("expected mismatch error message, got %s", rr.Body.String())
+	}
+}
+
+func TestSignupValidationNameAndMobile(t *testing.T) {
+	authHandler := handlers.NewAuthHandler(nil, nil, &config.Config{}, nil)
+
+	// Missing name
+	req1, _ := http.NewRequest("POST", "/api/auth/signup", strings.NewReader(`{"email": "valid@gmail.com", "mobile": "9876543210", "password": "Password123", "confirmPassword": "Password123"}`))
+	req1.Header.Set("Content-Type", "application/json")
+	rr1 := httptest.NewRecorder()
+	authHandler.Signup(rr1, req1)
+	if rr1.Code != http.StatusBadRequest || !strings.Contains(rr1.Body.String(), "full name") {
+		t.Errorf("expected 400 for missing name, got %d: %s", rr1.Code, rr1.Body.String())
+	}
+
+	// Missing mobile
+	req2, _ := http.NewRequest("POST", "/api/auth/signup", strings.NewReader(`{"email": "valid@gmail.com", "name": "Test User", "password": "Password123", "confirmPassword": "Password123"}`))
+	req2.Header.Set("Content-Type", "application/json")
+	rr2 := httptest.NewRecorder()
+	authHandler.Signup(rr2, req2)
+	if rr2.Code != http.StatusBadRequest || !strings.Contains(rr2.Body.String(), "mobile number") {
+		t.Errorf("expected 400 for missing mobile, got %d: %s", rr2.Code, rr2.Body.String())
 	}
 }
 

@@ -6,7 +6,7 @@ import 'mapbox-gl/dist/mapbox-gl.css'
 import { MapPin, RefreshCcw, Crosshair, AlertCircle, Loader2, Navigation, LocateFixed } from 'lucide-react'
 import CurrentLocationPicker from '@/components/ui/location/CurrentLocationPicker'
 import Select from '@/components/ui/Select'
-import { STATE_OPTIONS, getStateAndCityFromPin } from '@/lib/address/india'
+import { STATE_OPTIONS, getStateAndCityFromPin, normalizeStateName, normalizeCountryName } from '@/lib/address/india'
 
 /*
  * Real, production Mapbox location picker with free geolocation fallback.
@@ -235,8 +235,11 @@ export default function InteractiveLocationPicker({
         body: JSON.stringify({ lat, lng }),
       })
       const data = await res.json()
-      if (data.success && data.address) {
-        setLocationData({ ...data.address, coordinates: { lat, lng } })
+      const addr = data.address || data.data?.address || (data.data?.city ? data.data : null)
+      if (data.success && addr) {
+        const state = normalizeStateName(addr.state, addr.pinCode)
+        const country = normalizeCountryName(addr.country)
+        setLocationData({ ...addr, state, country, coordinates: { lat, lng } })
         setResolved(true)
       } else {
         setLocationData({ error: data.error || 'Could not retrieve address from this location.' })
@@ -315,8 +318,14 @@ export default function InteractiveLocationPicker({
       try {
         const res = await fetch('/api/location/detect')
         const json = await res.json()
-        if (json.success && json.data?.lat && json.data?.lng) {
-          const { lat, lng, city, state, pinCode, country } = json.data
+        const loc = json.data || json
+        if (json.success && loc?.lat && loc?.lng) {
+          const lat = loc.lat
+          const lng = loc.lng
+          const city = loc.city || ''
+          const pinCode = loc.pinCode || ''
+          const state = normalizeStateName(loc.state, pinCode)
+          const country = normalizeCountryName(loc.country)
           setMarkerPosition({ lat, lng })
           if (mapRef.current && mapStatusRef.current === 'ready') {
             mapRef.current.flyTo({ center: [lng, lat], zoom: 15, essential: true })
@@ -335,16 +344,19 @@ export default function InteractiveLocationPicker({
               body: JSON.stringify({ lat, lng }),
             })
             const geoData = await geoRes.json()
-            if (geoData.success && geoData.address) {
-              setLocationData({ ...geoData.address, coordinates: { lat, lng } })
+            const geoAddr = geoData.address || geoData.data?.address || (geoData.data?.city ? geoData.data : null)
+            if (geoData.success && geoAddr) {
+              const s = normalizeStateName(geoAddr.state, geoAddr.pinCode || pinCode)
+              const c = normalizeCountryName(geoAddr.country)
+              setLocationData({ ...geoAddr, state: s, country: c, coordinates: { lat, lng } })
               setResolved(true)
             } else {
               setLocationData({
-                city: city || '',
-                state: state || '',
-                country: country || 'India',
-                pinCode: pinCode || '',
-                areaStreet: city ? `${city}, ${state}` : '',
+                city,
+                state,
+                country,
+                pinCode,
+                areaStreet: city ? (state ? `${city}, ${state}` : city) : '',
                 formattedAddress: [city, state, country].filter(Boolean).join(', '),
                 coordinates: { lat, lng },
               })
@@ -352,11 +364,11 @@ export default function InteractiveLocationPicker({
             }
           } catch (_) {
             setLocationData({
-              city: city || '',
-              state: state || '',
-              country: country || 'India',
-              pinCode: pinCode || '',
-              areaStreet: city ? `${city}, ${state}` : '',
+              city,
+              state,
+              country,
+              pinCode,
+              areaStreet: city ? (state ? `${city}, ${state}` : city) : '',
               formattedAddress: [city, state, country].filter(Boolean).join(', '),
               coordinates: { lat, lng },
             })
@@ -462,10 +474,11 @@ export default function InteractiveLocationPicker({
       if (local) {
         setLocationData((current) => {
           if (!current || current.error) return current
+          const resolvedState = normalizeStateName(local.state || current.state, pin)
           return {
             ...current,
             pinCode: pin,
-            state: local.state || current.state,
+            state: resolvedState || current.state,
             city: current.city || local.city || '',
           }
         })
@@ -479,7 +492,7 @@ export default function InteractiveLocationPicker({
           clearTimeout(timer)
           if (Array.isArray(result) && result[0]?.Status === 'Success' && result[0]?.PostOffice?.length) {
             const po = result[0].PostOffice[0]
-            const stateName = po.State
+            const stateName = normalizeStateName(po.State, pin)
             const cityName = po.District || po.Block || po.Division || ''
             setLocationData((current) => {
               if (!current || current.error) return current
