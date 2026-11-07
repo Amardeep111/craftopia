@@ -5,7 +5,13 @@ import MarkdownContent from '@/components/content/MarkdownContent'
 
 export const revalidate = 60
 
-const BACKEND_URL = (process.env.GO_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || (process.env.NODE_ENV === 'production' ? 'https://craftopia-backend.vercel.app' : 'http://localhost:8080')).replace(/\/$/, '')
+const BACKEND_URL = (
+  process.env.GO_BACKEND_URL ||
+  process.env.NEXT_PUBLIC_API_URL ||
+  (process.env.NODE_ENV === 'production' ? 'https://craftopia-backend.vercel.app' : 'http://localhost:8080')
+).replace(/\/$/, '')
+
+const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://craftopia-store.vercel.app').replace(/\/$/, '')
 
 async function fetchProduct(productId) {
   try {
@@ -40,9 +46,40 @@ export async function generateMetadata({ params }) {
     if (!raw || raw.published === false) {
       return { title: "Piece Not Found | Jamae's Craftopia" }
     }
+
+    const title = `${raw.name} | Jamae's Craftopia`
+    const description = raw.short || raw.description?.slice(0, 160) || "Handmade piece from Jamae's Craftopia."
+    const image = raw.imageUrl || raw.image || (Array.isArray(raw.images) && raw.images[0]) || `${siteUrl}/favicon.svg`
+    const canonicalUrl = `${siteUrl}/shop/${encodeURIComponent(raw.slug || raw.id)}`
+
     return {
-      title: `${raw.name} | Jamae's Craftopia`,
-      description: raw.short || raw.description?.slice(0, 160) || "Handmade piece from Jamae's Craftopia.",
+      title,
+      description,
+      alternates: {
+        canonical: canonicalUrl,
+      },
+      openGraph: {
+        title,
+        description,
+        type: 'website',
+        locale: 'en_IN',
+        url: canonicalUrl,
+        siteName: "Jamae's Craftopia",
+        images: [
+          {
+            url: image,
+            width: 800,
+            height: 800,
+            alt: raw.name,
+          },
+        ],
+      },
+      twitter: {
+        card: 'summary_large_image',
+        title,
+        description,
+        images: [image],
+      },
     }
   } catch {
     return { title: "Handmade Piece | Jamae's Craftopia" }
@@ -129,15 +166,51 @@ export default async function ProductDetailsPage({ params }) {
     )
   }
 
+  const effectivePrice =
+    product.discountPercent > 0
+      ? Math.round((product.price * (100 - product.discountPercent)) / 100)
+      : product.price
+
+  const inStock = product.availableForSale !== false && product.stock > 0
+
+  const productJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Product',
+    name: product.name,
+    description: product.short || product.description || "Handmade piece from Jamae's Craftopia.",
+    image: product.images.length > 0 ? product.images : [product.imageUrl || `${siteUrl}/favicon.svg`],
+    brand: {
+      '@type': 'Brand',
+      name: "Jamae's Craftopia",
+    },
+    offers: {
+      '@type': 'Offer',
+      priceCurrency: 'INR',
+      price: effectivePrice,
+      availability: inStock ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
+      itemCondition: 'https://schema.org/NewCondition',
+      seller: {
+        '@type': 'Organization',
+        name: "Jamae's Craftopia",
+      },
+    },
+  }
+
   return (
-    <ProductDetailsClient
-      initialProduct={product}
-      initialRelatedProducts={relatedProducts}
-      productId={productId}
-      descriptionContent={<MarkdownContent>{product.description || product.short}</MarkdownContent>}
-      customizationContent={<MarkdownContent>{product.customization || 'Made with care to your preferences.'}</MarkdownContent>}
-      materialsContent={<MarkdownContent>{product.materials || 'Soft cotton-blend yarn and fine details.'}</MarkdownContent>}
-      careContent={<MarkdownContent>{product.care || 'Spot clean gently with a damp cloth.'}</MarkdownContent>}
-    />
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(productJsonLd) }}
+      />
+      <ProductDetailsClient
+        initialProduct={product}
+        initialRelatedProducts={relatedProducts}
+        productId={productId}
+        descriptionContent={<MarkdownContent>{product.description || product.short}</MarkdownContent>}
+        customizationContent={<MarkdownContent>{product.customization || 'Made with care to your preferences.'}</MarkdownContent>}
+        materialsContent={<MarkdownContent>{product.materials || 'Soft cotton-blend yarn and fine details.'}</MarkdownContent>}
+        careContent={<MarkdownContent>{product.care || 'Spot clean gently with a damp cloth.'}</MarkdownContent>}
+      />
+    </>
   )
 }

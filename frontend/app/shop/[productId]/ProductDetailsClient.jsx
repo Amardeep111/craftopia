@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ChevronLeft, ChevronDown, Minus, Plus, Flower2 } from 'lucide-react'
+import { ChevronLeft, ChevronDown, Minus, Plus, Flower2, Star, Zap, CheckCircle2, AlertTriangle } from 'lucide-react'
 import { useCartStore } from '@/lib/cart'
 import { categories } from '@/data/categories'
 import { formatPrice } from '@/data/products'
@@ -28,6 +28,7 @@ export default function ProductDetailsClient({ initialProduct, initialRelatedPro
   const salePrice = product ? discountedPrice(product.price, discountPercent) : 0
   const cartProduct = product ? { ...product, originalPrice: product.price, discountPercent, gstPercent, codFee, otherCharge, price: salePrice } : product
   const [qty, setQty] = useState(1)
+  const [reviewStats, setReviewStats] = useState({ count: 0, avg: 0 })
   const [customOpen, setCustomOpen] = useState(false)
   const [addedConfirm, setAddedConfirm] = useState(false)
   const [goToBag, setGoToBag] = useState(false)
@@ -85,6 +86,26 @@ export default function ProductDetailsClient({ initialProduct, initialRelatedPro
       active = false
     }
   }, [productId, initialProduct])
+
+  useEffect(() => {
+    const targetId = product?.id || productId
+    if (!targetId) return
+    let active = true
+    fetch(`/api/reviews/${encodeURIComponent(targetId)}`, { cache: 'no-store' })
+      .then((r) => r.json())
+      .then((res) => {
+        if (active && res?.success && Array.isArray(res.data?.reviews)) {
+          const revs = res.data.reviews
+          const count = revs.length
+          const avg = count ? revs.reduce((sum, r) => sum + Number(r.rating || 0), 0) / count : 0
+          setReviewStats({ count, avg })
+        }
+      })
+      .catch(() => {})
+    return () => {
+      active = false
+    }
+  }, [product?.id, productId])
 
   useEffect(() => {
     // If SSR already pre-loaded related products, skip client fetch
@@ -248,9 +269,33 @@ export default function ProductDetailsClient({ initialProduct, initialRelatedPro
           <div>
             <p className="inline-flex items-center gap-2 text-sm font-semibold text-moss"><Flower2 className="h-4 w-4" aria-hidden="true" /> Handmade</p>
             <h1 className="heading-display mt-2 text-3xl sm:text-4xl">{product.name}</h1>
-            <p className="mt-2 text-sm font-semibold text-bloom">
-              {category?.name || product?.categoryName || product?.category?.name || ''}
-            </p>
+            <div className="mt-2 flex flex-wrap items-center gap-3">
+              <span className="text-sm font-semibold text-bloom">
+                {category?.name || product?.categoryName || product?.category?.name || ''}
+              </span>
+              {reviewStats.count > 0 ? (
+                <button
+                  type="button"
+                  onClick={() => document.getElementById('customer-reviews')?.scrollIntoView({ behavior: 'smooth' })}
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-plum hover:text-bloom transition"
+                >
+                  <span className="flex items-center gap-0.5 text-amber-500 font-bold">
+                    <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
+                    {reviewStats.avg.toFixed(1)}
+                  </span>
+                  <span className="text-muted">({reviewStats.count} {reviewStats.count === 1 ? 'review' : 'reviews'})</span>
+                  <span className="text-bloom underline underline-offset-2">See reviews ↓</span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => document.getElementById('customer-reviews')?.scrollIntoView({ behavior: 'smooth' })}
+                  className="text-xs text-muted hover:text-plum transition underline underline-offset-2"
+                >
+                  Write first review ↓
+                </button>
+              )}
+            </div>
             <div className="mt-4 flex flex-wrap items-baseline gap-3">
               <p className="text-3xl font-semibold tracking-tight text-plum">{formatPrice(salePrice)}</p>
               {discountPercent > 0 && (
@@ -260,6 +305,24 @@ export default function ProductDetailsClient({ initialProduct, initialRelatedPro
                     {discountPercent}% off
                   </span>
                 </>
+              )}
+            </div>
+            <div className="mt-3 flex items-center gap-2">
+              {outOfStock ? (
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-rose-50 border border-rose-200 px-3 py-1 text-xs font-semibold text-rose-700">
+                  <span className="h-1.5 w-1.5 rounded-full bg-rose-600" />
+                  Out of stock
+                </span>
+              ) : hasStockCount && stockCount > 0 && stockCount <= 5 ? (
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 border border-amber-300 px-3 py-1 text-xs font-semibold text-amber-900 shadow-sm animate-pulse">
+                  <span className="text-amber-600 font-bold">⚡</span>
+                  Only {stockCount} left in stock — order soon
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 border border-emerald-200 px-3 py-1 text-xs font-semibold text-emerald-800">
+                  <span className="text-emerald-600 font-bold">✓</span>
+                  In stock · Ready to dispatch
+                </span>
               )}
             </div>
             {(gstPercent > 0 || codFee > 0 || otherCharge > 0) && (
@@ -442,7 +505,7 @@ export default function ProductDetailsClient({ initialProduct, initialRelatedPro
       </section>}
 
       {/* Customer Reviews — below product */}
-      <CustomerReviews product={product} />
+      <CustomerReviews product={product} onReviewsUpdated={setReviewStats} />
     </>
   )
 }

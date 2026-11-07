@@ -56,7 +56,7 @@ function StarRating({ rating, max = 5, size = 'md', interactive = false, onSelec
   )
 }
 
-export default function CustomerReviews({ product }) {
+export default function CustomerReviews({ product, onReviewsUpdated }) {
   const [sectionRef, inView] = useInView({ rootMargin: '400px' })
   const [reviews, setReviews] = useState([])
   const [reviewAccess, setReviewAccess] = useState({ authenticated: false, canReview: false })
@@ -91,10 +91,16 @@ export default function CustomerReviews({ product }) {
     const response = await fetch(`/api/reviews/${encodeURIComponent(product.id)}`, { cache: 'no-store' })
     const result = await response.json()
     if (response.ok && result.success) {
-      setReviews(result.data?.reviews || [])
+      const list = result.data?.reviews || []
+      setReviews(list)
       setReviewAccess({ authenticated: Boolean(result.data?.authenticated), canReview: Boolean(result.data?.canReview) })
+      if (typeof onReviewsUpdated === 'function') {
+        const count = list.length
+        const avg = count ? list.reduce((sum, review) => sum + Number(review.rating || 0), 0) / count : 0
+        onReviewsUpdated({ count, avg })
+      }
     }
-  }, [product?.id])
+  }, [product?.id, onReviewsUpdated])
 
   useEffect(() => {
     if (!inView || !product?.id) return
@@ -173,7 +179,7 @@ export default function CustomerReviews({ product }) {
   }, [product?.id, productRating, deliveryRating, packagingRating, formText, formTitle, formPhotos, refreshReviews])
 
   return (
-    <section ref={sectionRef} className="container-page mt-16 pt-14 pb-12 border-t border-sand/60" aria-label="Customer Reviews">
+    <section ref={sectionRef} id="customer-reviews" className="container-page mt-16 pt-14 pb-12 border-t border-sand/60 scroll-mt-10" aria-label="Customer Reviews">
       <h2 className="heading-display text-3xl">Customer Reviews</h2>
       <p className="mt-2 text-muted max-w-xl">See what our customers think about this creation.</p>
 
