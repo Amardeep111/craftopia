@@ -3,12 +3,14 @@
 import { useEffect } from 'react'
 import { ShoppingBag, Tag, Truck } from 'lucide-react'
 import { formatPrice } from '@/data/products'
-import { useCartStore } from '@/lib/cart'
+import { useCartStore, useCheckoutItems } from '@/lib/cart'
 import { useCouponStore, couponDiscountAmount } from '@/lib/coupon'
 import ProductImage from '@/components/ui/ProductImage'
 
 export default function OrderSummary() {
-  const items = useCartStore((s) => s.items)
+  const items = useCheckoutItems()
+  const isBuyNow = useCartStore((s) => s.checkoutMode === 'buynow')
+  const savedCartCount = useCartStore((s) => s.items.length)
   const coupon = useCouponStore((s) => s.coupon)
 
   const totalPrice = items.reduce((sum, i) => sum + i.price * i.quantity, 0)
@@ -29,8 +31,21 @@ export default function OrderSummary() {
 
   return (
     <aside className="paper-card p-6 sticky top-6">
-      <h3 className="font-display text-xl text-plum mb-1">Order summary</h3>
-      <p className="text-xs text-muted mb-4">Your bag is preserved across checkout steps.</p>
+      <div className="flex items-center justify-between mb-1">
+        <h3 className="font-display text-xl text-plum">Order summary</h3>
+        {isBuyNow && (
+          <span className="rounded-full bg-bloom/15 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wider text-bloom">
+            Buy Now
+          </span>
+        )}
+      </div>
+      <p className="text-xs text-muted mb-4">
+        {isBuyNow
+          ? savedCartCount > 0
+            ? `Direct checkout · ${savedCartCount} ${savedCartCount === 1 ? 'item' : 'items'} in your cart are preserved.`
+            : 'Direct checkout for this selected item.'
+          : 'Your bag is preserved across checkout steps.'}
+      </p>
 
       <ul className="divide-y divide-sand">
         {items.map((item) => (

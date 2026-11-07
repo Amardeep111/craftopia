@@ -18,13 +18,13 @@ import {
   ShoppingBag,
 } from 'lucide-react'
 import { formatPrice } from '@/data/products'
-import { useCartStore } from '@/lib/cart'
+import { useCartStore, useCheckoutItems } from '@/lib/cart'
 import { useCouponStore, couponDiscountAmount } from '@/lib/coupon'
 import CheckoutProgress from '@/components/checkout/CheckoutProgress'
 
 export default function CheckoutCouponPage() {
   const router = useRouter()
-  const items = useCartStore((s) => s.items)
+  const items = useCheckoutItems()
   const coupon = useCouponStore((s) => s.coupon)
   const applyCoupon = useCouponStore((s) => s.apply)
   const removeCoupon = useCouponStore((s) => s.remove)

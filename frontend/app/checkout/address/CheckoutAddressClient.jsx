@@ -9,7 +9,7 @@ import AddressCard from '@/components/checkout/AddressCard'
 import AddressForm from '@/components/checkout/AddressForm'
 import OrderSummary from '@/components/checkout/OrderSummary'
 import { useAddressStore, validateAddress } from '@/lib/address'
-import { useCartStore } from '@/lib/cart'
+import { useCartStore, useCheckoutItems } from '@/lib/cart'
 import { useUserStore } from '@/lib/user'
 
 export default function CheckoutAddressClient({ initialUser, initialAddresses = [], initialAddressError = '' }) {
@@ -31,7 +31,7 @@ export default function CheckoutAddressClient({ initialUser, initialAddresses = 
   const userId = initialUser?.userId || storedUserId
   const login = useUserStore((s) => s.login)
   const logout = useUserStore((s) => s.logout)
-  const cartItems = useCartStore((s) => s.items)
+  const cartItems = useCheckoutItems()
   const totalPrice = cartItems.reduce((sum, i) => sum + i.price * i.quantity, 0)
   const [showForm, setShowForm] = useState(false)
   const [editingAddress, setEditingAddress] = useState(null)

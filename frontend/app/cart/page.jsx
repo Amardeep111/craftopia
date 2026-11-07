@@ -14,6 +14,11 @@ export default function CartPage() {
   const removeItem = useCartStore((s) => s.removeItem)
   const updateQuantity = useCartStore((s) => s.updateQuantity)
   const updateItemPrices = useCartStore((s) => s.updateItemPrices)
+  const clearBuyNow = useCartStore((s) => s.clearBuyNow)
+
+  useEffect(() => {
+    clearBuyNow?.()
+  }, [clearBuyNow])
 
   const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0)
   const itemCount = items.reduce((sum, item) => sum + item.quantity, 0)
@@ -193,7 +198,11 @@ export default function CartPage() {
               </div>
             </div>
 
-            <Link href="/checkout/address" className="mt-5 flex w-full items-center justify-center rounded-full bg-plum px-5 py-2.5 text-sm font-semibold tracking-wide text-cream shadow-soft transition hover:bg-ink hover:-translate-y-0.5 hover:shadow-lift active:translate-y-0">
+            <Link
+              href="/checkout/address"
+              onClick={() => clearBuyNow?.()}
+              className="mt-5 flex w-full items-center justify-center rounded-full bg-plum px-5 py-2.5 text-sm font-semibold tracking-wide text-cream shadow-soft transition hover:bg-ink hover:-translate-y-0.5 hover:shadow-lift active:translate-y-0"
+            >
               Proceed to Checkout
             </Link>
             <p className="mt-3 text-center text-xs text-muted">Handmade pieces — ships within 3–5 days.</p>

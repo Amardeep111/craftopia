@@ -14,7 +14,7 @@ import PaymentSummary from './PaymentSummary'
 import PaymentResult from './PaymentResult'
 import { PAYMENT_METHODS, PAYMENT_METHOD_ORDER } from '@/lib/payment'
 import { couponDiscountAmount } from '@/lib/coupon'
-import { useCartStore } from '@/lib/cart'
+import { useCartStore, useCheckoutItems } from '@/lib/cart'
 import { useCouponStore } from '@/lib/coupon'
 import { useAddressStore } from '@/lib/address'
 import { useUserStore } from '@/lib/user'
@@ -24,7 +24,7 @@ export default function PaymentPage() {
   const router = useRouter()
 
   // ── Cart ────────────────────────────────────────────────────────────────
-  const items = useCartStore((s) => s.items)
+  const items = useCheckoutItems()
   const clearCart = useCartStore((s) => s.clear)
   const subtotal = items.reduce((sum, i) => sum + i.price * i.quantity, 0)
   const totalItems = items.reduce((sum, i) => sum + i.quantity, 0)

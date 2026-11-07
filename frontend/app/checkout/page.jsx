@@ -17,14 +17,16 @@ import {
 import Button from '@/components/ui/Button'
 import ProductImage from '@/components/ui/ProductImage'
 import { formatPrice } from '@/data/products'
-import { useCartStore } from '@/lib/cart'
+import { useCartStore, useCheckoutItems } from '@/lib/cart'
 import { useAddressStore } from '@/lib/address'
 import { useCouponStore, couponDiscountAmount } from '@/lib/coupon'
 import CheckoutProgress from '@/components/checkout/CheckoutProgress'
 import SkeletonCard from '@/components/ui/SkeletonCard'
 
 export default function CheckoutPage() {
-  const items = useCartStore((s) => s.items)
+  const items = useCheckoutItems()
+  const isBuyNow = useCartStore((s) => s.checkoutMode === 'buynow')
+  const savedCartCount = useCartStore((s) => s.items.length)
   const updateQuantity = useCartStore((s) => s.updateQuantity)
   const removeItem = useCartStore((s) => s.removeItem)
 

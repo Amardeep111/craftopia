@@ -2,11 +2,11 @@
 
 import { ShoppingBag, Tag, Truck, Lock } from 'lucide-react'
 import { formatPrice } from '@/data/products'
-import { useCartStore } from '@/lib/cart'
+import { useCartStore, useCheckoutItems } from '@/lib/cart'
 import { useCouponStore, couponDiscountAmount } from '@/lib/coupon'
 
 export default function PaymentSummary({ method }) {
-  const items = useCartStore((s) => s.items)
+  const items = useCheckoutItems()
   const coupon = useCouponStore((s) => s.coupon)
 
   const subtotal = items.reduce((sum, i) => sum + i.price * i.quantity, 0)
