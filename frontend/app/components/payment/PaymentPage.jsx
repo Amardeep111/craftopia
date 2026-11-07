@@ -39,10 +39,30 @@ export default function PaymentPage() {
 
   // ── Address ─────────────────────────────────────────────────────────────
   const selectedAddress = useAddressStore((s) => s.getSelectedAddress())
+  const addressHydrated = useAddressStore((s) => s.hydrated)
 
   // ── Auth ──────────────────────────────────────────────────────────────────
   const authEmail = useUserStore((s) => s.email)
   const authUserId = useUserStore((s) => s.userId)
+  const isLoggedIn = useUserStore((s) => s.isLoggedIn)
+
+  const isAddressValid = Boolean(
+    selectedAddress &&
+    selectedAddress.fullName &&
+    selectedAddress.mobileNumber &&
+    selectedAddress.houseFlatBuilding
+  )
+
+  useEffect(() => {
+    if (!addressHydrated || items.length === 0 || submitState === 'success') return
+    if (!authUserId && !isLoggedIn) {
+      router.replace('/account/login?redirect=/checkout/address')
+      return
+    }
+    if (!isAddressValid) {
+      router.replace('/checkout/address')
+    }
+  }, [addressHydrated, items.length, submitState, authUserId, isLoggedIn, isAddressValid, router])
 
   // ── Payment state ────────────────────────────────────────────────────────
   const [selectedMethod, setSelectedMethod] = useState('upi')
@@ -77,6 +97,18 @@ export default function PaymentPage() {
           <Link href="/shop" className="mt-5 inline-block rounded-full bg-plum px-5 py-2.5 text-sm font-semibold text-cream">
             Browse the shop
           </Link>
+        </div>
+      </div>
+    )
+  }
+
+  // ── Guard: unauthenticated or missing address ────────────────────────────
+  if (items.length > 0 && submitState !== 'success' && (!addressHydrated || !authUserId || !isAddressValid)) {
+    return (
+      <div className="container-page pb-20 pt-10 text-center">
+        <div className="mx-auto max-w-md rounded-3xl bg-ivory/60 p-10">
+          <p className="font-display text-2xl text-plum">Verifying checkout details…</p>
+          <p className="mt-2 text-sm text-muted">Directing you to the delivery address step.</p>
         </div>
       </div>
     )

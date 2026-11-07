@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { LogOut, MapPin, Plus, Trash2, UserRound } from 'lucide-react'
 import { useUserStore } from '@/lib/user'
+import { useAddressStore } from '@/lib/address'
 import AddressForm from '@/components/checkout/AddressForm'
 import ChangePasswordForm from '@/components/account/ChangePasswordForm'
 
@@ -89,6 +90,7 @@ export default function ProfileClient({ initialProfile, initialAddresses, initia
       const result = await response.json().catch(() => ({}))
       if (!response.ok || !result.success) throw new Error(result.error || 'Could not sign out. Please try again.')
       clearUser()
+      useAddressStore.getState().clear()
       router.replace('/')
       router.refresh()
     } catch (cause) {

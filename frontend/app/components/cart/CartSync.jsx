@@ -3,6 +3,7 @@
 import { useEffect, useRef } from 'react'
 import { useCartStore } from '@/lib/cart'
 import { useUserStore } from '@/lib/user'
+import { useAddressStore } from '@/lib/address'
 import { resolveCartItems } from '@/lib/cart-sync-utils'
 
 function normalizeCartItems(items) {
@@ -56,6 +57,7 @@ export default function CartSync({ initialUser = null, initialCart = null }) {
       userStore.login(initialUser)
     } else if (userStore.userId) {
       userStore.logout()
+      useAddressStore.getState().clear()
       useCartStore.getState().replaceItems([])
       useCartStore.getState().setOwnerUserId(null)
     }
@@ -69,6 +71,7 @@ export default function CartSync({ initialUser = null, initialCart = null }) {
       if (initializedUserId.current && !useUserStore.getState().userId) {
         useCartStore.getState().replaceItems([])
         useCartStore.getState().setOwnerUserId(null)
+        useAddressStore.getState().clear()
         initializedUserId.current = null
       }
       return () => { active = false }

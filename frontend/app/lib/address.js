@@ -179,6 +179,11 @@ export const useAddressStore = create(
         }
         return get().getDefaultAddress()
       },
+
+      clear() {
+        set({ addresses: [], selectedAddressId: null })
+        notifyChange()
+      },
     }),
     {
       name: 'jamaes:address',

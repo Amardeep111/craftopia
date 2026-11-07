@@ -62,8 +62,15 @@ export default function Navbar({ initialUser = null }) {
     return pathname?.startsWith(path)
   }
 
-  const loginHref = pathname && pathname !== '/' && !pathname.startsWith('/account')
-    ? `/account/login?redirect=${encodeURIComponent(pathname)}`
+  const loginRedirectPath = (() => {
+    if (!pathname || pathname === '/' || pathname.startsWith('/account')) return ''
+    // Never resume directly to payment or confirmation; checkout must start at address verification
+    if (pathname.startsWith('/checkout')) return '/checkout/address'
+    return pathname
+  })()
+
+  const loginHref = loginRedirectPath
+    ? `/account/login?redirect=${encodeURIComponent(loginRedirectPath)}`
     : '/account/login'
 
   return (
