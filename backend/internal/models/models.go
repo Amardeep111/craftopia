@@ -138,6 +138,7 @@ type Order struct {
 	Shipping          int             `json:"shipping"`
 	Fee               int             `json:"fee"`
 	Notes             *string         `json:"notes,omitempty"`
+	CouponCode        *string         `json:"couponCode,omitempty"`
 	TrackingNumber    *string         `json:"trackingNumber,omitempty"`
 	ShippingPartner   *string         `json:"shippingPartner,omitempty"`
 	EstimatedDelivery *string         `json:"estimatedDelivery,omitempty"`
@@ -249,6 +250,8 @@ type CreateOrderRequest struct {
 	PaymentMethod    string          `json:"paymentMethod"`
 	PaymentReference *string         `json:"paymentReference,omitempty"`
 	CouponCode       *string         `json:"couponCode,omitempty"`
+	Coupon           *string         `json:"coupon,omitempty"`
+	CouponCodeSnake  *string         `json:"coupon_code,omitempty"`
 	Notes            *string         `json:"notes,omitempty"`
 	Items            []struct {
 		ProductID string `json:"productId"`

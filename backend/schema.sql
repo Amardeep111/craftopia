@@ -137,6 +137,7 @@ CREATE TABLE IF NOT EXISTS "Order" (
     shipping INT DEFAULT 0,
     fee INT DEFAULT 0,
     notes TEXT,
+    "couponCode" TEXT,
     "trackingNumber" TEXT,
     "shippingPartner" TEXT,
     "estimatedDelivery" TEXT,

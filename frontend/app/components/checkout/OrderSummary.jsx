@@ -18,10 +18,10 @@ export default function OrderSummary() {
 
   useEffect(() => {
     const store = useCouponStore.getState()
-    if (store.coupon && store.revalidate) {
+    if (store.coupon && store.revalidate && totalPrice > 0 && items.length > 0) {
       store.revalidate(totalPrice)
     }
-  }, [totalPrice, items])
+  }, [totalPrice, items.length])
 
   const discount = couponDiscountAmount(coupon, totalPrice)
   const gstTotal = items.reduce((sum, item) => sum + (item.gstAmount || Math.round(item.price * (item.gstPercent || 0) / 100)) * item.quantity, 0)

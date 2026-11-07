@@ -185,20 +185,31 @@ export default function AdminOrderDetail() {
                   setError('Cannot confirm a UPI order before payment is verified and marked as Paid.')
                   return
                 }
+                if ((order.status === 'SHIPPED' || order.status === 'DELIVERED') && nextStatus === 'IN_PROGRESS') {
+                  setError('Once an order has been marked as Shipped, it cannot be changed back to In Progress.')
+                  return
+                }
                 patchOrder({ status: nextStatus })
               }}
               className="mt-1 min-h-11 w-full rounded-xl border border-sand bg-white px-3 sm:w-auto"
             >
-              {STATUSES.map((value) => (
-                <option
-                  key={value}
-                  value={value}
-                  disabled={value === 'CONFIRMED' && isUpi && order.paymentStatus !== 'PAID'}
-                >
-                  {label(value)}
-                  {value === 'CONFIRMED' && isUpi && order.paymentStatus !== 'PAID' ? ' (Requires Paid)' : ''}
-                </option>
-              ))}
+              {STATUSES.map((value) => {
+                const isShippedOrBeyond = order.status === 'SHIPPED' || order.status === 'DELIVERED'
+                const cannotRevertToInProgress = isShippedOrBeyond && value === 'IN_PROGRESS'
+                const cannotConfirmWithoutPaid = value === 'CONFIRMED' && isUpi && order.paymentStatus !== 'PAID'
+                const disabled = cannotConfirmWithoutPaid || cannotRevertToInProgress
+                return (
+                  <option
+                    key={value}
+                    value={value}
+                    disabled={disabled}
+                  >
+                    {label(value)}
+                    {cannotConfirmWithoutPaid ? ' (Requires Paid)' : ''}
+                    {cannotRevertToInProgress ? ' (Cannot revert once shipped)' : ''}
+                  </option>
+                )
+              })}
             </select>
           </label>
         ) : (
@@ -475,7 +486,7 @@ export default function AdminOrderDetail() {
               </div>
               <div>
                 <dt className="text-muted">Phone</dt>
-                <dd className="break-words font-medium text-plum">{order.customerPhone || order.user?.phone || 'Not provided'}</dd>
+                <dd className="break-words font-medium text-plum">{order.customerPhone || addressParts.phone || order.user?.phone || 'Not provided'}</dd>
               </div>
               <div>
                 <dt className="text-muted">Account type</dt>
@@ -587,25 +598,34 @@ export default function AdminOrderDetail() {
             <dl className="mt-3 space-y-2 text-sm">
               <div className="flex justify-between gap-3">
                 <dt className="text-muted">Subtotal</dt>
-                <dd>{money(order.subtotal)}</dd>
+                <dd className="font-medium text-plum">{money(order.subtotal)}</dd>
               </div>
               <div className="flex justify-between gap-3">
-                <dt className="text-muted">Discount</dt>
-                <dd>−{money(order.discount)}</dd>
+                <dt className="text-muted">
+                  Discount{order.couponCode ? ` (${order.couponCode})` : ''}
+                </dt>
+                <dd className={order.discount > 0 ? "font-semibold text-emerald-700" : "text-muted"}>
+                  −{money(order.discount)}
+                </dd>
               </div>
               <div className="flex justify-between gap-3">
                 <dt className="text-muted">Shipping</dt>
-                <dd>{money(order.shipping)}</dd>
+                <dd className="font-medium text-plum">{order.shipping > 0 ? money(order.shipping) : 'Free'}</dd>
               </div>
               <div className="flex justify-between gap-3">
                 <dt className="text-muted">Fees and charges</dt>
-                <dd>{money(order.fee)}</dd>
+                <dd className="font-medium text-plum">{money(order.fee)}</dd>
               </div>
               <div className="flex justify-between gap-3 border-t border-sand pt-3 font-semibold text-plum">
                 <dt>Total</dt>
-                <dd>{money(order.totalAmount)}</dd>
+                <dd className="text-base text-plum font-bold">{money(order.totalAmount)}</dd>
               </div>
             </dl>
+            {order.discount > 0 && order.couponCode && (
+              <div className="mt-3 rounded-lg bg-sage/15 p-2 text-xs font-semibold text-emerald-800">
+                Coupon {order.couponCode} applied: {money(order.discount)} saved
+              </div>
+            )}
           </section>
 
           {/* ── Payment Activity Section ── */}

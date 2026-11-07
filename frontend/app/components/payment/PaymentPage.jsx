@@ -102,7 +102,7 @@ export default function PaymentPage() {
         const orderData = {
           customerName: selectedAddress?.fullName || authEmail?.split('@')[0] || '',
           customerEmail: selectedAddress?.email || authEmail || '',
-          customerPhone: selectedAddress?.mobileNumber || '',
+          customerPhone: selectedAddress?.mobileNumber || selectedAddress?.phone || '',
           shippingAddress: { ...selectedAddress, userId: authUserId || null },
           totalAmount: effectiveTotal,
           paymentMethod: selectedMethod === 'cod' ? 'Cash on Delivery' : 'UPI',
@@ -123,6 +123,7 @@ export default function PaymentPage() {
         const orderNumber = order?.orderNumber || order?.id
 
         clearCart()
+        useCouponStore.getState().clear()
 
         // Persist the most recent order so the success page can render immediately
         try {
@@ -186,7 +187,7 @@ export default function PaymentPage() {
       const orderData = {
         customerName: selectedAddress?.fullName || '',
         customerEmail: selectedAddress?.email || authEmail || '',
-        customerPhone: selectedAddress?.mobileNumber || '',
+        customerPhone: selectedAddress?.mobileNumber || selectedAddress?.phone || '',
         shippingAddress: selectedAddress || null,
         totalAmount: orderTotal + currentFee,
         paymentMethod: PAYMENT_METHODS[selectedMethod]?.label || selectedMethod,
@@ -215,6 +216,7 @@ export default function PaymentPage() {
       })
 
       clearCart()
+      useCouponStore.getState().clear()
       setInFlight(false)
       setSubmitState('success')
       if (order?.orderNumber) {

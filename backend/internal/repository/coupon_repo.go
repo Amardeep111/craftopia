@@ -48,7 +48,7 @@ func (r *CouponRepository) ValidateCoupon(ctx context.Context, code string, subt
 
 	query := `
 		SELECT id, code, label, "discountPercent", "minSubtotal", active, "expiresAt", "firstTimeOnly", "maxUses", "currentUses"
-		FROM "Coupon" WHERE code = $1 LIMIT 1;
+		FROM "Coupon" WHERE UPPER(TRIM(code)) = $1 LIMIT 1;
 	`
 	var c Coupon
 	err := r.db.Pool.QueryRow(ctx, query, cleanCode).Scan(
@@ -62,7 +62,8 @@ func (r *CouponRepository) ValidateCoupon(ctx context.Context, code string, subt
 		return nil, fmt.Errorf("failed to query coupon: %w", err)
 	}
 
-	if !c.Active || (c.ExpiresAt != nil && c.ExpiresAt.Before(time.Now())) {
+	isExpired := c.ExpiresAt != nil && c.ExpiresAt.Before(time.Now()) && c.ExpiresAt.Format("2006-01-02") < time.Now().Format("2006-01-02")
+	if !c.Active || isExpired {
 		return nil, errors.New("that coupon is expired or inactive")
 	}
 

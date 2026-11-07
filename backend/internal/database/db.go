@@ -64,6 +64,9 @@ func Connect(ctx context.Context, cfg *config.Config) (*DB, error) {
 		return nil, fmt.Errorf("database ping failed: %w", err)
 	}
 
+	// Idempotent column migrations for live database safety
+	_, _ = pool.Exec(ctx, `ALTER TABLE "Order" ADD COLUMN IF NOT EXISTS "couponCode" TEXT;`)
+
 	slog.Info("Connected to PostgreSQL successfully")
 	return &DB{Pool: pool}, nil
 }
