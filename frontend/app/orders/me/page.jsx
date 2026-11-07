@@ -6,12 +6,12 @@ import Link from 'next/link'
 import { Package, ChevronRight, ShoppingBag, Loader2 } from 'lucide-react'
 import { useUserStore } from '@/lib/user'
 import { formatPrice } from '@/data/products'
-import { STATUS_META, getPaymentStatusMeta } from '@/components/orders/orderConstants'
+import { STATUS_META, getStatusMeta, getPaymentStatusMeta } from '@/components/orders/orderConstants'
 
 const STATUS_TABS = [
   { value: 'ALL', label: 'All' },
   { value: 'CONFIRMED', label: 'Confirmed' },
-  { value: 'PROCESSING', label: 'Processing' },
+  { value: 'IN_PROGRESS', label: 'Being crafted' },
   { value: 'SHIPPED', label: 'Shipped' },
   { value: 'DELIVERED', label: 'Delivered' },
   { value: 'CANCELLED', label: 'Cancelled' },
@@ -105,7 +105,14 @@ function MyOrdersContent() {
     )
   }
 
-  const filtered = tab === 'ALL' ? orders : orders.filter((o) => o.status === tab)
+  const filtered = tab === 'ALL'
+    ? orders
+    : orders.filter((o) => {
+        if (tab === 'IN_PROGRESS' || tab === 'PROCESSING') {
+          return o.status === 'IN_PROGRESS' || o.status === 'PROCESSING'
+        }
+        return o.status === tab
+      })
 
   return (
     <div className="container-page pb-24 pt-8 md:pt-12">
@@ -157,7 +164,14 @@ function MyOrdersContent() {
       {!error && orders.length > 0 && (
         <div className="mt-6 flex flex-wrap gap-2">
           {STATUS_TABS.map((s) => {
-            const count = s.value === 'ALL' ? orders.length : orders.filter((o) => o.status === s.value).length
+            const count = s.value === 'ALL'
+              ? orders.length
+              : orders.filter((o) => {
+                  if (s.value === 'IN_PROGRESS' || s.value === 'PROCESSING') {
+                    return o.status === 'IN_PROGRESS' || o.status === 'PROCESSING'
+                  }
+                  return o.status === s.value
+                }).length
             const active = tab === s.value
             return (
               <button
@@ -185,7 +199,7 @@ function MyOrdersContent() {
       {!error && !loading && filtered.length > 0 && (
         <ul className="mt-6 space-y-3" aria-label="Orders">
           {filtered.map((o) => {
-            const meta = STATUS_META[o.status] || { label: o.status, color: 'text-muted', dot: 'bg-muted' }
+            const meta = getStatusMeta(o.status)
             const isFocus = focusOrder && o.orderNumber === focusOrder
             return (
               <li key={o.id}>

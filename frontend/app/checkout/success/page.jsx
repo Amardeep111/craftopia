@@ -21,12 +21,13 @@ import { formatPrice } from '@/data/products'
 // ─── Order status definitions ───────────────────────────────────────────────
 
 const STATUS_META = {
-  CONFIRMED:  { label: 'Order confirmed',     icon: CheckCircle2, color: 'text-sage',      dot: 'bg-sage',       desc: 'Your order has been placed.' },
-  PROCESSING: { label: 'Being crafted',        icon: Package,      color: 'text-bloom',    dot: 'bg-bloom',      desc: 'Our artisans are preparing it.' },
-  SHIPPED:    { label: 'Shipped',              icon: Truck,        color: 'text-plum',     dot: 'bg-plum',       desc: 'On its way to you.' },
-  DELIVERED:  { label: 'Delivered',            icon: CheckCircle2, color: 'text-sage',     dot: 'bg-sage',       desc: 'Enjoy your piece!' },
-  CANCELLED:  { label: 'Cancelled',            icon: AlertCircle,  color: 'text-bloom',   dot: 'bg-bloom',      desc: 'This order was cancelled.' },
-  PENDING:    { label: 'Pending',              icon: AlertCircle,  color: 'text-muted',    dot: 'bg-muted',      desc: 'Awaiting confirmation.' },
+  CONFIRMED:   { label: 'Order confirmed',     icon: CheckCircle2, color: 'text-sage',      dot: 'bg-sage',       desc: 'Your order has been placed.' },
+  IN_PROGRESS: { label: 'Being crafted',        icon: Package,      color: 'text-bloom',    dot: 'bg-bloom',      desc: 'Our artisans are preparing it.' },
+  PROCESSING:  { label: 'Being crafted',        icon: Package,      color: 'text-bloom',    dot: 'bg-bloom',      desc: 'Our artisans are preparing it.' },
+  SHIPPED:     { label: 'Shipped',              icon: Truck,        color: 'text-plum',     dot: 'bg-plum',       desc: 'On its way to you.' },
+  DELIVERED:   { label: 'Delivered',            icon: CheckCircle2, color: 'text-sage',     dot: 'bg-sage',       desc: 'Enjoy your piece!' },
+  CANCELLED:   { label: 'Cancelled',            icon: AlertCircle,  color: 'text-bloom',   dot: 'bg-bloom',      desc: 'This order was cancelled.' },
+  PENDING:     { label: 'Pending',              icon: AlertCircle,  color: 'text-muted',    dot: 'bg-muted',      desc: 'Awaiting confirmation.' },
 }
 
 const PAYMENT_STATUS_META = {
@@ -41,11 +42,12 @@ function isCod(order) {
   return order?.paymentMethod === 'Cash on Delivery'
 }
 
-const STATUS_FLOW = ['CONFIRMED', 'PROCESSING', 'SHIPPED', 'DELIVERED']
+const STATUS_FLOW = ['CONFIRMED', 'IN_PROGRESS', 'SHIPPED', 'DELIVERED']
 
 function getFlowIndex(status) {
   if (status === 'CANCELLED' || status === 'PENDING') return -1
-  return STATUS_FLOW.indexOf(status)
+  const normalized = status === 'PROCESSING' ? 'IN_PROGRESS' : status
+  return STATUS_FLOW.indexOf(normalized)
 }
 
 // ─── Timeline component ──────────────────────────────────────────────────────

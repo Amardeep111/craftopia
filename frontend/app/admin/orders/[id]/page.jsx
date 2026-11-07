@@ -8,7 +8,7 @@ import { QRCodeSVG } from 'qrcode.react'
 import { CreditCard, Truck, Package, UserCheck, AlertTriangle, CheckCircle2 } from 'lucide-react'
 
 const STATUSES = ['PENDING', 'CONFIRMED', 'IN_PROGRESS', 'SHIPPED', 'DELIVERED', 'CANCELLED', 'RETURN_REQUESTED', 'RETURN_APPROVED', 'RETURN_IN_TRANSIT', 'RETURNED']
-const label = (value = '') => value.replaceAll('_', ' ').toLowerCase().replace(/\b\w/g, (letter) => letter.toUpperCase())
+const label = (value = '') => value === 'IN_PROGRESS' ? 'Being crafted' : value.replaceAll('_', ' ').toLowerCase().replace(/\b\w/g, (letter) => letter.toUpperCase())
 const money = (amount) => `₹${Number(amount || 0).toLocaleString('en-IN')}`
 
 function paymentBadgeStyle(status) {
