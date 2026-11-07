@@ -76,6 +76,9 @@ function OrderDetailContent({ initialOrder, orderId }) {
   const [reviewText, setReviewText] = useState('')
   const [reviewRating, setReviewRating] = useState(5)
   const [reviewPhotos, setReviewPhotos] = useState([])
+  const [reviewSubmitting, setReviewSubmitting] = useState(false)
+  const [reviewError, setReviewError] = useState('')
+  const [submittedReviews, setSubmittedReviews] = useState({})
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false)
   const [cancelling, setCancelling] = useState(false)
   const [cancelError, setCancelError] = useState('')
@@ -162,14 +165,62 @@ function OrderDetailContent({ initialOrder, orderId }) {
     }
   }
 
-  function handleSubmitReview(item) {
-    if (!reviewText.trim()) return
-    // Wire to /api/reviews in production.
-    // Photos are collected in reviewPhotos []; they can be uploaded to /api/upload
-    // with the order+product metadata as part of a full review POST.
-    setReviewing({ ...item, text: reviewText, rating: reviewRating, photos: reviewPhotos, submitted: true })
-    setReviewText('')
-    setReviewPhotos([])
+  async function handleSubmitReview(item) {
+    if (!reviewText.trim()) {
+      setReviewError('Please write a review before submitting.')
+      return
+    }
+    setReviewSubmitting(true)
+    setReviewError('')
+
+    try {
+      let uploadedPhotoUrls = []
+      if (reviewPhotos && reviewPhotos.length > 0) {
+        const formData = new FormData()
+        formData.append('productId', item.productId)
+        reviewPhotos.forEach((file) => formData.append('files', file))
+        const uploadRes = await fetch('/api/reviews/upload', {
+          method: 'POST',
+          credentials: 'include',
+          body: formData,
+        })
+        const uploadData = await uploadRes.json()
+        if (uploadRes.ok && Array.isArray(uploadData.images)) {
+          uploadedPhotoUrls = uploadData.images
+        }
+      }
+
+      const res = await fetch(`/api/reviews/${encodeURIComponent(item.productId)}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          orderId: order?.id,
+          productRating: reviewRating,
+          deliveryRating: reviewRating,
+          packagingRating: reviewRating,
+          text: reviewText.trim(),
+          comment: reviewText.trim(),
+          photos: uploadedPhotoUrls,
+        }),
+      })
+
+      const body = await res.json()
+      if (!res.ok || !body.success) {
+        setReviewError(body.error || 'Failed to submit review. Please try again.')
+        return
+      }
+
+      setSubmittedReviews((prev) => ({ ...prev, [item.productId]: true }))
+      setReviewing(null)
+      setReviewText('')
+      setReviewPhotos([])
+      setReviewRating(5)
+    } catch {
+      setReviewError('Unable to reach server. Please try again.')
+    } finally {
+      setReviewSubmitting(false)
+    }
   }
 
   if (loading) {
@@ -381,8 +432,9 @@ function OrderDetailContent({ initialOrder, orderId }) {
             <h2 className="font-display text-xl text-plum mb-4">Items</h2>
             <ul className="divide-y divide-sand">
               {order.items?.map((item) => {
-                const reviewOpen = reviewing?.productId === item.productId
-                const reviewDone = reviewOpen && reviewing.submitted
+                const isReviewed = Boolean(submittedReviews[item.productId])
+                const reviewOpen = reviewing?.productId === item.productId && !isReviewed
+                const reviewDone = isReviewed || (reviewing?.productId === item.productId && reviewing.submitted)
                 return (
                   <li key={item.id || item.productId} className="py-4 first:pt-0 last:pb-0">
                     <div className="flex items-start gap-3">
@@ -405,7 +457,13 @@ function OrderDetailContent({ initialOrder, orderId }) {
                           <div className="mt-3">
                             {!reviewOpen && !reviewDone && (
                               <button
-                                onClick={() => setReviewing(item)}
+                                onClick={() => {
+                                  setReviewing(item)
+                                  setReviewError('')
+                                  setReviewText('')
+                                  setReviewRating(5)
+                                  setReviewPhotos([])
+                                }}
                                 className="text-xs font-semibold text-bloom hover:text-plum inline-flex items-center gap-1"
                               >
                                 <Star className="h-3.5 w-3.5" aria-hidden="true" />
@@ -414,8 +472,8 @@ function OrderDetailContent({ initialOrder, orderId }) {
                             )}
                             {reviewOpen && !reviewDone && (
                               <div className="rounded-2xl border border-sand bg-ivory/50 p-3 space-y-2">
-                              <div className="flex items-center gap-1" role="radiogroup" aria-label="Rating">
-                                {[1, 2, 3, 4, 5].map((n) => (
+                                <div className="flex items-center gap-1" role="radiogroup" aria-label="Rating">
+                                  {[1, 2, 3, 4, 5].map((n) => (
                                     <button
                                       key={n}
                                       onClick={() => setReviewRating(n)}
@@ -437,12 +495,12 @@ function OrderDetailContent({ initialOrder, orderId }) {
                                 />
                                 <div className="flex items-center gap-2 pt-1">
                                   <label
-                                    htmlFor="review-photo"
+                                    htmlFor={`review-photo-${item.productId}`}
                                     className="inline-flex items-center gap-1 rounded-full bg-ivory border border-sand px-2.5 py-1 text-xs font-semibold text-plum cursor-pointer hover:bg-ivory transition"
                                   >
                                     Add photo
                                     <input
-                                      id="review-photo"
+                                      id={`review-photo-${item.productId}`}
                                       type="file"
                                       accept="image/*"
                                       multiple
@@ -457,15 +515,24 @@ function OrderDetailContent({ initialOrder, orderId }) {
                                     <span className="text-xs text-muted">{reviewPhotos.length} selected</span>
                                   )}
                                 </div>
+                                {reviewError && (
+                                  <p className="text-xs text-rose-600 font-medium">{reviewError}</p>
+                                )}
                                 <div className="flex items-center gap-2">
                                   <button
                                     onClick={() => handleSubmitReview(item)}
-                                    className="rounded-full bg-plum px-4 py-1.5 text-xs font-semibold text-cream hover:bg-ink transition"
+                                    disabled={reviewSubmitting}
+                                    className="rounded-full bg-plum px-4 py-1.5 text-xs font-semibold text-cream hover:bg-ink transition disabled:opacity-50 inline-flex items-center gap-1.5"
                                   >
-                                    Submit
+                                    {reviewSubmitting && <Loader2 className="h-3 w-3 animate-spin" />}
+                                    {reviewSubmitting ? 'Submitting…' : 'Submit'}
                                   </button>
                                   <button
-                                    onClick={() => setReviewing(null)}
+                                    onClick={() => {
+                                      setReviewing(null)
+                                      setReviewError('')
+                                    }}
+                                    disabled={reviewSubmitting}
                                     className="rounded-full px-3 py-1.5 text-xs font-semibold text-muted hover:text-plum transition"
                                   >
                                     Cancel

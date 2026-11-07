@@ -259,7 +259,9 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 
 		challenge, _ := h.userRepo.CreateEmailVerification(r.Context(), user.Email, codeHash, payloadMap, expiresAt)
 		if challenge != nil {
-			_ = h.mailer.SendSignupVerification(user.Email, code)
+			h.mailer.SendEmailBestEffort("login-unverified-otp", func() error {
+				return h.mailer.SendSignupVerification(user.Email, code)
+			})
 		}
 
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
@@ -829,7 +831,9 @@ func (h *AuthHandler) ResetPassword(w http.ResponseWriter, r *http.Request) {
 	if user.Name != nil {
 		name = *user.Name
 	}
-	_ = h.mailer.SendPasswordChanged(user.Email, name)
+	h.mailer.SendEmailBestEffort("password-changed", func() error {
+		return h.mailer.SendPasswordChanged(user.Email, name)
+	})
 
 	utils.Success(w, http.StatusOK, "Password updated successfully. Please sign in with your new password.", nil)
 }

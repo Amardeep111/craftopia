@@ -218,7 +218,7 @@ func (m *Mailer) SendOrderPlacedEmail(order *models.Order) error {
 		return nil
 	}
 
-	amount := fmt.Sprintf("%.2f", float64(order.TotalAmount)/100.0)
+	amount := fmt.Sprintf("%d.00", order.TotalAmount)
 	paymentLabel := string(order.PaymentStatus)
 	if order.PaymentStatus == models.PaymentStatusCODPendingCollection {
 		paymentLabel = "Cash on delivery"
@@ -297,7 +297,7 @@ func (m *Mailer) SendNewOrderSupportAlert(order *models.Order) error {
 		return nil
 	}
 	support := m.getSupportEmail()
-	amount := fmt.Sprintf("%.2f", float64(order.TotalAmount)/100.0)
+	amount := fmt.Sprintf("%d.00", order.TotalAmount)
 
 	subject := fmt.Sprintf("New order %s", order.OrderNumber)
 	text := fmt.Sprintf("Order %s was placed by %s (%s). Total: ₹%s. Payment: %s.",
@@ -317,7 +317,7 @@ func (m *Mailer) SendRefundRequestedSupportAlert(order *models.Order, reason, re
 		return nil
 	}
 	support := m.getSupportEmail()
-	amount := fmt.Sprintf("%.2f", float64(order.TotalAmount)/100.0)
+	amount := fmt.Sprintf("%d.00", order.TotalAmount)
 
 	subject := fmt.Sprintf("Refund requested for order %s", order.OrderNumber)
 	text := fmt.Sprintf("Refund requested for order %s (%s). Amount: ₹%s. Refund UPI: %s. Reason: %s",
