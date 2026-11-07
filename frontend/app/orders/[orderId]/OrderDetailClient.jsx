@@ -18,12 +18,16 @@ import {
   Star,
   ChevronRight,
   XCircle,
+  Eye,
+  Printer,
+  ExternalLink,
 } from 'lucide-react'
 import { formatPrice } from '@/data/products'
 import { STATUS_META, STATUS_FLOW, getFlowIndex, getStatusMeta } from '@/components/orders/orderConstants'
 import Modal from '@/components/ui/Modal'
 import { useUserStore } from '@/lib/user'
 import { getPaymentStatusMeta } from '@/components/orders/orderConstants'
+import Invoice, { printInvoice } from '@/components/orders/Invoice'
 
 function StatusTimeline({ status }) {
   const currentIndex = getFlowIndex(status)
@@ -88,6 +92,7 @@ function OrderDetailContent({ initialOrder, orderId }) {
   const [refundSubmitting, setRefundSubmitting] = useState(false)
   const [refundError, setRefundError] = useState('')
   const [refundNotice, setRefundNotice] = useState('')
+  const [invoiceModalOpen, setInvoiceModalOpen] = useState(false)
 
   useEffect(() => {
     if (initialOrder) return
@@ -314,14 +319,24 @@ function OrderDetailContent({ initialOrder, orderId }) {
         </div>
 
         {/* Actions */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <button
-            onClick={() => window.print()}
-            className="inline-flex items-center gap-1.5 rounded-full border border-plum/40 px-4 py-2 text-sm font-semibold text-plum hover:bg-plum/5 transition"
-            title="Save as PDF (Print dialog)"
+            type="button"
+            onClick={() => printInvoice(order)}
+            className="inline-flex items-center gap-1.5 rounded-full bg-plum px-4 py-2 text-sm font-semibold text-cream shadow-soft hover:bg-ink hover:-translate-y-0.5 hover:shadow-lift active:translate-y-0 transition"
+            title="Download or Print PDF Invoice"
           >
             <Download className="h-4 w-4" aria-hidden="true" />
-            Invoice
+            Download invoice
+          </button>
+          <button
+            type="button"
+            onClick={() => setInvoiceModalOpen(true)}
+            className="inline-flex items-center gap-1.5 rounded-full border border-plum/30 px-3.5 py-2 text-sm font-semibold text-plum hover:bg-plum/5 transition"
+            title="Preview Invoice"
+          >
+            <Eye className="h-4 w-4" aria-hidden="true" />
+            Preview
           </button>
           {canCancel && (
             <button
@@ -416,6 +431,41 @@ function OrderDetailContent({ initialOrder, orderId }) {
         </form>
       </Modal>
       {refundNotice && <p role="status" className="mt-4 rounded-2xl bg-sage/10 px-4 py-3 text-sm text-sage">{refundNotice}</p>}
+
+      {/* Invoice Preview Modal */}
+      <Modal
+        open={invoiceModalOpen}
+        title="Tax Invoice"
+        onClose={() => setInvoiceModalOpen(false)}
+        maxWidth="max-w-4xl"
+        className="max-h-[92vh] overflow-y-auto"
+      >
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-sand pb-3">
+          <p className="text-xs text-muted">
+            Previewing official tax invoice for Order #{order.orderNumber}.
+          </p>
+          <div className="flex items-center gap-2">
+            <Link
+              href={`/orders/${order.id || orderId}/invoice`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 rounded-full border border-sand px-3 py-1.5 text-xs font-semibold text-plum hover:bg-ivory transition"
+            >
+              <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+              Open Fullscreen
+            </Link>
+            <button
+              type="button"
+              onClick={() => printInvoice(order)}
+              className="inline-flex items-center gap-1.5 rounded-full bg-plum px-4 py-1.5 text-xs font-semibold text-cream hover:bg-ink transition shadow-soft"
+            >
+              <Printer className="h-3.5 w-3.5" aria-hidden="true" />
+              Print / Save as PDF
+            </button>
+          </div>
+        </div>
+        <Invoice order={order} showActions={false} onDownload={() => printInvoice(order)} />
+      </Modal>
 
       {/* Two-column */}
       <div className="mt-8 grid gap-6 lg:grid-cols-[1fr_22rem] lg:items-start">

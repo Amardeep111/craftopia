@@ -15,18 +15,22 @@ import {
   Copy,
   AlertCircle,
   MessageCircle,
+  Download,
+  Printer,
 } from 'lucide-react'
 import { formatPrice } from '@/data/products'
+import { printInvoice } from '@/components/orders/Invoice'
 
 // ─── Order status definitions ───────────────────────────────────────────────
 
 const STATUS_META = {
-  CONFIRMED:  { label: 'Order confirmed',     icon: CheckCircle2, color: 'text-sage',      dot: 'bg-sage',       desc: 'Your order has been placed.' },
-  PROCESSING: { label: 'Being crafted',        icon: Package,      color: 'text-bloom',    dot: 'bg-bloom',      desc: 'Our artisans are preparing it.' },
-  SHIPPED:    { label: 'Shipped',              icon: Truck,        color: 'text-plum',     dot: 'bg-plum',       desc: 'On its way to you.' },
-  DELIVERED:  { label: 'Delivered',            icon: CheckCircle2, color: 'text-sage',     dot: 'bg-sage',       desc: 'Enjoy your piece!' },
-  CANCELLED:  { label: 'Cancelled',            icon: AlertCircle,  color: 'text-bloom',   dot: 'bg-bloom',      desc: 'This order was cancelled.' },
-  PENDING:    { label: 'Pending',              icon: AlertCircle,  color: 'text-muted',    dot: 'bg-muted',      desc: 'Awaiting confirmation.' },
+  CONFIRMED:   { label: 'Order confirmed',     icon: CheckCircle2, color: 'text-sage',      dot: 'bg-sage',       desc: 'Your order has been placed.' },
+  IN_PROGRESS: { label: 'Being crafted',        icon: Package,      color: 'text-bloom',    dot: 'bg-bloom',      desc: 'Our artisans are preparing it.' },
+  PROCESSING:  { label: 'Being crafted',        icon: Package,      color: 'text-bloom',    dot: 'bg-bloom',      desc: 'Our artisans are preparing it.' },
+  SHIPPED:     { label: 'Shipped',              icon: Truck,        color: 'text-plum',     dot: 'bg-plum',       desc: 'On its way to you.' },
+  DELIVERED:   { label: 'Delivered',            icon: CheckCircle2, color: 'text-sage',     dot: 'bg-sage',       desc: 'Enjoy your piece!' },
+  CANCELLED:   { label: 'Cancelled',            icon: AlertCircle,  color: 'text-bloom',   dot: 'bg-bloom',      desc: 'This order was cancelled.' },
+  PENDING:     { label: 'Pending',              icon: AlertCircle,  color: 'text-muted',    dot: 'bg-muted',      desc: 'Awaiting confirmation.' },
 }
 
 const PAYMENT_STATUS_META = {
@@ -41,11 +45,12 @@ function isCod(order) {
   return order?.paymentMethod === 'Cash on Delivery'
 }
 
-const STATUS_FLOW = ['CONFIRMED', 'PROCESSING', 'SHIPPED', 'DELIVERED']
+const STATUS_FLOW = ['CONFIRMED', 'IN_PROGRESS', 'SHIPPED', 'DELIVERED']
 
 function getFlowIndex(status) {
   if (status === 'CANCELLED' || status === 'PENDING') return -1
-  return STATUS_FLOW.indexOf(status)
+  const normalized = status === 'PROCESSING' ? 'IN_PROGRESS' : status
+  return STATUS_FLOW.indexOf(normalized)
 }
 
 // ─── Timeline component ──────────────────────────────────────────────────────
@@ -485,6 +490,14 @@ function SuccessContent() {
 
             {/* Actions */}
             <div className="space-y-2.5">
+              <button
+                type="button"
+                onClick={() => printInvoice(order)}
+                className="w-full inline-flex items-center justify-center gap-1.5 rounded-full border border-plum/30 bg-ivory/60 px-4 py-2.5 text-sm font-semibold text-plum hover:bg-ivory hover:-translate-y-0.5 hover:shadow-soft active:translate-y-0 transition"
+              >
+                <Download className="h-4 w-4" aria-hidden="true" />
+                Download Invoice
+              </button>
               <Link href="/orders/me" className="w-full inline-flex items-center justify-center gap-1.5 rounded-full bg-plum px-4 py-2.5 text-sm font-semibold text-cream hover:bg-ink hover:-translate-y-0.5 hover:shadow-lift active:translate-y-0 transition">
                 View my orders
                 <ChevronRight className="h-4 w-4" aria-hidden="true" />

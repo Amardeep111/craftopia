@@ -182,6 +182,20 @@ export default function PaymentPage() {
 
         setInFlight(false)
 
+        // If the user chose to place order and immediately share proof on WhatsApp
+        if (details?.openWhatsApp && details?.whatsappNumber && orderNumber) {
+          try {
+            const cleanPhone = String(details.whatsappNumber).replace(/\D/g, '')
+            const utrPart = details?.paymentReference ? ` My UTR is ${details.paymentReference}.` : ''
+            const customer = selectedAddress?.fullName ? ` from ${selectedAddress.fullName}` : ''
+            const waMessage = `Hi! I have placed order ${orderNumber}${customer} for ₹${Number(effectiveTotal).toLocaleString('en-IN')} via UPI.${utrPart} Here is my payment confirmation.`
+            const waUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(waMessage)}`
+            window.open(waUrl, '_blank')
+          } catch {
+            /* ignore window.open popup errors */
+          }
+        }
+
         // Redirect to order success page so the user sees confirmation + tracking + "View my orders"
         if (orderNumber) {
           window.location.href = `/checkout/success?order=${encodeURIComponent(orderNumber)}`

@@ -3,8 +3,9 @@
 import { useEffect } from 'react'
 import { X } from 'lucide-react'
 import { useLockBody } from '@/hooks/useScrolled'
+import { cn } from '@/lib/cn'
 
-export default function Modal({ open, title, onClose, children }) {
+export default function Modal({ open, title, onClose, maxWidth = 'max-w-md', className = '', children }) {
   useLockBody(open)
 
   useEffect(() => {
@@ -30,7 +31,7 @@ export default function Modal({ open, title, onClose, children }) {
         role="dialog"
         aria-modal="true"
         aria-labelledby="modal-title"
-        className="relative z-10 w-full max-w-md rounded-3xl bg-cream p-6 shadow-lift sm:p-8"
+        className={cn('relative z-10 w-full rounded-3xl bg-cream p-6 shadow-lift sm:p-8', maxWidth, className)}
       >
         <div className="flex items-start justify-between gap-4">
           <h2 id="modal-title" className="font-display text-2xl text-plum">
