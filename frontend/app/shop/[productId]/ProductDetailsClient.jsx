@@ -41,6 +41,7 @@ export default function ProductDetailsClient({ initialProduct, initialRelatedPro
   const descriptionRef = useRef(null)
   const purchaseOptionsRef = useRef(null)
   const addItem = useCartStore((s) => s.addItem)
+  const setBuyNow = useCartStore((s) => s.setBuyNow)
   const cartItems = useCartStore((s) => s.items)
 
   useEffect(() => {
@@ -150,8 +151,8 @@ export default function ProductDetailsClient({ initialProduct, initialRelatedPro
   function handleBuyNow() {
     if (purchaseBlocked) return
     try {
-      addItem(cartProduct, qty)
-      router.push('/checkout/address')
+      setBuyNow(cartProduct, qty)
+      router.push('/checkout/address?buyNow=1')
     } catch {
       setCartFeedback('We could not start checkout. Please try again.')
     }

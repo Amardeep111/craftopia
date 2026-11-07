@@ -639,7 +639,7 @@ function OrderDetailContent({ initialOrder, orderId }) {
               )}
               {order.discount > 0 && (
                 <div className="flex justify-between gap-3">
-                  <span className="text-muted">Discount</span>
+                  <span className="text-muted">Discount{order.couponCode ? ` (${order.couponCode})` : ''}</span>
                   <span className="font-semibold text-sage">−{formatPrice(order.discount)}</span>
                 </div>
               )}

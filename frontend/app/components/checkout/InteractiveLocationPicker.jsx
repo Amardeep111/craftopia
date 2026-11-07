@@ -52,6 +52,7 @@ export default function InteractiveLocationPicker({
   const [permissionDenied, setPermissionDenied] = useState(false)
   const [networkError, setNetworkError] = useState('')
   const [locationData, setLocationData] = useState(null) // { street, area, city, state, pinCode, country, formattedAddress, coordinates }
+  const [locationSource, setLocationSource] = useState('gps') // 'gps' | 'network-ip'
   const [markerPosition, setMarkerPosition] = useState({ lat: initialLat, lng: initialLng })
   const [houseFlat, setHouseFlat] = useState('')
   const [landmark, setLandmark] = useState('')
@@ -238,12 +239,20 @@ export default function InteractiveLocationPicker({
       const addr = data.address || data.data?.address || (data.data?.city ? data.data : null)
       if (data.success && addr) {
         const state = normalizeStateName(addr.state, addr.pinCode)
-        const country = normalizeCountryName(addr.country)
-        setLocationData({ ...addr, state, country, coordinates: { lat, lng } })
+        const country = normalizeCountryName(addr.country) || 'India'
+        const area = addr.areaStreet || addr.street || addr.area || ''
+        setLocationData({ ...addr, areaStreet: area, state, country, coordinates: { lat, lng } })
         setResolved(true)
       } else {
-        setLocationData({ error: data.error || 'Could not retrieve address from this location.' })
-        setResolved(false)
+        setLocationData({
+          country: 'India',
+          areaStreet: '',
+          city: '',
+          state: '',
+          pinCode: '',
+          coordinates: { lat, lng },
+        })
+        setResolved(true)
       }
     } catch (e) {
       // eslint-disable-next-line no-console
@@ -291,6 +300,7 @@ export default function InteractiveLocationPicker({
     const handleSuccess = (pos) => {
       if (resolvedLoc) return
       resolvedLoc = true
+      setLocationSource('gps')
       const lat = pos.coords.latitude
       const lng = pos.coords.longitude
       if (typeof lat !== 'number' || typeof lng !== 'number' || Number.isNaN(lat) || Number.isNaN(lng)) {
@@ -315,6 +325,7 @@ export default function InteractiveLocationPicker({
     const fallbackToIp = async () => {
       if (resolvedLoc) return
       resolvedLoc = true
+      setLocationSource('network-ip')
       try {
         const res = await fetch('/api/location/detect')
         const json = await res.json()
@@ -325,7 +336,7 @@ export default function InteractiveLocationPicker({
           const city = loc.city || ''
           const pinCode = loc.pinCode || ''
           const state = normalizeStateName(loc.state, pinCode)
-          const country = normalizeCountryName(loc.country)
+          const country = normalizeCountryName(loc.country) || 'India'
           setMarkerPosition({ lat, lng })
           if (mapRef.current && mapStatusRef.current === 'ready') {
             mapRef.current.flyTo({ center: [lng, lat], zoom: 15, essential: true })
@@ -346,30 +357,35 @@ export default function InteractiveLocationPicker({
             const geoData = await geoRes.json()
             const geoAddr = geoData.address || geoData.data?.address || (geoData.data?.city ? geoData.data : null)
             if (geoData.success && geoAddr) {
-              const s = normalizeStateName(geoAddr.state, geoAddr.pinCode || pinCode)
-              const c = normalizeCountryName(geoAddr.country)
-              setLocationData({ ...geoAddr, state: s, country: c, coordinates: { lat, lng } })
+              const s = normalizeStateName(geoAddr.state || state, geoAddr.pinCode || pinCode)
+              const c = normalizeCountryName(geoAddr.country || country) || 'India'
+              const area = geoAddr.areaStreet || geoAddr.street || geoAddr.area || (city ? (s ? `${city}, ${s}` : city) : '')
+              setLocationData({ ...geoAddr, areaStreet: area, state: s, country: c, coordinates: { lat, lng } })
               setResolved(true)
             } else {
+              const s = normalizeStateName(state, pinCode)
+              const c = normalizeCountryName(country) || 'India'
               setLocationData({
                 city,
-                state,
-                country,
+                state: s,
+                country: c,
                 pinCode,
-                areaStreet: city ? (state ? `${city}, ${state}` : city) : '',
-                formattedAddress: [city, state, country].filter(Boolean).join(', '),
+                areaStreet: city ? (s ? `${city}, ${s}` : city) : '',
+                formattedAddress: [city, s, c].filter(Boolean).join(', '),
                 coordinates: { lat, lng },
               })
               setResolved(true)
             }
           } catch (_) {
+            const s = normalizeStateName(state, pinCode)
+            const c = normalizeCountryName(country) || 'India'
             setLocationData({
               city,
-              state,
-              country,
+              state: s,
+              country: c,
               pinCode,
-              areaStreet: city ? (state ? `${city}, ${state}` : city) : '',
-              formattedAddress: [city, state, country].filter(Boolean).join(', '),
+              areaStreet: city ? (s ? `${city}, ${s}` : city) : '',
+              formattedAddress: [city, s, c].filter(Boolean).join(', '),
               coordinates: { lat, lng },
             })
             setResolved(true)
@@ -389,20 +405,26 @@ export default function InteractiveLocationPicker({
       return
     }
 
+    // Insecure context check (e.g. testing over HTTP on LAN mobile)
+    if (typeof window !== 'undefined' && !window.isSecureContext && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+      console.warn('Geolocation requires a secure context (HTTPS) on mobile devices. Falling back to network IP location.')
+      fallbackToIp()
+      return
+    }
+
     // Browser geolocation is PRIMARY.
-    // 1. Try High Accuracy GPS first (up to 7s).
-    // 2. If unavailable (code 2) or timed out (code 3), try standard accuracy (up to 8s).
-    // 3. ONLY if browser geolocation fails or times out (e.g. Firefox MLS disabled), fall back to IP location.
-    // 4. If user explicitly denied permission (code 1), respect their choice and do not fall back.
+    // 1. High-accuracy GPS with realistic 15s timeout for mobile satellite lock & permission prompt
+    // 2. 60s maximumAge allows instant resolution if device recently got a GPS lock
     navigator.geolocation.getCurrentPosition(
       handleSuccess,
       (err1) => {
-        if (err1.code === 1) {
+        if (err1.code === 1) { // PERMISSION_DENIED
           setLocating(false)
           setPermissionDenied(true)
           setLocationData({ error: 'Location permission was denied. You can enter your address manually.' })
           return
         }
+        // Fall back to lower-accuracy cell/Wi-Fi triangulation with 10s timeout
         navigator.geolocation.getCurrentPosition(
           handleSuccess,
           (err2) => {
@@ -412,13 +434,12 @@ export default function InteractiveLocationPicker({
               setLocationData({ error: 'Location permission was denied. You can enter your address manually.' })
               return
             }
-            // Pure fallback: both browser geolocation attempts failed or timed out
             fallbackToIp()
           },
-          { enableHighAccuracy: false, timeout: 8000, maximumAge: 60000 }
+          { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 }
         )
       },
-      { enableHighAccuracy: true, timeout: 7000, maximumAge: 0 }
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 }
     )
   }, [reverseGeocode, placeMarker])
 
@@ -654,11 +675,17 @@ export default function InteractiveLocationPicker({
             <h3 className="font-display text-lg text-plum flex items-center gap-2">
               <MapPin className="h-5 w-5 text-bloom" aria-hidden="true" />
               Location detected
-              <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-sage/20 px-2 py-0.5 text-[10px] font-bold uppercase text-sage">
-                <Navigation className="h-3 w-3" aria-hidden="true" /> GPS
-              </span>
+              {locationSource === 'gps' ? (
+                <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-sage/20 px-2 py-0.5 text-[10px] font-bold uppercase text-sage">
+                  <Navigation className="h-3 w-3" aria-hidden="true" /> GPS
+                </span>
+              ) : (
+                <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-sand/60 px-2 py-0.5 text-[10px] font-bold uppercase text-plum">
+                  <MapPin className="h-3 w-3" aria-hidden="true" /> Network IP
+                </span>
+              )}
             </h3>
-            <p className="text-sm text-muted">GPS can be imprecise. Review these details and edit anything that looks wrong.</p>
+            <p className="text-sm text-muted">Review these details and edit anything that looks wrong.</p>
             <div className="grid gap-3 sm:grid-cols-2">
               <DetectedField label="Area / Street" value={locationData.areaStreet || locationData.street || locationData.area || ''} onChange={(value) => updateDetectedAddress('areaStreet', value)} />
               <DetectedField label="City" value={locationData.city || ''} onChange={(value) => updateDetectedAddress('city', value)} />
@@ -666,7 +693,7 @@ export default function InteractiveLocationPicker({
                 <label htmlFor="detected-state-select" className="block text-sm font-medium text-plum mb-1">State</label>
                 <Select
                   id="detected-state-select"
-                  value={locationData.state || ''}
+                  value={normalizeStateName(locationData.state, locationData.pinCode) || ''}
                   onChange={(value) => updateDetectedAddress('state', value)}
                   options={STATE_OPTIONS}
                   placeholder="Select state"
@@ -674,7 +701,7 @@ export default function InteractiveLocationPicker({
                 />
               </div>
               <DetectedField label="PIN Code" value={locationData.pinCode || ''} onChange={handleDetectedPinChange} inputMode="numeric" maxLength={6} />
-              <DetectedField label="Country" value={locationData.country || ''} onChange={(value) => updateDetectedAddress('country', value)} />
+              <DetectedField label="Country" value={normalizeCountryName(locationData.country) || 'India'} onChange={(value) => updateDetectedAddress('country', value)} />
             </div>
 
             <div className="grid gap-3 pt-2">

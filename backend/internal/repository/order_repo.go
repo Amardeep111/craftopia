@@ -20,8 +20,9 @@ type OrderRepository struct {
 }
 
 var (
-	ErrOrderNotFound               = errors.New("order not found")
-	ErrUnpaidUPIOrderCannotConfirm = errors.New("cannot confirm a UPI order before payment is verified and marked Paid")
+	ErrOrderNotFound                        = errors.New("order not found")
+	ErrUnpaidUPIOrderCannotConfirm          = errors.New("cannot confirm a UPI order before payment is verified and marked Paid")
+	ErrShippedOrderCannotRevertToInProgress = errors.New("once an order has been marked as shipped, it cannot be changed back to in progress")
 )
 
 func NewOrderRepository(db *database.DB) *OrderRepository {
@@ -135,18 +136,38 @@ func (r *OrderRepository) CreateOrder(ctx context.Context, userID *string, req *
 	discount := 0
 	now := time.Now()
 
-	// Apply coupon if provided
+	// If userID is not passed from session, look up by customerEmail to link order and check first-time coupon usage
+	if userID == nil && req.CustomerEmail != "" {
+		var uid string
+		if uErr := tx.QueryRow(ctx, `SELECT id FROM "User" WHERE LOWER(email) = LOWER($1) LIMIT 1;`, req.CustomerEmail).Scan(&uid); uErr == nil && uid != "" {
+			userID = &uid
+		}
+	}
+
+	// Parse coupon code from request
+	couponStr := ""
 	if req.CouponCode != nil && strings.TrimSpace(*req.CouponCode) != "" {
-		cleanCoupon := strings.ToUpper(strings.TrimSpace(*req.CouponCode))
+		couponStr = strings.TrimSpace(*req.CouponCode)
+	} else if req.Coupon != nil && strings.TrimSpace(*req.Coupon) != "" {
+		couponStr = strings.TrimSpace(*req.Coupon)
+	} else if req.CouponCodeSnake != nil && strings.TrimSpace(*req.CouponCodeSnake) != "" {
+		couponStr = strings.TrimSpace(*req.CouponCodeSnake)
+	}
+
+	// Apply coupon if provided
+	var appliedCouponCode *string
+	if couponStr != "" {
+		cleanCoupon := strings.ToUpper(couponStr)
 		var c Coupon
 		cErr := tx.QueryRow(ctx, `
 			SELECT id, code, label, "discountPercent", "minSubtotal", active, "expiresAt", "firstTimeOnly", "maxUses", "currentUses"
-			FROM "Coupon" WHERE code = $1 FOR UPDATE;
+			FROM "Coupon" WHERE UPPER(TRIM(code)) = $1 FOR UPDATE;
 		`, cleanCoupon).Scan(
 			&c.ID, &c.Code, &c.Label, &c.DiscountPercent, &c.MinSubtotal, &c.Active,
 			&c.ExpiresAt, &c.FirstTimeOnly, &c.MaxUses, &c.CurrentUses,
 		)
-		if cErr == nil && c.Active && (c.ExpiresAt == nil || c.ExpiresAt.After(now)) && subtotal >= c.MinSubtotal {
+		isNotExpired := c.ExpiresAt == nil || c.ExpiresAt.After(now) || c.ExpiresAt.Format("2006-01-02") >= now.Format("2006-01-02")
+		if cErr == nil && c.Active && isNotExpired && subtotal >= c.MinSubtotal {
 			canUse := true
 			if c.MaxUses > 0 && c.CurrentUses >= c.MaxUses {
 				canUse = false
@@ -162,6 +183,7 @@ func (r *OrderRepository) CreateOrder(ctx context.Context, userID *string, req *
 			}
 			if canUse {
 				discount = int(math.Round(float64(subtotal*c.DiscountPercent) / 100.0))
+				appliedCouponCode = &c.Code
 				_, _ = tx.Exec(ctx, `UPDATE "Coupon" SET "currentUses" = "currentUses" + 1, "updatedAt" = $1 WHERE id = $2;`, now, c.ID)
 				if userID != nil {
 					usageID := generateID("cusg")
@@ -185,15 +207,15 @@ func (r *OrderRepository) CreateOrder(ctx context.Context, userID *string, req *
 		INSERT INTO "Order" (
 			id, "orderNumber", "userId", "customerName", "customerEmail", "customerPhone",
 			"shippingAddress", status, "paymentMethod", "paymentStatus", "paymentReference",
-			"totalAmount", subtotal, discount, shipping, fee, notes, "createdAt", "updatedAt"
+			"totalAmount", subtotal, discount, shipping, fee, notes, "couponCode", "createdAt", "updatedAt"
 		) VALUES (
-			$1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19
+			$1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20
 		) RETURNING id;
 	`
 	_, err = tx.Exec(ctx, insertOrderQuery,
 		orderID, orderNumber, userID, req.CustomerName, req.CustomerEmail, req.CustomerPhone,
 		req.ShippingAddress, initialOrderStatus, paymentMethod, initialPaymentStatus, req.PaymentReference,
-		totalAmount, subtotal, discount, shipping, fee, req.Notes, now, now,
+		totalAmount, subtotal, discount, shipping, fee, req.Notes, appliedCouponCode, now, now,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to insert order: %w", err)
@@ -240,7 +262,7 @@ func (r *OrderRepository) GetOrderByID(ctx context.Context, id string) (*models.
 	query := `
 		SELECT id, "orderNumber", "userId", "customerName", "customerEmail", "customerPhone",
 		       "shippingAddress", status, "paymentMethod", "paymentStatus", "paymentReference",
-		       "totalAmount", subtotal, discount, shipping, fee, notes, "trackingNumber",
+		       "totalAmount", subtotal, discount, shipping, fee, notes, "couponCode", "trackingNumber",
 		       "shippingPartner", "estimatedDelivery", "createdAt", "updatedAt"
 		FROM "Order" WHERE id = $1;
 	`
@@ -248,7 +270,7 @@ func (r *OrderRepository) GetOrderByID(ctx context.Context, id string) (*models.
 	err := r.db.Pool.QueryRow(ctx, query, id).Scan(
 		&o.ID, &o.OrderNumber, &o.UserID, &o.CustomerName, &o.CustomerEmail, &o.CustomerPhone,
 		&o.ShippingAddress, &o.Status, &o.PaymentMethod, &o.PaymentStatus, &o.PaymentReference,
-		&o.TotalAmount, &o.Subtotal, &o.Discount, &o.Shipping, &o.Fee, &o.Notes, &o.TrackingNumber,
+		&o.TotalAmount, &o.Subtotal, &o.Discount, &o.Shipping, &o.Fee, &o.Notes, &o.CouponCode, &o.TrackingNumber,
 		&o.ShippingPartner, &o.EstimatedDelivery, &o.CreatedAt, &o.UpdatedAt,
 	)
 	if err != nil {
@@ -442,7 +464,7 @@ func (r *OrderRepository) GetOrderByOrderNumber(ctx context.Context, orderNumber
 	query := `
 		SELECT id, "orderNumber", "userId", "customerName", "customerEmail", "customerPhone",
 		       "shippingAddress", status, "paymentMethod", "paymentStatus", "paymentReference",
-		       "totalAmount", subtotal, discount, shipping, fee, notes, "trackingNumber",
+		       "totalAmount", subtotal, discount, shipping, fee, notes, "couponCode", "trackingNumber",
 		       "shippingPartner", "estimatedDelivery", "createdAt", "updatedAt"
 		FROM "Order" WHERE "orderNumber" = $1;
 	`
@@ -450,7 +472,7 @@ func (r *OrderRepository) GetOrderByOrderNumber(ctx context.Context, orderNumber
 	err := r.db.Pool.QueryRow(ctx, query, orderNumber).Scan(
 		&o.ID, &o.OrderNumber, &o.UserID, &o.CustomerName, &o.CustomerEmail, &o.CustomerPhone,
 		&o.ShippingAddress, &o.Status, &o.PaymentMethod, &o.PaymentStatus, &o.PaymentReference,
-		&o.TotalAmount, &o.Subtotal, &o.Discount, &o.Shipping, &o.Fee, &o.Notes, &o.TrackingNumber,
+		&o.TotalAmount, &o.Subtotal, &o.Discount, &o.Shipping, &o.Fee, &o.Notes, &o.CouponCode, &o.TrackingNumber,
 		&o.ShippingPartner, &o.EstimatedDelivery, &o.CreatedAt, &o.UpdatedAt,
 	)
 	if err != nil {
@@ -510,7 +532,7 @@ func (r *OrderRepository) GetAllOrdersAdmin(ctx context.Context, page, pageSize 
 	rows, err := r.db.Pool.Query(ctx, `
 		SELECT id, "orderNumber", "userId", "customerName", "customerEmail", "customerPhone",
 		       "shippingAddress", status, "paymentMethod", "paymentStatus", "paymentReference",
-		       "totalAmount", subtotal, discount, shipping, fee, notes, "trackingNumber",
+		       "totalAmount", subtotal, discount, shipping, fee, notes, "couponCode", "trackingNumber",
 		       "shippingPartner", "estimatedDelivery", "createdAt", "updatedAt"
 		FROM "Order" `+filterSQL+`
 		ORDER BY "createdAt" DESC, id DESC
@@ -527,7 +549,7 @@ func (r *OrderRepository) GetAllOrdersAdmin(ctx context.Context, page, pageSize 
 		if scanErr := rows.Scan(
 			&o.ID, &o.OrderNumber, &o.UserID, &o.CustomerName, &o.CustomerEmail, &o.CustomerPhone,
 			&o.ShippingAddress, &o.Status, &o.PaymentMethod, &o.PaymentStatus, &o.PaymentReference,
-			&o.TotalAmount, &o.Subtotal, &o.Discount, &o.Shipping, &o.Fee, &o.Notes, &o.TrackingNumber,
+			&o.TotalAmount, &o.Subtotal, &o.Discount, &o.Shipping, &o.Fee, &o.Notes, &o.CouponCode, &o.TrackingNumber,
 			&o.ShippingPartner, &o.EstimatedDelivery, &o.CreatedAt, &o.UpdatedAt,
 		); scanErr != nil {
 			return nil, fmt.Errorf("failed to scan admin order: %w", scanErr)
@@ -623,8 +645,8 @@ func (r *OrderRepository) UpdateOrderStatus(ctx context.Context, orderID string,
 		return fmt.Errorf("failed to begin order update: %w", err)
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
-	var paymentMethod, paymentStatus string
-	if err := tx.QueryRow(ctx, `SELECT "paymentMethod", "paymentStatus" FROM "Order" WHERE id = $1 FOR UPDATE`, orderID).Scan(&paymentMethod, &paymentStatus); err != nil {
+	var paymentMethod, paymentStatus, currentStatus string
+	if err := tx.QueryRow(ctx, `SELECT "paymentMethod", "paymentStatus", status FROM "Order" WHERE id = $1 FOR UPDATE`, orderID).Scan(&paymentMethod, &paymentStatus, &currentStatus); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return ErrOrderNotFound
 		}
@@ -632,6 +654,10 @@ func (r *OrderRepository) UpdateOrderStatus(ctx context.Context, orderID string,
 	}
 	if status == string(models.OrderStatusConfirmed) && strings.Contains(strings.ToLower(paymentMethod), "upi") && paymentStatus != string(models.PaymentStatusPaid) {
 		return ErrUnpaidUPIOrderCannotConfirm
+	}
+	// Once an order is marked as SHIPPED or DELIVERED, it cannot be reverted to IN_PROGRESS
+	if (currentStatus == string(models.OrderStatusShipped) || currentStatus == string(models.OrderStatusDelivered)) && status == string(models.OrderStatusInProgress) {
+		return ErrShippedOrderCannotRevertToInProgress
 	}
 	query := `
 		UPDATE "Order"
@@ -685,8 +711,8 @@ func (r *OrderRepository) GetDashboardStats(ctx context.Context) (*models.AdminD
 	var stats models.AdminDashboardStats
 	err := r.db.Pool.QueryRow(ctx, `
 		SELECT
-			(SELECT COUNT(*) FROM "Order"),
-			(SELECT COUNT(*) FROM "User" WHERE role = 'CUSTOMER'),
+			(SELECT COUNT(*) FROM "Order" WHERE status != 'CANCELLED'),
+			(SELECT COUNT(*) FROM "User" WHERE UPPER(COALESCE(role, 'CUSTOMER')) NOT IN ('ADMIN', 'SUPERADMIN')),
 			(SELECT COUNT(*) FROM "Product" WHERE published = true),
 			(SELECT COUNT(*) FROM "Order" WHERE status = 'PENDING');
 	`).Scan(&stats.Orders, &stats.Users, &stats.Products, &stats.Pending)

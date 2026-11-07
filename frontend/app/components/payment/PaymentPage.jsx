@@ -14,7 +14,7 @@ import PaymentSummary from './PaymentSummary'
 import PaymentResult from './PaymentResult'
 import { PAYMENT_METHODS, PAYMENT_METHOD_ORDER } from '@/lib/payment'
 import { couponDiscountAmount } from '@/lib/coupon'
-import { useCartStore } from '@/lib/cart'
+import { useCartStore, useCheckoutItems } from '@/lib/cart'
 import { useCouponStore } from '@/lib/coupon'
 import { useAddressStore } from '@/lib/address'
 import { useUserStore } from '@/lib/user'
@@ -24,7 +24,7 @@ export default function PaymentPage() {
   const router = useRouter()
 
   // ── Cart ────────────────────────────────────────────────────────────────
-  const items = useCartStore((s) => s.items)
+  const items = useCheckoutItems()
   const clearCart = useCartStore((s) => s.clear)
   const subtotal = items.reduce((sum, i) => sum + i.price * i.quantity, 0)
   const totalItems = items.reduce((sum, i) => sum + i.quantity, 0)
@@ -102,7 +102,7 @@ export default function PaymentPage() {
         const orderData = {
           customerName: selectedAddress?.fullName || authEmail?.split('@')[0] || '',
           customerEmail: selectedAddress?.email || authEmail || '',
-          customerPhone: selectedAddress?.mobileNumber || '',
+          customerPhone: selectedAddress?.mobileNumber || selectedAddress?.phone || '',
           shippingAddress: { ...selectedAddress, userId: authUserId || null },
           totalAmount: effectiveTotal,
           paymentMethod: selectedMethod === 'cod' ? 'Cash on Delivery' : 'UPI',
@@ -123,6 +123,7 @@ export default function PaymentPage() {
         const orderNumber = order?.orderNumber || order?.id
 
         clearCart()
+        useCouponStore.getState().clear()
 
         // Persist the most recent order so the success page can render immediately
         try {
@@ -186,7 +187,7 @@ export default function PaymentPage() {
       const orderData = {
         customerName: selectedAddress?.fullName || '',
         customerEmail: selectedAddress?.email || authEmail || '',
-        customerPhone: selectedAddress?.mobileNumber || '',
+        customerPhone: selectedAddress?.mobileNumber || selectedAddress?.phone || '',
         shippingAddress: selectedAddress || null,
         totalAmount: orderTotal + currentFee,
         paymentMethod: PAYMENT_METHODS[selectedMethod]?.label || selectedMethod,
@@ -215,6 +216,7 @@ export default function PaymentPage() {
       })
 
       clearCart()
+      useCouponStore.getState().clear()
       setInFlight(false)
       setSubmitState('success')
       if (order?.orderNumber) {

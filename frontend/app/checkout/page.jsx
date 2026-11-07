@@ -17,14 +17,16 @@ import {
 import Button from '@/components/ui/Button'
 import ProductImage from '@/components/ui/ProductImage'
 import { formatPrice } from '@/data/products'
-import { useCartStore } from '@/lib/cart'
+import { useCartStore, useCheckoutItems } from '@/lib/cart'
 import { useAddressStore } from '@/lib/address'
 import { useCouponStore, couponDiscountAmount } from '@/lib/coupon'
 import CheckoutProgress from '@/components/checkout/CheckoutProgress'
 import SkeletonCard from '@/components/ui/SkeletonCard'
 
 export default function CheckoutPage() {
-  const items = useCartStore((s) => s.items)
+  const items = useCheckoutItems()
+  const isBuyNow = useCartStore((s) => s.checkoutMode === 'buynow')
+  const savedCartCount = useCartStore((s) => s.items.length)
   const updateQuantity = useCartStore((s) => s.updateQuantity)
   const removeItem = useCartStore((s) => s.removeItem)
 
@@ -46,13 +48,13 @@ export default function CheckoutPage() {
   const totalItems = items.reduce((sum, i) => sum + i.quantity, 0)
   const subtotal = items.reduce((sum, i) => sum + i.price * i.quantity, 0)
 
-  // Revalidate coupon whenever cart subtotal changes
+  // Revalidate coupon whenever cart subtotal changes (guard against running before items hydrate)
   useEffect(() => {
     const store = useCouponStore.getState()
-    if (store.coupon && store.revalidate) {
+    if (store.coupon && store.revalidate && subtotal > 0 && items.length > 0) {
       store.revalidate(subtotal)
     }
-  }, [subtotal])
+  }, [subtotal, items.length])
 
   // Fetch available coupons count / suggestions
   useEffect(() => {

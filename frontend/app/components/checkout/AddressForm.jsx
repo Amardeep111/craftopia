@@ -236,7 +236,7 @@ export default function AddressForm({ open, onClose, onSave, initial = null, sav
             <SectionHead icon={User} title="Contact information" k="info" />
             {openSections.info && (
               <div className="grid gap-4 sm:grid-cols-2 pt-3">
-                <Input label="Full name" value={data.fullName} onChange={(e) => update('fullName', e.target.value)} error={errors.fullName} placeholder="Aisha Mehta" autoComplete="name" />
+                <Input label="Full name" value={data.fullName} onChange={(e) => update('fullName', e.target.value)} error={errors.fullName} placeholder="Enter your full name" autoComplete="name" />
                 <Input label="Mobile number" value={data.mobileNumber} onChange={(e) => update('mobileNumber', e.target.value)} error={errors.mobileNumber} placeholder="9876543210" autoComplete="tel-national" type="tel" />
               </div>
             )}

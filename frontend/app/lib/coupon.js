@@ -66,7 +66,10 @@ export const useCouponStore = create(
       revalidate(subtotal) {
         const { coupon } = get()
         if (!coupon) return true
-        if (couponMeetsMinSubtotal(coupon, subtotal)) {
+        const num = Number(subtotal)
+        // If subtotal is 0 or not yet available (e.g. while cart is hydrating on initial mount), do not drop coupon
+        if (!num || num <= 0) return true
+        if (couponMeetsMinSubtotal(coupon, num)) {
           // Still valid — clear any stale min-subtotal error.
           if (get().error) set({ error: '' })
           return true

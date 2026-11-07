@@ -52,6 +52,10 @@ export default function AdminOrders() {
       setError(`Cannot confirm UPI order ${order.orderNumber} before payment is verified. Click "Verify Payment" to confirm it.`)
       return
     }
+    if ((order.status === 'SHIPPED' || order.status === 'DELIVERED') && nextStatus === 'IN_PROGRESS') {
+      setError(`Once order ${order.orderNumber} is marked as Shipped, it cannot be changed back to In Progress.`)
+      return
+    }
     try {
       const response = await fetch('/api/admin/orders', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: order.id, status: nextStatus }) })
       const result = await response.json()
@@ -78,8 +82,11 @@ export default function AdminOrders() {
           <div className="min-w-0"><Link href={`/admin/orders/${order.id}`} className="break-all font-semibold text-plum underline decoration-sand underline-offset-4 hover:decoration-plum">{order.orderNumber}</Link><p className="mt-1 break-words text-sm">{order.customerName} · {order.customerEmail}</p><p className="text-xs text-muted">{new Date(order.createdAt).toLocaleString()}</p></div>
           {canManage ? <label className="text-sm">Fulfillment status<select aria-label={`Status for ${order.orderNumber}`} value={order.status} onChange={(event) => updateStatus(order, event.target.value)} className="mt-1 min-h-11 w-full rounded-lg border border-sand bg-white px-3 sm:ml-2 sm:mt-0 sm:w-auto">{STATUSES.map((value) => {
             const isUpi = order.paymentMethod === 'UPI' || order.paymentMethod?.toLowerCase().includes('upi')
-            const disabled = value === 'CONFIRMED' && isUpi && order.paymentStatus !== 'PAID'
-            return <option key={value} value={value} disabled={disabled}>{label(value)}{disabled ? ' (Requires Paid)' : ''}</option>
+            const isShippedOrBeyond = order.status === 'SHIPPED' || order.status === 'DELIVERED'
+            const cannotRevertToInProgress = isShippedOrBeyond && value === 'IN_PROGRESS'
+            const cannotConfirmWithoutPaid = value === 'CONFIRMED' && isUpi && order.paymentStatus !== 'PAID'
+            const disabled = cannotConfirmWithoutPaid || cannotRevertToInProgress
+            return <option key={value} value={value} disabled={disabled}>{label(value)}{cannotConfirmWithoutPaid ? ' (Requires Paid)' : ''}{cannotRevertToInProgress ? ' (Cannot revert once shipped)' : ''}</option>
           })}</select></label> : <span className="rounded-full bg-blush/40 px-3 py-2 text-sm text-plum">{label(order.status)}</span>}
         </div>
         <div className="mt-4 flex flex-col justify-between gap-2 border-t border-sand pt-3 text-sm sm:flex-row"><span className="break-words">{(order.items || []).map((item) => `${item.product?.name || 'Product unavailable'} × ${item.quantity}`).join(', ') || 'No items listed'}</span><strong className="shrink-0 text-plum">₹{order.totalAmount}</strong></div>
