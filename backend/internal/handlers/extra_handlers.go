@@ -237,13 +237,33 @@ func (h *ExtraHandlers) CreateProductReview(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	productID := r.PathValue("productId")
-	var rev repository.Review
-	if err := json.NewDecoder(r.Body).Decode(&rev); err != nil {
+	var payload struct {
+		repository.Review
+		CommentAlias string `json:"comment"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
 		utils.Error(w, http.StatusBadRequest, "Invalid review payload")
+		return
+	}
+	rev := payload.Review
+	if strings.TrimSpace(rev.Comment) == "" && strings.TrimSpace(payload.CommentAlias) != "" {
+		rev.Comment = strings.TrimSpace(payload.CommentAlias)
+	}
+	if strings.TrimSpace(rev.Comment) == "" {
+		utils.Error(w, http.StatusBadRequest, "Please share your experience in the review comment.")
 		return
 	}
 	rev.ProductID = productID
 	rev.UserID = claims.UserID
+	if rev.ProductRating <= 0 || rev.ProductRating > 5 {
+		rev.ProductRating = 5
+	}
+	if rev.DeliveryRating <= 0 || rev.DeliveryRating > 5 {
+		rev.DeliveryRating = rev.ProductRating
+	}
+	if rev.PackagingRating <= 0 || rev.PackagingRating > 5 {
+		rev.PackagingRating = rev.ProductRating
+	}
 	created, err := h.reviewRepo.CreateReview(r.Context(), &rev)
 	if err != nil {
 		utils.Error(w, http.StatusInternalServerError, err.Error())

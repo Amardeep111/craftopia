@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -65,7 +66,11 @@ func (h *PaymentHandler) GetUPIDetails(w http.ResponseWriter, r *http.Request) {
 		note = fmt.Sprintf("Order %s", orderID)
 	}
 
-	deepLink := fmt.Sprintf("upi://pay?pa=%s&pn=%s&am=%s&cu=INR&tn=%s", vpa, name, amount, note)
+	escapeParam := func(s string) string {
+		return strings.ReplaceAll(url.QueryEscape(s), "+", "%20")
+	}
+
+	deepLink := fmt.Sprintf("upi://pay?pa=%s&pn=%s&am=%s&cu=INR&tn=%s", vpa, escapeParam(name), escapeParam(amount), escapeParam(note))
 
 	utils.JSON(w, http.StatusOK, map[string]any{
 		"vpa":            vpa,

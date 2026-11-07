@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"craftopia-backend/internal/database"
@@ -20,6 +21,7 @@ type Review struct {
 	ID               string    `json:"id"`
 	ProductID        string    `json:"productId"`
 	UserID           string    `json:"userId"`
+	OrderID          *string   `json:"orderId,omitempty"`
 	UserName         string    `json:"name"`
 	ProductRating    int       `json:"productRating"`
 	DeliveryRating   int       `json:"deliveryRating"`
@@ -93,18 +95,40 @@ func (r *ContactRepository) SaveMessage(ctx context.Context, name, email, messag
 func (r *ReviewRepository) CreateReview(ctx context.Context, rev *Review) (*Review, error) {
 	id := generateID("rev")
 	now := time.Now()
+	var orderID any = nil
+	if rev.OrderID != nil && strings.TrimSpace(*rev.OrderID) != "" {
+		orderID = strings.TrimSpace(*rev.OrderID)
+	}
+	if rev.Images == nil {
+		rev.Images = []string{}
+	}
 	query := `
 		INSERT INTO "Review" (
-			id, "productId", "userId", "productRating", "deliveryRating", "packagingRating",
+			id, "productId", "userId", "orderId", "productRating", "deliveryRating", "packagingRating",
 			title, comment, images, "createdAt"
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 		RETURNING id;
 	`
 	err := r.db.Pool.QueryRow(ctx, query,
-		id, rev.ProductID, rev.UserID, rev.ProductRating, rev.DeliveryRating, rev.PackagingRating,
+		id, rev.ProductID, rev.UserID, orderID, rev.ProductRating, rev.DeliveryRating, rev.PackagingRating,
 		rev.Title, rev.Comment, rev.Images, now,
 	).Scan(&rev.ID)
 	if err != nil {
+		// Fallback without orderId if column or constraint differs
+		fallbackQuery := `
+			INSERT INTO "Review" (
+				id, "productId", "userId", "productRating", "deliveryRating", "packagingRating",
+				title, comment, images, "createdAt"
+			) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+			RETURNING id;
+		`
+		if fbErr := r.db.Pool.QueryRow(ctx, fallbackQuery,
+			id, rev.ProductID, rev.UserID, rev.ProductRating, rev.DeliveryRating, rev.PackagingRating,
+			rev.Title, rev.Comment, rev.Images, now,
+		).Scan(&rev.ID); fbErr == nil {
+			rev.CreatedAt = now
+			return rev, nil
+		}
 		return nil, err
 	}
 	rev.CreatedAt = now

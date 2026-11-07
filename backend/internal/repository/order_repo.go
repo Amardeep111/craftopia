@@ -133,12 +133,52 @@ func (r *OrderRepository) CreateOrder(ctx context.Context, userID *string, req *
 		shipping = 0
 	}
 	discount := 0
+	now := time.Now()
+
+	// Apply coupon if provided
+	if req.CouponCode != nil && strings.TrimSpace(*req.CouponCode) != "" {
+		cleanCoupon := strings.ToUpper(strings.TrimSpace(*req.CouponCode))
+		var c Coupon
+		cErr := tx.QueryRow(ctx, `
+			SELECT id, code, label, "discountPercent", "minSubtotal", active, "expiresAt", "firstTimeOnly", "maxUses", "currentUses"
+			FROM "Coupon" WHERE code = $1 FOR UPDATE;
+		`, cleanCoupon).Scan(
+			&c.ID, &c.Code, &c.Label, &c.DiscountPercent, &c.MinSubtotal, &c.Active,
+			&c.ExpiresAt, &c.FirstTimeOnly, &c.MaxUses, &c.CurrentUses,
+		)
+		if cErr == nil && c.Active && (c.ExpiresAt == nil || c.ExpiresAt.After(now)) && subtotal >= c.MinSubtotal {
+			canUse := true
+			if c.MaxUses > 0 && c.CurrentUses >= c.MaxUses {
+				canUse = false
+			}
+			if canUse && c.FirstTimeOnly && userID != nil {
+				var used bool
+				uErr := tx.QueryRow(ctx, `
+					SELECT true FROM "CouponUsage" WHERE "couponId" = $1 AND "userId" = $2 LIMIT 1;
+				`, c.ID, *userID).Scan(&used)
+				if uErr == nil && used {
+					canUse = false
+				}
+			}
+			if canUse {
+				discount = int(math.Round(float64(subtotal*c.DiscountPercent) / 100.0))
+				_, _ = tx.Exec(ctx, `UPDATE "Coupon" SET "currentUses" = "currentUses" + 1, "updatedAt" = $1 WHERE id = $2;`, now, c.ID)
+				if userID != nil {
+					usageID := generateID("cusg")
+					_, _ = tx.Exec(ctx, `INSERT INTO "CouponUsage" (id, "couponId", "userId", used, "usedAt") VALUES ($1, $2, $3, true, $4);`, usageID, c.ID, *userID, now)
+				}
+			}
+		}
+	}
+
 	fee := totalGST + totalCODFee + totalOther
 	totalAmount := subtotal - discount + shipping + fee
+	if totalAmount < 0 {
+		totalAmount = 0
+	}
 
 	orderID := generateID("ord")
 	orderNumber := generateOrderNumber()
-	now := time.Now()
 
 	// Insert Order
 	insertOrderQuery := `
