@@ -18,7 +18,11 @@ export default function Select({
   const ref = useRef(null)
   const triggerRef = useRef(null)
 
-  const selectedOption = options.find((o) => o.value === value) || null
+  const selectedOption =
+    options.find((o) => o.value === value) ||
+    options.find((o) => o.value && value && String(o.value).toLowerCase() === String(value).toLowerCase()) ||
+    options.find((o) => o.label && value && String(o.label).toLowerCase() === String(value).toLowerCase()) ||
+    null
   const selectedLabel = selectedOption ? selectedOption.label : placeholder
 
   const handleSelect = useCallback(

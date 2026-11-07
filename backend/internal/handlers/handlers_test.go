@@ -287,6 +287,43 @@ func TestGeocodeInvalidCoords(t *testing.T) {
 	}
 }
 
+func TestGeocodeValidCoordsResilientFallback(t *testing.T) {
+	extraHandler := handlers.NewExtraHandlers(nil, nil, nil, nil, nil, nil, nil, nil)
+
+	req, err := http.NewRequest("POST", "/api/geocode", strings.NewReader(`{"lat":12.9716,"lng":77.5946}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	rr := httptest.NewRecorder()
+	extraHandler.Geocode(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("expected status 200 for valid coords, got %d (body: %s)", rr.Code, rr.Body.String())
+	}
+
+	var resp struct {
+		Success bool `json:"success"`
+		Address struct {
+			Country     string             `json:"country"`
+			Coordinates map[string]float64 `json:"coordinates"`
+		} `json:"address"`
+	}
+	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+	if !resp.Success {
+		t.Errorf("expected success true, got false")
+	}
+	if resp.Address.Country != "India" {
+		t.Errorf("expected country India, got %s", resp.Address.Country)
+	}
+	if resp.Address.Coordinates["lat"] != 12.9716 || resp.Address.Coordinates["lng"] != 77.5946 {
+		t.Errorf("expected coords 12.9716, 77.5946, got %v", resp.Address.Coordinates)
+	}
+}
+
 func TestForgotPasswordValidation(t *testing.T) {
 	authHandler := handlers.NewAuthHandler(nil, nil, &config.Config{}, nil)
 

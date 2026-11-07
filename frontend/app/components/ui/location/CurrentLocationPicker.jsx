@@ -38,7 +38,12 @@ export default function CurrentLocationPicker({ onSelect, disabled }) {
       setErrorMsg('Could not detect location. Please enter manually.')
     }
 
-    if (!navigator.geolocation) {
+    if (typeof window === 'undefined' || !navigator.geolocation) {
+      fallbackToIp()
+      return
+    }
+
+    if (typeof window !== 'undefined' && !window.isSecureContext && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
       fallbackToIp()
       return
     }
@@ -63,10 +68,10 @@ export default function CurrentLocationPicker({ onSelect, disabled }) {
             // Pure fallback: both browser geolocation attempts failed or timed out
             fallbackToIp()
           },
-          { enableHighAccuracy: false, timeout: 8000, maximumAge: 60000 }
+          { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 }
         )
       },
-      { enableHighAccuracy: true, timeout: 7000, maximumAge: 0 }
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 }
     )
   }
 

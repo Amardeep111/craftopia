@@ -490,6 +490,9 @@ func (h *ExtraHandlers) DetectLocation(w http.ResponseWriter, r *http.Request) {
 	}
 	region := normalizeState(r.Header.Get("x-vercel-ip-country-region"))
 	country := normalizeCountry(r.Header.Get("x-vercel-ip-country"))
+	if country == "" {
+		country = "India"
+	}
 	postal := r.Header.Get("x-vercel-ip-postal-code")
 	if region == "" && len(postal) >= 2 {
 		region = getStateFromPinPrefix(postal)
@@ -554,6 +557,9 @@ func (h *ExtraHandlers) DetectLocation(w http.ResponseWriter, r *http.Request) {
 				if err := json.NewDecoder(res.Body).Decode(&data); err == nil {
 					if (data.Success == nil || *data.Success) && data.Latitude != 0 && data.Longitude != 0 {
 						c := normalizeCountry(data.Country)
+						if c == "" {
+							c = "India"
+						}
 						st := normalizeState(data.Region)
 						if st == "" && len(data.Postal) >= 2 {
 							st = getStateFromPinPrefix(data.Postal)
@@ -655,19 +661,96 @@ func (h *ExtraHandlers) Geocode(w http.ResponseWriter, r *http.Request) {
 
 	// 2. OpenStreetMap Nominatim reverse geocode fallback (free, no token required)
 	addr, err := reverseGeocodeNominatim(r.Context(), lat, lng)
-	if err != nil {
-		slog.Error("Nominatim reverse geocode failed", "error", err)
-		utils.Error(w, http.StatusBadGateway, "Geocoding service unavailable. Please enter your address manually.")
+	if err == nil && addr != nil {
+		addr.Country = normalizeCountry(addr.Country)
+		addr.State = normalizeState(addr.State)
+		if addr.State == "" && len(addr.PinCode) >= 2 {
+			addr.State = getStateFromPinPrefix(addr.PinCode)
+		}
+		writeGeocodeResponse(w, addr)
 		return
 	}
+	slog.Warn("Nominatim reverse geocode failed, falling back to BigDataCloud", "error", err)
 
-	addr.Country = normalizeCountry(addr.Country)
-	addr.State = normalizeState(addr.State)
-	if addr.State == "" && len(addr.PinCode) >= 2 {
-		addr.State = getStateFromPinPrefix(addr.PinCode)
+	// 3. BigDataCloud reverse geocode fallback (free, fast, mobile-friendly)
+	addr, err = reverseGeocodeBigDataCloud(r.Context(), lat, lng)
+	if err == nil && addr != nil {
+		addr.Country = normalizeCountry(addr.Country)
+		addr.State = normalizeState(addr.State)
+		if addr.State == "" && len(addr.PinCode) >= 2 {
+			addr.State = getStateFromPinPrefix(addr.PinCode)
+		}
+		writeGeocodeResponse(w, addr)
+		return
+	}
+	slog.Warn("BigDataCloud reverse geocode failed, using coordinates fallback", "error", err)
+
+	// 4. Non-blocking coordinates fallback: return coordinates with India default so mobile customers can proceed
+	fbAddr := &GeocodeAddress{
+		Country:     "India",
+		Coordinates: map[string]float64{"lat": lat, "lng": lng},
+		Provider:    "coordinates-fallback",
+	}
+	writeGeocodeResponse(w, fbAddr)
+}
+
+func reverseGeocodeBigDataCloud(ctx context.Context, lat, lng float64) (*GeocodeAddress, error) {
+	apiURL := fmt.Sprintf("https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=%s&longitude=%s&localityLanguage=en",
+		url.QueryEscape(strconv.FormatFloat(lat, 'f', 6, 64)),
+		url.QueryEscape(strconv.FormatFloat(lng, 'f', 6, 64)))
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, apiURL, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("User-Agent", "JamaesCraftopia/1.0 (contact@jamaescraftopia.com)")
+
+	client := &http.Client{Timeout: 5 * time.Second}
+	res, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer res.Body.Close()
+
+	if res.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("bigdatacloud returned status %d", res.StatusCode)
 	}
 
-	writeGeocodeResponse(w, addr)
+	var data struct {
+		City                 string `json:"city"`
+		Locality             string `json:"locality"`
+		PrincipalSubdivision string `json:"principalSubdivision"`
+		CountryName          string `json:"countryName"`
+		Postcode             string `json:"postcode"`
+	}
+
+	if err := json.NewDecoder(res.Body).Decode(&data); err != nil {
+		return nil, err
+	}
+
+	country := data.CountryName
+	if country == "" {
+		country = "India"
+	}
+	area := data.Locality
+	city := data.City
+	if city == "" {
+		city = data.Locality
+	}
+	formatted := strings.Trim(strings.Join([]string{area, city, data.PrincipalSubdivision, country}, ", "), ", ")
+
+	return &GeocodeAddress{
+		Street:           area,
+		AreaStreet:       area,
+		Area:             area,
+		City:             city,
+		State:            data.PrincipalSubdivision,
+		Country:          country,
+		PinCode:          data.Postcode,
+		FormattedAddress: formatted,
+		Coordinates:      map[string]float64{"lat": lat, "lng": lng},
+		Provider:         "bigdatacloud",
+	}, nil
 }
 
 func reverseGeocodeNominatim(ctx context.Context, lat, lng float64) (*GeocodeAddress, error) {
