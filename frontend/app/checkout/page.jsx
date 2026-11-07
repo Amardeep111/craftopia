@@ -448,12 +448,21 @@ export default function CheckoutPage() {
             )}
 
             <div className="mt-6 space-y-3">
-              <Link
-                href="/checkout/payment"
-                className="w-full inline-flex justify-center items-center rounded-full bg-plum px-5 py-3 text-sm font-semibold tracking-wide text-cream shadow-soft transition hover:bg-ink hover:-translate-y-0.5 hover:shadow-lift active:translate-y-0"
-              >
-                Continue to payment <ArrowRight className="h-4 w-4 ml-1.5" />
-              </Link>
+              {selectedAddress && selectedAddress.fullName ? (
+                <Link
+                  href="/checkout/payment"
+                  className="w-full inline-flex justify-center items-center rounded-full bg-plum px-5 py-3 text-sm font-semibold tracking-wide text-cream shadow-soft transition hover:bg-ink hover:-translate-y-0.5 hover:shadow-lift active:translate-y-0"
+                >
+                  Continue to payment <ArrowRight className="h-4 w-4 ml-1.5" />
+                </Link>
+              ) : (
+                <Link
+                  href="/checkout/address"
+                  className="w-full inline-flex justify-center items-center rounded-full bg-bloom px-5 py-3 text-sm font-semibold tracking-wide text-cream shadow-soft transition hover:bg-ink hover:-translate-y-0.5 hover:shadow-lift active:translate-y-0"
+                >
+                  Select delivery address to continue <ArrowRight className="h-4 w-4 ml-1.5" />
+                </Link>
+              )}
               <Button as={Link} href="/checkout/address" className="w-full" variant="secondary">
                 Back to address
               </Button>

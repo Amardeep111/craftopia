@@ -9,6 +9,7 @@ import Input from '@/components/ui/Input'
 import Button from '@/components/ui/Button'
 import { cn } from '@/lib/cn'
 import { useUserStore } from '@/lib/user'
+import { useCartStore } from '@/lib/cart'
 import { encryptPassword } from '@/lib/auth/password-encryption-client'
 import { isDisposableEmail } from '@/lib/auth/disposable-email'
 
@@ -520,21 +521,42 @@ export default function LoginPage() {
   function handleVerified(data) {
     userLogin({ email: data.email, name: data.name, userId: data.id })
     const isAuthPath = (p) => !p || p.startsWith('/account/login') || p.startsWith('/account/signup') || p.startsWith('/account/verify') || p.startsWith('/account/forgot-password')
+
+    function sanitizeCheckoutDestination(p) {
+      if (!p || isAuthPath(p)) return '/'
+      // If destination is in checkout flow, never resume directly to payment or summary without verifying address
+      if (p.startsWith('/checkout/payment') || p.startsWith('/checkout/success') || p === '/checkout' || p.startsWith('/checkout/coupon')) {
+        return '/checkout/address'
+      }
+      return p
+    }
+
     const redirectParam = new URLSearchParams(window.location.search).get('redirect')
     let destination = '/'
     if (redirectParam && redirectParam.startsWith('/') && !isAuthPath(redirectParam)) {
-      destination = redirectParam
+      destination = sanitizeCheckoutDestination(redirectParam)
     } else if (typeof document !== 'undefined' && document.referrer) {
       try {
         const refUrl = new URL(document.referrer)
         if (refUrl.origin === window.location.origin) {
           const path = refUrl.pathname + refUrl.search
           if (!isAuthPath(path)) {
-            destination = path
+            destination = sanitizeCheckoutDestination(path)
           }
         }
       } catch {}
     }
+
+    // Guard: If checkout destination is requested but user has no items in cart, take them to bag
+    if (destination.startsWith('/checkout')) {
+      const cartItems = useCartStore.getState().items
+      const buyNowItem = useCartStore.getState().buyNowItem
+      const hasItems = (Array.isArray(cartItems) && cartItems.length > 0) || (Array.isArray(buyNowItem) && buyNowItem.length > 0)
+      if (!hasItems) {
+        destination = '/cart'
+      }
+    }
+
     if (destination === '/' && (data.role === 'ADMIN' || data.role === 'SUPERADMIN')) {
       destination = '/admin'
     }
