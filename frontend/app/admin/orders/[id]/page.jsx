@@ -5,7 +5,8 @@ import { useParams } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { useAdminAccess } from '../../access-context'
 import { QRCodeSVG } from 'qrcode.react'
-import { CreditCard, Truck, Package, UserCheck, AlertTriangle, CheckCircle2 } from 'lucide-react'
+import { CreditCard, Truck, Package, UserCheck, AlertTriangle, CheckCircle2, Printer, Download } from 'lucide-react'
+import { printInvoice } from '@/components/orders/Invoice'
 
 const STATUSES = ['PENDING', 'CONFIRMED', 'IN_PROGRESS', 'SHIPPED', 'DELIVERED', 'CANCELLED', 'RETURN_REQUESTED', 'RETURN_APPROVED', 'RETURN_IN_TRANSIT', 'RETURNED']
 const label = (value = '') => value === 'IN_PROGRESS' ? 'Being crafted' : value.replaceAll('_', ' ').toLowerCase().replace(/\b\w/g, (letter) => letter.toUpperCase())
@@ -172,7 +173,17 @@ export default function AdminOrderDetail() {
           <h1 className="break-all font-display text-2xl text-plum sm:text-3xl">{order.orderNumber}</h1>
           <p className="mt-1 text-sm text-muted">Placed {new Date(order.createdAt).toLocaleString()}</p>
         </div>
-        {canManage ? (
+        <div className="flex items-center gap-2.5 flex-wrap">
+          <button
+            type="button"
+            onClick={() => printInvoice(order)}
+            className="inline-flex min-h-11 items-center gap-1.5 rounded-xl border border-sand bg-white px-3.5 py-2 text-sm font-semibold text-plum hover:bg-cream shadow-sm transition"
+            title="Download or Print PDF Tax Invoice"
+          >
+            <Printer className="h-4 w-4 text-plum" aria-hidden="true" />
+            Print Invoice
+          </button>
+          {canManage ? (
           <label className="text-sm font-medium text-plum">
             Fulfillment status
             <select
@@ -215,6 +226,7 @@ export default function AdminOrderDetail() {
         ) : (
           <span className="rounded-full bg-blush/40 px-3 py-2 text-sm text-plum">{label(order.status)}</span>
         )}
+        </div>
       </header>
 
       {error && <p role="alert" className="rounded-xl bg-bloom/10 p-3 text-sm text-bloom">{error}</p>}

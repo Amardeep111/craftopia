@@ -15,8 +15,11 @@ import {
   Copy,
   AlertCircle,
   MessageCircle,
+  Download,
+  Printer,
 } from 'lucide-react'
 import { formatPrice } from '@/data/products'
+import { printInvoice } from '@/components/orders/Invoice'
 
 // ─── Order status definitions ───────────────────────────────────────────────
 
@@ -487,6 +490,14 @@ function SuccessContent() {
 
             {/* Actions */}
             <div className="space-y-2.5">
+              <button
+                type="button"
+                onClick={() => printInvoice(order)}
+                className="w-full inline-flex items-center justify-center gap-1.5 rounded-full border border-plum/30 bg-ivory/60 px-4 py-2.5 text-sm font-semibold text-plum hover:bg-ivory hover:-translate-y-0.5 hover:shadow-soft active:translate-y-0 transition"
+              >
+                <Download className="h-4 w-4" aria-hidden="true" />
+                Download Invoice
+              </button>
               <Link href="/orders/me" className="w-full inline-flex items-center justify-center gap-1.5 rounded-full bg-plum px-4 py-2.5 text-sm font-semibold text-cream hover:bg-ink hover:-translate-y-0.5 hover:shadow-lift active:translate-y-0 transition">
                 View my orders
                 <ChevronRight className="h-4 w-4" aria-hidden="true" />
