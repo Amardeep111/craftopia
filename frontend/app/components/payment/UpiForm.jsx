@@ -19,7 +19,7 @@ function supportsUpiAppOpen() {
   const ua = navigator.userAgent || ''
   const mobileUserAgent = /Android|iPhone|iPad|iPod|Mobile|IEMobile|Windows Phone/i.test(ua)
   const touchFoldableWidth = navigator.maxTouchPoints > 0 && window.matchMedia('(max-width: 1024px)').matches
-  return (mobileUserAgent && window.matchMedia('(max-width: 1200px)').matches) || touchFoldableWidth
+  return (mobileUserAgent && window.matchMedia('(max-width: 1200px)').matches) || touchFoldableWidth || window.innerWidth <= 768
 }
 
 export default function UpiForm({ total, orderId, onSubmit, loading, error }) {
@@ -102,6 +102,23 @@ export default function UpiForm({ total, orderId, onSubmit, loading, error }) {
         </span>
       </div>
 
+      {/* 1-Tap Mobile UPI App Opener (GPay, PhonePe, Paytm, BHIM) */}
+      {isMobile && upiDeepLink && (
+        <div className="rounded-2xl border border-plum/20 bg-plum/5 p-4 text-center">
+          <p className="text-xs font-medium text-plum/80 mb-2.5">
+            Paying from this phone? Tap below to launch your UPI app directly:
+          </p>
+          <a
+            href={upiDeepLink}
+            className="flex w-full items-center justify-center gap-2.5 rounded-xl bg-plum px-5 py-3.5 text-base font-semibold text-cream shadow-soft transition hover:bg-ink active:scale-[0.99]"
+          >
+            <Smartphone className="h-5 w-5 shrink-0" aria-hidden="true" />
+            <span>Open UPI App to Pay ({formattedTotal})</span>
+          </a>
+          <p className="mt-2 text-[11px] text-muted">Supports Google Pay, PhonePe, Paytm, BHIM, and bank UPI apps.</p>
+        </div>
+      )}
+
       {/* QR Code & Payee Details in clean compact layout */}
       <div className="grid gap-4 sm:grid-cols-[auto_1fr] sm:items-center rounded-2xl bg-ivory/60 border border-sand/70 p-4 sm:p-5">
         {/* QR Code */}
@@ -114,7 +131,9 @@ export default function UpiForm({ total, orderId, onSubmit, loading, error }) {
               loading="eager"
             />
           </div>
-          <p className="mt-1.5 text-[11px] text-muted text-center">Scan with GPay, PhonePe, Paytm</p>
+          <p className="mt-1.5 text-[11px] text-muted text-center">
+            {isMobile ? 'Or scan from another phone' : 'Scan with GPay, PhonePe, Paytm'}
+          </p>
         </div>
 
         {/* Payee Info & Steps */}
@@ -154,7 +173,7 @@ export default function UpiForm({ total, orderId, onSubmit, loading, error }) {
           <ol className="space-y-1.5 text-xs text-ink/85 border-t border-sand/50 pt-2.5">
             <li className="flex items-start gap-1.5">
               <strong className="text-bloom">1.</strong>
-              <span>Scan the QR code or copy the UPI ID above.</span>
+              <span>{isMobile ? 'Tap the "Open UPI App" button above, or copy the UPI ID.' : 'Scan the QR code or copy the UPI ID above.'}</span>
             </li>
             <li className="flex items-start gap-1.5">
               <strong className="text-bloom">2.</strong>
@@ -167,17 +186,6 @@ export default function UpiForm({ total, orderId, onSubmit, loading, error }) {
           </ol>
         </div>
       </div>
-
-      {/* Mobile Open UPI App button */}
-      {isMobile && upiDeepLink && (
-        <a
-          href={upiDeepLink}
-          className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-plum/20 bg-plum/5 py-2.5 text-sm font-semibold text-plum transition hover:bg-plum/10"
-        >
-          <Smartphone className="h-4 w-4" aria-hidden="true" />
-          Tap to Open in UPI App (GPay / PhonePe / Paytm)
-        </a>
-      )}
 
       {/* UTR Reference Input */}
       <div className="space-y-1.5">
