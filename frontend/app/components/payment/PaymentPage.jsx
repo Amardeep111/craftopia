@@ -23,6 +23,14 @@ import usePayment from '@/hooks/usePayment'
 export default function PaymentPage() {
   const router = useRouter()
 
+  // ── Payment state ────────────────────────────────────────────────────────
+  const [selectedMethod, setSelectedMethod] = useState('upi')
+  const [submitState, setSubmitState] = useState('form') // 'form' | 'processing' | 'success' | 'failure'
+  const [orderResult, setOrderResult] = useState(null)
+  const [failureMessage, setFailureMessage] = useState('')
+  // Idempotency guard — prevent duplicate orders on double-click / network retry.
+  const [inFlight, setInFlight] = useState(false)
+
   // ── Cart ────────────────────────────────────────────────────────────────
   const items = useCheckoutItems()
   const clearCart = useCartStore((s) => s.clear)
@@ -64,13 +72,6 @@ export default function PaymentPage() {
     }
   }, [addressHydrated, items.length, submitState, authUserId, isLoggedIn, isAddressValid, router])
 
-  // ── Payment state ────────────────────────────────────────────────────────
-  const [selectedMethod, setSelectedMethod] = useState('upi')
-  const [submitState, setSubmitState] = useState('form') // 'form' | 'processing' | 'success' | 'failure'
-  const [orderResult, setOrderResult] = useState(null)
-  const [failureMessage, setFailureMessage] = useState('')
-  // Idempotency guard — prevent duplicate orders on double-click / network retry.
-  const [inFlight, setInFlight] = useState(false)
   useEffect(() => {
     if (availableMethods.length && !availableMethods.includes(selectedMethod)) setSelectedMethod(availableMethods[0])
   }, [availableMethods.join(','), selectedMethod])
