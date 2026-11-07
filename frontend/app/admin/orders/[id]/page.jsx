@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { useAdminAccess } from '../../access-context'
 import { QRCodeSVG } from 'qrcode.react'
+import { CreditCard, Truck, Package, UserCheck, AlertTriangle, CheckCircle2 } from 'lucide-react'
 
 const STATUSES = ['PENDING', 'CONFIRMED', 'IN_PROGRESS', 'SHIPPED', 'DELIVERED', 'CANCELLED', 'RETURN_REQUESTED', 'RETURN_APPROVED', 'RETURN_IN_TRANSIT', 'RETURNED']
 const label = (value = '') => value.replaceAll('_', ' ').toLowerCase().replace(/\b\w/g, (letter) => letter.toUpperCase())
@@ -154,6 +155,9 @@ export default function AdminOrderDetail() {
   }
 
   const isUpi = order.paymentMethod === 'UPI' || order.paymentMethod?.toLowerCase().includes('upi')
+  const isPaid = order.paymentStatus === 'PAID' || order.paymentStatus === 'COD_COLLECTED'
+  const isPendingVerification = ['AWAITING_VERIFICATION', 'MANUAL_REVIEW'].includes(order.paymentStatus)
+  const isCOD = order.paymentMethod?.toLowerCase().includes('cash') || order.paymentMethod?.toLowerCase().includes('cod')
   const refundUpiUri = (refund) => `upi://pay?${new URLSearchParams({ pa: refund.refundUpiId, pn: order.customerName || 'Customer', am: (Number(refund.amount) || 0).toFixed(2), cu: 'INR', tn: `Refund ${order.orderNumber}` })}`
 
   return (
@@ -213,9 +217,220 @@ export default function AdminOrderDetail() {
 
       <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1.5fr)_minmax(280px,1fr)]">
         <div className="min-w-0 space-y-4">
-          {/* Items */}
+
+          {/* ══════════════════════════════════════════════════════════════
+              1. PAYMENT & VERIFICATION (Primary Step)
+             ══════════════════════════════════════════════════════════════ */}
           <section className="rounded-2xl bg-cream p-4 shadow-soft ring-1 ring-sand sm:p-5">
-            <h2 className="font-display text-xl text-plum">Items</h2>
+            <div className="flex items-center justify-between gap-2 border-b border-sand pb-3">
+              <div className="flex items-center gap-2.5">
+                <span className="p-2 rounded-xl bg-sand/30">
+                  <CreditCard className="h-5 w-5 text-plum" />
+                </span>
+                <div>
+                  <h2 className="font-display text-xl text-plum">1. Payment & Verification</h2>
+                  <p className="text-xs text-muted">Verify transaction and payment state before fulfillment</p>
+                </div>
+              </div>
+              <span className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${paymentBadgeStyle(order.paymentStatus)}`}>
+                {label(order.paymentStatus)}
+              </span>
+            </div>
+
+            <dl className="mt-4 grid gap-3 sm:grid-cols-2 text-sm">
+              <div className="rounded-xl bg-white p-3 border border-sand/60">
+                <dt className="text-xs text-muted">Payment Method</dt>
+                <dd className="font-semibold text-plum mt-0.5">{order.paymentMethod || 'Not recorded'}</dd>
+              </div>
+              <div className="rounded-xl bg-white p-3 border border-sand/60">
+                <dt className="text-xs text-muted">Payment Status</dt>
+                <dd className="font-semibold text-plum mt-0.5">{label(order.paymentStatus)}</dd>
+              </div>
+              <div className="rounded-xl bg-white p-3 border border-sand/60 sm:col-span-2">
+                <dt className="text-xs text-muted">Customer Payment Reference / UTR</dt>
+                <dd className="font-mono text-sm text-plum break-all mt-0.5">
+                  {order.paymentReference || <span className="text-muted font-sans italic">No reference entered by customer</span>}
+                </dd>
+              </div>
+              {order.notes && (
+                <div className="rounded-xl bg-white p-3 border border-sand/60 sm:col-span-2">
+                  <dt className="text-xs text-muted">Customer Notes</dt>
+                  <dd className="text-xs text-muted whitespace-pre-wrap mt-0.5">{order.notes}</dd>
+                </div>
+              )}
+            </dl>
+
+            {canManage && (
+              <div className="mt-4 space-y-3">
+                {/* UPI Verification Flow */}
+                {isUpi && (
+                  <div className={`rounded-xl border p-4 ${isPaid ? 'border-sage/40 bg-sage/10' : 'border-amber-300 bg-amber-50/60'}`}>
+                    <div className="flex items-start gap-2.5">
+                      {isPaid ? (
+                        <CheckCircle2 className="h-5 w-5 text-emerald-700 shrink-0 mt-0.5" />
+                      ) : (
+                        <AlertTriangle className="h-5 w-5 text-amber-700 shrink-0 mt-0.5" />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className={`text-sm font-semibold ${isPaid ? 'text-emerald-900' : 'text-amber-950'}`}>
+                          {isPaid ? 'UPI Payment Verified & Recorded' : 'Verify UPI Payment from Customer'}
+                        </p>
+                        <p className="text-xs text-muted mt-0.5">
+                          {isPaid
+                            ? 'The transaction reference has been verified and confirmed.'
+                            : `Check your bank or UPI merchant account for receipt of ${money(order.totalAmount)}. Enter the verified UTR below.`}
+                        </p>
+
+                        <div className="mt-3">
+                          <label className="block text-xs font-semibold text-plum mb-1">
+                            Verified UTR / Transaction Reference
+                            {!isPaid && <span className="text-bloom ml-1 font-normal">*Required</span>}
+                          </label>
+                          <div className="flex flex-col sm:flex-row gap-2">
+                            <input
+                              type="text"
+                              value={paymentRefDraft}
+                              disabled={saving || isPaid}
+                              onChange={(e) => setPaymentRefDraft(e.target.value)}
+                              placeholder={isPaid ? 'Payment verified' : 'Enter 12-digit UPI UTR number'}
+                              maxLength={80}
+                              className="min-h-11 flex-1 rounded-xl border border-sand bg-white px-3 text-sm text-plum disabled:bg-sand/20"
+                            />
+                            {isPendingVerification && (
+                              <button
+                                type="button"
+                                disabled={saving || !paymentRefDraft.trim()}
+                                onClick={() =>
+                                  runPaymentAction(
+                                    `/api/orders/${encodeURIComponent(id)}/verify-payment`,
+                                    { utr: paymentRefDraft.trim() },
+                                    'Payment verified and marked Paid.'
+                                  )
+                                }
+                                className="min-h-11 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-semibold text-sm px-4 py-2 transition shadow-sm disabled:opacity-50 whitespace-nowrap"
+                              >
+                                {saving ? 'Verifying…' : '✓ Verify & Mark Paid'}
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* COD Flow */}
+                {isCOD && order.paymentStatus === 'COD_PENDING_COLLECTION' && (
+                  <div className="rounded-xl border border-sky-300 bg-sky-50 p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold text-sky-950">Cash on Delivery Pending</p>
+                      <p className="text-xs text-sky-800">Collect {money(order.totalAmount)} upon physical delivery to the customer.</p>
+                    </div>
+                    <button
+                      type="button"
+                      disabled={saving}
+                      onClick={() =>
+                        runPaymentAction(
+                          `/api/admin/orders/${encodeURIComponent(id)}/collect-cod`,
+                          null,
+                          'Cash collection recorded.'
+                        )
+                      }
+                      className="min-h-11 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-semibold text-sm px-4 py-2 transition shadow-sm whitespace-nowrap"
+                    >
+                      ✓ Mark Cash Collected
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </section>
+
+          {/* ══════════════════════════════════════════════════════════════
+              2. SHIPPING & TRACKING (Immediately following Payment)
+             ══════════════════════════════════════════════════════════════ */}
+          <section className="rounded-2xl bg-cream p-4 shadow-soft ring-1 ring-sand sm:p-5">
+            <div className="flex items-center justify-between gap-2 border-b border-sand pb-3">
+              <div className="flex items-center gap-2.5">
+                <span className="p-2 rounded-xl bg-sand/30">
+                  <Truck className="h-5 w-5 text-plum" />
+                </span>
+                <div>
+                  <h2 className="font-display text-xl text-plum">2. Shipping and tracking</h2>
+                  <p className="text-xs text-muted">Courier dispatch partner, tracking reference, and expected arrival</p>
+                </div>
+              </div>
+              {order.trackingNumber && (
+                <span className="text-xs font-mono bg-white px-2.5 py-1 rounded-lg border border-sand text-plum">
+                  {order.trackingNumber}
+                </span>
+              )}
+            </div>
+
+            {/* Warning if payment is not yet verified */}
+            {isUpi && !isPaid && (
+              <div className="mt-3 rounded-xl border border-amber-300 bg-amber-50 p-3 text-xs text-amber-900">
+                <strong>Attention:</strong> Payment is awaiting verification. Verify payment above before dispatching packages to the courier.
+              </div>
+            )}
+
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <label className="text-sm text-muted">
+                Shipping partner
+                <input
+                  readOnly={!canManage}
+                  value={draft.shippingPartner}
+                  onChange={(event) => setDraft({ ...draft, shippingPartner: event.target.value })}
+                  placeholder="e.g. India Post, Blue Dart, DTDC, Delhivery"
+                  className="mt-1 min-h-11 w-full rounded-xl border border-sand bg-white px-3 text-plum read-only:bg-ink/5"
+                />
+              </label>
+              <label className="text-sm text-muted">
+                Tracking number
+                <input
+                  readOnly={!canManage}
+                  value={draft.trackingNumber}
+                  onChange={(event) => setDraft({ ...draft, trackingNumber: event.target.value })}
+                  placeholder="e.g. AW123456789IN"
+                  className="mt-1 min-h-11 w-full rounded-xl border border-sand bg-white px-3 text-plum font-mono read-only:bg-ink/5"
+                />
+              </label>
+              <label className="text-sm text-muted sm:col-span-2">
+                Estimated delivery
+                <input
+                  readOnly={!canManage}
+                  value={draft.estimatedDelivery}
+                  onChange={(event) => setDraft({ ...draft, estimatedDelivery: event.target.value })}
+                  placeholder="e.g. 3–5 business days"
+                  className="mt-1 min-h-11 w-full rounded-xl border border-sand bg-white px-3 text-plum read-only:bg-ink/5"
+                />
+              </label>
+            </div>
+            {canManage && (
+              <button
+                type="button"
+                disabled={saving}
+                onClick={() => patchOrder(draft)}
+                className="mt-4 min-h-11 w-full rounded-xl bg-plum px-4 py-2 font-medium text-cream shadow-sm hover:bg-plum/90 disabled:opacity-60 sm:w-auto"
+              >
+                {saving ? 'Saving…' : 'Save tracking details'}
+              </button>
+            )}
+          </section>
+
+          {/* ══════════════════════════════════════════════════════════════
+              3. ORDER ITEMS
+             ══════════════════════════════════════════════════════════════ */}
+          <section className="rounded-2xl bg-cream p-4 shadow-soft ring-1 ring-sand sm:p-5">
+            <div className="flex items-center gap-2.5 border-b border-sand pb-3">
+              <span className="p-2 rounded-xl bg-sand/30">
+                <Package className="h-5 w-5 text-plum" />
+              </span>
+              <div>
+                <h2 className="font-display text-xl text-plum">3. Order Items</h2>
+                <p className="text-xs text-muted">{(order.items || []).length} unique item{(order.items || []).length === 1 ? '' : 's'}</p>
+              </div>
+            </div>
             <div className="mt-3 divide-y divide-sand">
               {(order.items || []).map((item) => (
                 <div key={item.id} className="flex min-w-0 flex-col justify-between gap-2 py-3 sm:flex-row sm:items-center">
@@ -228,7 +443,7 @@ export default function AdminOrderDetail() {
                       GST {item.gstPercent}% ({money(item.gstAmount)}) · COD fee {money(item.codFee)} · Other charge {money(item.otherCharge)}
                     </p>
                   </div>
-                  <strong className="shrink-0">
+                  <strong className="shrink-0 text-plum font-semibold">
                     {money(item.unitPrice * item.quantity + item.gstAmount + item.codFee + item.otherCharge)}
                   </strong>
                 </div>
@@ -236,25 +451,35 @@ export default function AdminOrderDetail() {
             </div>
           </section>
 
-          {/* Customer and delivery */}
+          {/* ══════════════════════════════════════════════════════════════
+              4. CUSTOMER AND DELIVERY
+             ══════════════════════════════════════════════════════════════ */}
           <section className="rounded-2xl bg-cream p-4 shadow-soft ring-1 ring-sand sm:p-5">
-            <h2 className="font-display text-xl text-plum">Customer and delivery</h2>
-            <dl className="mt-3 grid gap-4 text-sm sm:grid-cols-2">
+            <div className="flex items-center gap-2.5 border-b border-sand pb-3">
+              <span className="p-2 rounded-xl bg-sand/30">
+                <UserCheck className="h-5 w-5 text-plum" />
+              </span>
+              <div>
+                <h2 className="font-display text-xl text-plum">4. Customer and delivery</h2>
+                <p className="text-xs text-muted">Recipient contact details and destination address</p>
+              </div>
+            </div>
+            <dl className="mt-4 grid gap-4 text-sm sm:grid-cols-2">
               <div>
                 <dt className="text-muted">Customer</dt>
-                <dd className="break-words font-medium">{order.customerName}</dd>
+                <dd className="break-words font-medium text-plum">{order.customerName}</dd>
               </div>
               <div>
                 <dt className="text-muted">Email</dt>
-                <dd className="break-all font-medium">{order.customerEmail}</dd>
+                <dd className="break-all font-medium text-plum">{order.customerEmail}</dd>
               </div>
               <div>
                 <dt className="text-muted">Phone</dt>
-                <dd className="break-words font-medium">{order.customerPhone || order.user?.phone || 'Not provided'}</dd>
+                <dd className="break-words font-medium text-plum">{order.customerPhone || order.user?.phone || 'Not provided'}</dd>
               </div>
               <div>
                 <dt className="text-muted">Account type</dt>
-                <dd className="font-medium">{order.user ? 'Registered customer' : 'Guest order'}</dd>
+                <dd className="font-medium text-plum">{order.user ? 'Registered customer' : 'Guest order'}</dd>
               </div>
             </dl>
             <div className="mt-4 border-t border-sand pt-3 text-sm">
@@ -276,52 +501,9 @@ export default function AdminOrderDetail() {
             </div>
           </section>
 
-          {/* Shipping and tracking */}
-          <section className="rounded-2xl bg-cream p-4 shadow-soft ring-1 ring-sand sm:p-5">
-            <h2 className="font-display text-xl text-plum">Shipping and tracking</h2>
-            <div className="mt-3 grid gap-3 sm:grid-cols-2">
-              <label className="text-sm text-muted">
-                Shipping partner
-                <input
-                  readOnly={!canManage}
-                  value={draft.shippingPartner}
-                  onChange={(event) => setDraft({ ...draft, shippingPartner: event.target.value })}
-                  className="mt-1 min-h-11 w-full rounded-xl border border-sand bg-white px-3 text-plum read-only:bg-ink/5"
-                />
-              </label>
-              <label className="text-sm text-muted">
-                Tracking number
-                <input
-                  readOnly={!canManage}
-                  value={draft.trackingNumber}
-                  onChange={(event) => setDraft({ ...draft, trackingNumber: event.target.value })}
-                  className="mt-1 min-h-11 w-full rounded-xl border border-sand bg-white px-3 text-plum read-only:bg-ink/5"
-                />
-              </label>
-              <label className="text-sm text-muted sm:col-span-2">
-                Estimated delivery
-                <input
-                  readOnly={!canManage}
-                  value={draft.estimatedDelivery}
-                  onChange={(event) => setDraft({ ...draft, estimatedDelivery: event.target.value })}
-                  placeholder="e.g. 3–5 business days"
-                  className="mt-1 min-h-11 w-full rounded-xl border border-sand bg-white px-3 text-plum read-only:bg-ink/5"
-                />
-              </label>
-            </div>
-            {canManage && (
-              <button
-                type="button"
-                disabled={saving}
-                onClick={() => patchOrder(draft)}
-                className="mt-4 min-h-11 w-full rounded-xl bg-plum px-4 py-2 font-medium text-cream disabled:opacity-60 sm:w-auto"
-              >
-                {saving ? 'Saving…' : 'Save tracking details'}
-              </button>
-            )}
-          </section>
-
-          {/* Refund requests */}
+          {/* ══════════════════════════════════════════════════════════════
+              5. REFUND REQUESTS (If any)
+             ══════════════════════════════════════════════════════════════ */}
           <section className="rounded-2xl bg-cream p-4 shadow-soft ring-1 ring-sand sm:p-5">
             <h2 className="font-display text-xl text-plum">Refund requests</h2>
             {!order.refundRequests?.length ? (
@@ -331,8 +513,8 @@ export default function AdminOrderDetail() {
                 {order.refundRequests.map((refund) => {
                   const refundUri = refundUpiUri(refund)
                   const isTerminal = ['COMPLETED', 'REJECTED'].includes(refund.status)
-                  const isCOD = order.paymentMethod?.toLowerCase().includes('cash') || order.paymentMethod?.toLowerCase().includes('cod')
-                  const canApprove = !isCOD || ['RETURN_APPROVED', 'RETURNED'].includes(order.status)
+                  const isCODOrder = order.paymentMethod?.toLowerCase().includes('cash') || order.paymentMethod?.toLowerCase().includes('cod')
+                  const canApprove = !isCODOrder || ['RETURN_APPROVED', 'RETURNED'].includes(order.status)
                   return (
                     <div key={refund.id} className="rounded-xl border border-sand bg-white p-3 sm:p-4">
                       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -395,6 +577,9 @@ export default function AdminOrderDetail() {
           </section>
         </div>
 
+        {/* ══════════════════════════════════════════════════════════════
+            SIDEBAR (Price Details & Payment Activity Log)
+           ══════════════════════════════════════════════════════════════ */}
         <aside className="min-w-0 space-y-4">
           {/* Price details */}
           <section className="rounded-2xl bg-cream p-4 shadow-soft ring-1 ring-sand sm:p-5">
@@ -421,94 +606,6 @@ export default function AdminOrderDetail() {
                 <dd>{money(order.totalAmount)}</dd>
               </div>
             </dl>
-          </section>
-
-          {/* ── Payment Details & Management ── */}
-          <section className="rounded-2xl bg-cream p-4 shadow-soft ring-1 ring-sand sm:p-5">
-            <div className="flex items-center justify-between gap-2">
-              <h2 className="font-display text-xl text-plum">Payment</h2>
-              <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${paymentBadgeStyle(order.paymentStatus)}`}>
-                {label(order.paymentStatus)}
-              </span>
-            </div>
-
-            <dl className="mt-3 space-y-3 break-words text-sm">
-              <div>
-                <dt className="text-xs text-muted">Method</dt>
-                <dd className="font-medium text-plum">{order.paymentMethod || 'Not recorded'}</dd>
-              </div>
-              <div>
-                <dt className="text-xs text-muted">Payment status</dt>
-                <dd className="font-medium text-plum">{label(order.paymentStatus)}</dd>
-              </div>
-              {!canManage && (
-                <div>
-                  <dt className="text-xs text-muted">Payment reference</dt>
-                  <dd className="font-medium text-plum break-all">{order.paymentReference || 'Not recorded'}</dd>
-                </div>
-              )}
-              <div>
-                <dt className="text-xs text-muted">Order notes</dt>
-                <dd className="whitespace-pre-wrap text-xs text-muted">{order.notes || 'None'}</dd>
-              </div>
-            </dl>
-
-            {canManage && (
-              <div className="mt-4 border-t border-sand pt-4 space-y-3">
-                {/* UTR / Reference Input */}
-                {isUpi && <div>
-                  <label className="block text-xs font-semibold text-plum mb-1">
-                    Payment Reference (UTR)
-                    {isUpi && !paymentRefDraft.trim() && (
-                      <span className="text-bloom ml-1 font-normal">*Required for UPI verification</span>
-                    )}
-                  </label>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={paymentRefDraft}
-                      disabled={saving || order.paymentStatus === 'PAID'}
-                      onChange={(e) => setPaymentRefDraft(e.target.value)}
-                      placeholder={order.paymentStatus === 'PAID' ? 'Payment verified' : 'Enter UPI UTR or reference'}
-                      maxLength={80}
-                      className="min-h-10 flex-1 rounded-xl border border-sand bg-white px-3 text-sm text-plum"
-                    />
-                  </div>
-                  <p className="mt-1 text-xs text-muted">The UTR is saved with the verification record.</p>
-                </div>}
-
-                {/* UPI Verification Quick Action */}
-                {isUpi && ['AWAITING_VERIFICATION', 'MANUAL_REVIEW'].includes(order.paymentStatus) && (
-                  <div className="rounded-xl border border-sage/40 bg-sage/10 p-3">
-                    <p className="text-xs text-emerald-900 font-medium">Verify UPI Payment</p>
-                    <p className="text-xs text-muted mt-0.5">
-                      Confirm receipt of transfer from customer. Order will be marked Confirmed automatically.
-                    </p>
-                    <button
-                      type="button"
-                      disabled={saving || !paymentRefDraft.trim()}
-                      onClick={() => runPaymentAction(`/api/orders/${encodeURIComponent(id)}/verify-payment`, { utr: paymentRefDraft.trim() }, 'Payment verified and marked Paid.')}
-                      className="mt-2.5 w-full rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-semibold text-sm py-2 px-3 transition shadow-sm"
-                    >
-                      {saving ? 'Verifying…' : '✓ Verify transfer and mark Paid'}
-                    </button>
-                  </div>
-                )}
-
-                {/* COD Quick Action */}
-                {order.paymentMethod?.toLowerCase().includes('cash') && order.paymentStatus === 'COD_PENDING_COLLECTION' && (
-                  <button
-                    type="button"
-                    disabled={saving}
-                    onClick={() => runPaymentAction(`/api/admin/orders/${encodeURIComponent(id)}/collect-cod`, null, 'Cash collection recorded.')}
-                    className="w-full rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-semibold text-sm py-2 px-3 transition shadow-sm"
-                  >
-                    ✓ Mark Cash Collected
-                  </button>
-                )}
-
-              </div>
-            )}
           </section>
 
           {/* ── Payment Activity Section ── */}

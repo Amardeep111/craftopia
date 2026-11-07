@@ -112,7 +112,7 @@ func (r *UserRepository) ListAllUsersAdmin(ctx context.Context, page, pageSize i
 	var total int64
 	if err := r.db.Pool.QueryRow(ctx, `
 		SELECT COUNT(*) FROM "User" u
-		WHERE u.role = 'CUSTOMER'
+		WHERE UPPER(COALESCE(u.role, 'CUSTOMER')) NOT IN ('ADMIN', 'SUPERADMIN')
 		  AND ($1 = '' OR u.email ILIKE $2 OR COALESCE(u.name, '') ILIKE $2 OR COALESCE(u.phone, '') ILIKE $2);
 	`, search, pattern).Scan(&total); err != nil {
 		return nil, fmt.Errorf("failed to count admin customers: %w", err)
@@ -122,7 +122,7 @@ func (r *UserRepository) ListAllUsersAdmin(ctx context.Context, page, pageSize i
 		WITH user_page AS MATERIALIZED (
 			SELECT u.id, u.email, u.name, u.phone, u.role, u."adminActive", u.active, u."createdAt", u."updatedAt"
 			FROM "User" u
-			WHERE u.role = 'CUSTOMER'
+			WHERE UPPER(COALESCE(u.role, 'CUSTOMER')) NOT IN ('ADMIN', 'SUPERADMIN')
 			  AND ($1 = '' OR u.email ILIKE $2 OR COALESCE(u.name, '') ILIKE $2 OR COALESCE(u.phone, '') ILIKE $2)
 			ORDER BY u."createdAt" DESC, u.id DESC
 			LIMIT $3 OFFSET $4

@@ -685,8 +685,8 @@ func (r *OrderRepository) GetDashboardStats(ctx context.Context) (*models.AdminD
 	var stats models.AdminDashboardStats
 	err := r.db.Pool.QueryRow(ctx, `
 		SELECT
-			(SELECT COUNT(*) FROM "Order"),
-			(SELECT COUNT(*) FROM "User" WHERE role = 'CUSTOMER'),
+			(SELECT COUNT(*) FROM "Order" WHERE status != 'CANCELLED'),
+			(SELECT COUNT(*) FROM "User" WHERE UPPER(COALESCE(role, 'CUSTOMER')) NOT IN ('ADMIN', 'SUPERADMIN')),
 			(SELECT COUNT(*) FROM "Product" WHERE published = true),
 			(SELECT COUNT(*) FROM "Order" WHERE status = 'PENDING');
 	`).Scan(&stats.Orders, &stats.Users, &stats.Products, &stats.Pending)
