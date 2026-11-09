@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"log/slog"
 	"net/http"
 	"strings"
 
@@ -47,6 +48,7 @@ func (h *AdminAccessHandler) List(w http.ResponseWriter, r *http.Request) {
 	}
 	admins, err := h.users.ListAdmins(r.Context())
 	if err != nil {
+		slog.Error("Failed to load admin accounts", "error", err)
 		utils.Error(w, http.StatusInternalServerError, "Failed to load admin accounts")
 		return
 	}

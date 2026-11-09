@@ -85,7 +85,7 @@ func (r *OrderRepository) CreateOrder(ctx context.Context, userID *string, req *
 		var p models.Product
 		err := tx.QueryRow(ctx, `
 			SELECT id, name, price, COALESCE("discountPercent", 0), COALESCE("gstPercent", 0), COALESCE("codFee", 0), COALESCE("otherCharge", 0), stock
-			FROM "Product" WHERE id = $1 FOR UPDATE;
+			FROM "Product" WHERE id = $1 AND COALESCE("softDeleted", false) = false FOR UPDATE;
 		`, it.ProductID).Scan(
 			&p.ID, &p.Name, &p.Price, &p.DiscountPercent, &p.GSTPercent, &p.CODFee, &p.OtherCharge, &p.Stock,
 		)
@@ -713,7 +713,7 @@ func (r *OrderRepository) GetDashboardStats(ctx context.Context) (*models.AdminD
 		SELECT
 			(SELECT COUNT(*) FROM "Order" WHERE status != 'CANCELLED'),
 			(SELECT COUNT(*) FROM "User" WHERE UPPER(COALESCE(role, 'CUSTOMER')) NOT IN ('ADMIN', 'SUPERADMIN')),
-			(SELECT COUNT(*) FROM "Product" WHERE published = true),
+			(SELECT COUNT(*) FROM "Product" WHERE published = true AND COALESCE("softDeleted", false) = false),
 			(SELECT COUNT(*) FROM "Order" WHERE status = 'PENDING');
 	`).Scan(&stats.Orders, &stats.Users, &stats.Products, &stats.Pending)
 	if err != nil {

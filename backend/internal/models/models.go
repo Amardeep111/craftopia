@@ -6,17 +6,19 @@ import (
 )
 
 type Category struct {
-	ID          string    `json:"id"`
-	Name        string    `json:"name"`
-	Slug        string    `json:"slug"`
-	Description *string   `json:"description,omitempty"`
-	Accent      *string   `json:"accent,omitempty"`
-	Image       *string   `json:"image,omitempty"`
-	Published   bool      `json:"published"`
-	Hidden      bool      `json:"hidden"`
-	Order       int       `json:"order"`
-	CreatedAt   time.Time `json:"createdAt"`
-	UpdatedAt   time.Time `json:"updatedAt"`
+	ID          string     `json:"id"`
+	Name        string     `json:"name"`
+	Slug        string     `json:"slug"`
+	Description *string    `json:"description,omitempty"`
+	Accent      *string    `json:"accent,omitempty"`
+	Image       *string    `json:"image,omitempty"`
+	Published   bool       `json:"published"`
+	Hidden      bool       `json:"hidden"`
+	Order       int        `json:"order"`
+	SoftDeleted bool       `json:"softDeleted"`
+	DeletedAt   *time.Time `json:"deletedAt,omitempty"`
+	CreatedAt   time.Time  `json:"createdAt"`
+	UpdatedAt   time.Time  `json:"updatedAt"`
 }
 
 type Product struct {
@@ -47,6 +49,8 @@ type Product struct {
 	UnavailableStates     []string        `json:"unavailableStates"`
 	UnavailablePinCodes   []string        `json:"unavailablePinCodes"`
 	AllowedPaymentMethods []string        `json:"allowedPaymentMethods"`
+	SoftDeleted           bool            `json:"softDeleted"`
+	DeletedAt             *time.Time      `json:"deletedAt,omitempty"`
 	CreatedAt             time.Time       `json:"createdAt"`
 	UpdatedAt             time.Time       `json:"updatedAt"`
 }

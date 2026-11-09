@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useCallback, useEffect } from 'react'
 import {
-  Star, ChevronLeft, ChevronRight, ThumbsUp, Camera, X, Filter
+  Star, ChevronLeft, ChevronRight, ThumbsUp, Camera, X, Filter, Check
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { getOptimizedImageUrl } from '@/lib/images'

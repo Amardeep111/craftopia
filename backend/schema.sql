@@ -45,6 +45,8 @@ CREATE TABLE IF NOT EXISTS "Category" (
     published BOOLEAN DEFAULT true,
     hidden BOOLEAN DEFAULT false,
     "order" INT DEFAULT 0,
+    "softDeleted" BOOLEAN NOT NULL DEFAULT false,
+    "deletedAt" TIMESTAMP(3),
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
@@ -77,6 +79,8 @@ CREATE TABLE IF NOT EXISTS "Product" (
     "unavailableStates" TEXT[] DEFAULT ARRAY[]::TEXT[],
     "unavailablePinCodes" TEXT[] DEFAULT ARRAY[]::TEXT[],
     "allowedPaymentMethods" TEXT[] DEFAULT ARRAY['upi']::TEXT[],
+    "softDeleted" BOOLEAN NOT NULL DEFAULT false,
+    "deletedAt" TIMESTAMP(3),
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
@@ -98,6 +102,7 @@ CREATE TABLE IF NOT EXISTS "User" (
 );
 
 ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "emailVerified" BOOLEAN DEFAULT false;
+ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "adminActive" BOOLEAN DEFAULT false;
 ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "adminPermissions" JSONB NOT NULL DEFAULT '[]'::JSONB;
 
 -- Shopping cart (required by the authenticated cart endpoints)
