@@ -14,6 +14,7 @@ import {
   AlertCircle,
   ExternalLink,
   Sparkles,
+  Palette,
 } from 'lucide-react'
 import { useAdminAccess } from '../access-context'
 import { uploadProductImage } from '@/lib/images'
@@ -37,7 +38,25 @@ const PRESET_ACCENTS = [
   { name: 'sage', hex: '#8EA89D', label: 'Sage' },
   { name: 'bloom', hex: '#964F66', label: 'Bloom' },
   { name: 'honey', hex: '#E5A93C', label: 'Honey' },
+  { name: 'peach', hex: '#F4C2A1', label: 'Peach' },
+  { name: 'sky', hex: '#A8C5DA', label: 'Sky' },
+  { name: 'sand', hex: '#E6DDD3', label: 'Sand' },
+  { name: 'ivory', hex: '#FBF8F3', label: 'Ivory' },
 ]
+
+function resolveColorHex(val) {
+  if (!val) return '#E8B4B8'
+  const trimmed = String(val).toLowerCase().trim()
+  const found = PRESET_ACCENTS.find((p) => p.name === trimmed)
+  if (found) return found.hex
+  if (/^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(trimmed)) {
+    if (trimmed.length === 4) {
+      return '#' + trimmed[1] + trimmed[1] + trimmed[2] + trimmed[2] + trimmed[3] + trimmed[3]
+    }
+    return trimmed
+  }
+  return '#E8B4B8'
+}
 
 function toSlug(text) {
   return (text || '')
@@ -259,26 +278,87 @@ function CategoryEditor({ initial, onCancel, onSaved }) {
 
       {/* Accent Color and Order */}
       <div className="grid gap-4 sm:grid-cols-2">
-        <div>
-          <label className="block text-xs font-semibold uppercase tracking-wider text-plum">
-            Accent Color
-          </label>
-          <div className="mt-1.5 flex items-center gap-1.5 flex-wrap">
-            {PRESET_ACCENTS.map((preset) => {
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <label className="block text-xs font-semibold uppercase tracking-wider text-plum">
+              Accent Color
+            </label>
+            {form.accent && (
+              <span className="text-[11px] font-mono text-muted">
+                Active: <strong className="text-plum">{form.accent}</strong>
+              </span>
+            )}
+          </div>
+
+          {/* Preset Dropdown */}
+          <select
+            aria-label="Select accent theme color"
+            value={PRESET_ACCENTS.some((p) => p.name === (form.accent || '').toLowerCase()) ? (form.accent || '').toLowerCase() : form.accent ? 'custom' : ''}
+            onChange={(e) => {
+              const val = e.target.value
+              if (val && val !== 'custom') {
+                update('accent', val)
+              }
+            }}
+            className="w-full rounded-xl border border-sand bg-white px-3.5 py-2 text-xs text-plum font-medium focus:border-bloom focus:outline-none focus:ring-1 focus:ring-bloom/20"
+          >
+            <option value="">Choose a theme palette color…</option>
+            {PRESET_ACCENTS.map((preset) => (
+              <option key={preset.name} value={preset.name}>
+                {preset.label} ({preset.hex})
+              </option>
+            ))}
+            <option value="custom">Custom Color / Hex Code</option>
+          </select>
+
+          {/* Color Picker Swatch & Manual Input */}
+          <div className="flex items-center gap-2">
+            {/* Visual Color Picker (Clickable Swatch that opens native color picker) */}
+            <div className="relative shrink-0">
+              <input
+                type="color"
+                id="cat-color-picker"
+                value={resolveColorHex(form.accent)}
+                onChange={(e) => update('accent', e.target.value)}
+                className="sr-only"
+                title="Open color picker palette"
+              />
+              <label
+                htmlFor="cat-color-picker"
+                className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-xl border-2 border-sand shadow-sm transition hover:scale-105 active:scale-95"
+                style={{ backgroundColor: resolveColorHex(form.accent) }}
+                title="Click to open color picker"
+              >
+                <Palette className="h-4 w-4 text-black/50 drop-shadow-[0_1px_1px_rgba(255,255,255,0.8)]" />
+              </label>
+            </div>
+
+            {/* Direct Text Input */}
+            <input
+              value={form.accent}
+              onChange={(e) => update('accent', e.target.value)}
+              placeholder="e.g. blush, #E8B4B8, or pick with palette"
+              className="flex-1 rounded-xl border border-sand bg-white px-3.5 py-2 text-xs font-mono text-plum placeholder:font-sans placeholder:text-muted focus:border-bloom focus:outline-none focus:ring-1 focus:ring-bloom/20"
+            />
+          </div>
+
+          {/* Quick Swatches Chips */}
+          <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
+            {PRESET_ACCENTS.slice(0, 6).map((preset) => {
               const selected = (form.accent || '').toLowerCase() === preset.name
               return (
                 <button
                   key={preset.name}
                   type="button"
                   onClick={() => update('accent', preset.name)}
-                  className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium transition ring-1 ${
+                  className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[10px] font-medium transition ring-1 ${
                     selected
                       ? 'ring-2 ring-plum bg-white font-semibold text-plum shadow-sm'
                       : 'ring-sand/70 bg-cream/70 text-muted hover:bg-white'
                   }`}
                 >
                   <span
-                    className="h-2.5 w-2.5 rounded-full ring-1 ring-black/10"
+                    className="h-2 w-2 rounded-full ring-1 ring-black/10"
                     style={{ backgroundColor: preset.hex }}
                     aria-hidden="true"
                   />
@@ -287,12 +367,6 @@ function CategoryEditor({ initial, onCancel, onSaved }) {
               )
             })}
           </div>
-          <input
-            value={form.accent}
-            onChange={(e) => update('accent', e.target.value)}
-            placeholder="Custom color name or hex"
-            className="mt-2 w-full rounded-xl border border-sand bg-white px-3.5 py-2 text-xs text-plum placeholder:text-muted focus:border-bloom focus:outline-none focus:ring-1 focus:ring-bloom/20"
-          />
         </div>
 
         <div>
@@ -562,8 +636,13 @@ export default function AdminCategories() {
                   {cat.accent && (
                     <div className="mt-3 flex items-center gap-1.5 text-xs text-muted">
                       <span>Accent:</span>
-                      <span className="rounded-md bg-ivory px-2 py-0.5 font-medium text-plum border border-sand">
-                        {cat.accent}
+                      <span className="inline-flex items-center gap-1.5 rounded-md bg-ivory px-2 py-0.5 font-medium text-plum border border-sand">
+                        <span
+                          className="h-2.5 w-2.5 rounded-full ring-1 ring-black/15 shrink-0"
+                          style={{ backgroundColor: resolveColorHex(cat.accent) }}
+                          aria-hidden="true"
+                        />
+                        <span>{cat.accent}</span>
                       </span>
                     </div>
                   )}
