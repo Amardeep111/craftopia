@@ -31,6 +31,7 @@ type Review struct {
 	Comment          string    `json:"text"`
 	Images           []string  `json:"photos"`
 	VerifiedPurchase bool      `json:"verifiedPurchase"`
+	Helpful          int       `json:"helpful"`
 	CreatedAt        time.Time `json:"date"`
 }
 

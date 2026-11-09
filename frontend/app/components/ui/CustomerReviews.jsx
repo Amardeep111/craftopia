@@ -130,9 +130,15 @@ export default function CustomerReviews({ product, onReviewsUpdated }) {
     if (sortBy === 'newest') list.sort((a, b) => new Date(b.date) - new Date(a.date))
     if (sortBy === 'highest') list.sort((a, b) => b.rating - a.rating)
     if (sortBy === 'lowest') list.sort((a, b) => a.rating - b.rating)
-    if (sortBy === 'helpful') list.sort((a, b) => b.helpful - a.helpful)
+    if (sortBy === 'helpful') {
+      list.sort((a, b) => {
+        const countA = (Number(a.helpful) || 0) + (helpful[a.id] ? 1 : 0)
+        const countB = (Number(b.helpful) || 0) + (helpful[b.id] ? 1 : 0)
+        return countB - countA
+      })
+    }
     return list
-  }, [reviews, sortBy, filterStars])
+  }, [reviews, sortBy, filterStars, helpful])
 
   const allCustomerPhotos = useMemo(() => {
     const photos = []
@@ -450,7 +456,13 @@ export default function CustomerReviews({ product, onReviewsUpdated }) {
                   aria-pressed={!!helpful[review.id]}
                 >
                   <ThumbsUp className={cn('h-3.5 w-3.5', helpful[review.id] && 'fill-bloom')} aria-hidden="true" />
-                  Helpful {review.helpful + (helpful[review.id] ? 1 : 0)}
+                  <span>
+                    Helpful
+                    {(() => {
+                      const count = (Number(review.helpful) || 0) + (helpful[review.id] ? 1 : 0)
+                      return count > 0 ? ` (${count})` : ''
+                    })()}
+                  </span>
                 </button>
               </div>
             </article>

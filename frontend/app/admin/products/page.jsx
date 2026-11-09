@@ -342,7 +342,7 @@ export default function AdminProducts() {
           Are you sure you want to delete <strong className="font-semibold text-plum">{deleteTarget?.name}</strong>?
         </p>
         <div className="rounded-xl bg-bloom/10 border border-bloom/20 p-3 text-xs text-bloom leading-relaxed">
-          <strong>Notice:</strong> This product will be soft-deleted and removed from the storefront and admin catalog.
+          <strong>Notice:</strong> This will remove the product from the storefront and admin catalog.
         </div>
         {deleteError && (
           <div role="alert" className="flex items-center gap-2 rounded-xl bg-bloom/10 p-3 text-xs text-bloom">
