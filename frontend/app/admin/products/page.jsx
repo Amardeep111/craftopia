@@ -7,6 +7,8 @@ import { useAdminAccess } from '../access-context'
 import { indiaStates } from '@/lib/india-states'
 import MarkdownEditor from '../components/MarkdownEditor'
 import AdminPagination from '../components/AdminPagination'
+import Modal from '@/components/ui/Modal'
+import { Trash2, Loader2, AlertCircle } from 'lucide-react'
 
 const emptyProduct = {
   name: '', slug: '', categoryId: '', price: '0', discountPercent: '0', gstPercent: '0', codFee: '0', otherCharge: '0',
@@ -49,7 +51,7 @@ function MultiSelect({ label, options, values, onChange }) {
   </div>
 }
 
-function ProductEditor({ initial, categories, onCancel, onSaved }) {
+function ProductEditor({ initial, categories, onCancel, onSaved, onDelete }) {
   const [form, setForm] = useState(() => initial ? {
     ...emptyProduct,
     ...initial,
@@ -150,7 +152,22 @@ function ProductEditor({ initial, categories, onCancel, onSaved }) {
     </div><p className="text-xs leading-5 text-muted">A cart containing multiple items only offers methods accepted by every item. UPI orders are marked as awaiting payment verification until an admin confirms the transfer.</p>{form.allowedPaymentMethods.length === 0 && <p role="alert" className="text-sm text-bloom">Select at least one payment method.</p>}</section>
 
     {error && <p role="alert" className="rounded-xl border border-bloom/30 bg-bloom/10 p-3 text-sm text-bloom">{error}</p>}
-    <div className="flex flex-col-reverse gap-3 border-t border-sand pt-4 sm:flex-row sm:justify-end"><button type="button" onClick={onCancel} className="min-h-11 rounded-full border border-sand px-5 font-medium text-plum">Cancel</button><button disabled={saving || !categories.length} type="submit" className="min-h-11 rounded-full bg-plum px-6 font-semibold text-cream disabled:opacity-60">{saving ? 'Saving…' : isEditing ? 'Save product changes' : 'Add product'}</button></div>
+    <div className="flex flex-col-reverse gap-3 border-t border-sand pt-4 sm:flex-row sm:items-center sm:justify-between">
+      {isEditing && onDelete ? (
+        <button
+          type="button"
+          onClick={() => onDelete(initial)}
+          className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-bloom/40 px-5 text-sm font-semibold text-bloom hover:bg-bloom/10 transition"
+        >
+          <Trash2 className="h-4 w-4" />
+          <span>Delete product</span>
+        </button>
+      ) : <div />}
+      <div className="flex flex-col-reverse gap-3 sm:flex-row">
+        <button type="button" onClick={onCancel} className="min-h-11 rounded-full border border-sand px-5 font-medium text-plum">Cancel</button>
+        <button disabled={saving || !categories.length} type="submit" className="min-h-11 rounded-full bg-plum px-6 font-semibold text-cream disabled:opacity-60">{saving ? 'Saving…' : isEditing ? 'Save product changes' : 'Add product'}</button>
+      </div>
+    </div>
   </form>
 }
 
@@ -167,6 +184,9 @@ export default function AdminProducts() {
   const [editorOpen, setEditorOpen] = useState(false)
   const [editingId, setEditingId] = useState('')
   const [search, setSearch] = useState('')
+  const [deleteTarget, setDeleteTarget] = useState(null)
+  const [deleting, setDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
   const editorRef = useRef(null)
@@ -219,6 +239,26 @@ export default function AdminProducts() {
     }
   }
 
+  async function confirmDeleteProduct() {
+    if (!deleteTarget) return
+    setDeleting(true)
+    setDeleteError('')
+    try {
+      const response = await fetch(`/api/admin/products/${encodeURIComponent(deleteTarget.id)}`, {
+        method: 'DELETE',
+      })
+      const result = await response.json()
+      if (!response.ok || !result.success) throw new Error(result.error || 'Could not delete product.')
+      setDeleteTarget(null)
+      setEditorOpen(false)
+      await load()
+    } catch (cause) {
+      setDeleteError(cause.message || 'Could not delete product.')
+    } finally {
+      setDeleting(false)
+    }
+  }
+
   function status(product) {
     if (!product.published) return { label: 'Hidden from shop', style: 'bg-ink/10 text-ink' }
     if (product.availableForSale === false) return { label: 'Unavailable for purchase', style: 'bg-ink/10 text-ink' }
@@ -230,7 +270,25 @@ export default function AdminProducts() {
   return <section className="space-y-6">
     <header className="flex flex-wrap items-start justify-between gap-4"><div><h1 className="font-display text-3xl text-plum">Products</h1><p className="mt-1 text-sm text-muted">Create listings and manage pricing, inventory, taxes, fees, and delivery areas.</p></div>{canManage && <button onClick={() => { setEditorProduct(null); setEditorOpen(true); setError('') }} className="min-h-11 rounded-full bg-plum px-5 font-semibold text-cream shadow-soft">+ Add product</button>}</header>
     {error && <p role="alert" className="rounded-xl bg-bloom/10 p-3 text-sm text-bloom">{error}</p>}
-    {editorOpen && <div ref={editorRef} className="scroll-mt-24" tabIndex={-1} aria-label={editorProduct ? `Edit ${editorProduct.name}` : 'Add a product'}><ProductEditor key={editorProduct?.id || 'new'} initial={editorProduct} categories={categories} onCancel={() => setEditorOpen(false)} onSaved={async () => { if (editorProduct) await load(); else setPage(1); setEditorOpen(false) }} /></div>}
+    {editorOpen && (
+      <div ref={editorRef} className="scroll-mt-24" tabIndex={-1} aria-label={editorProduct ? `Edit ${editorProduct.name}` : 'Add a product'}>
+        <ProductEditor
+          key={editorProduct?.id || 'new'}
+          initial={editorProduct}
+          categories={categories}
+          onCancel={() => setEditorOpen(false)}
+          onSaved={async () => {
+            if (editorProduct) await load()
+            else setPage(1)
+            setEditorOpen(false)
+          }}
+          onDelete={(prod) => {
+            setDeleteError('')
+            setDeleteTarget(prod)
+          }}
+        />
+      </div>
+    )}
     <label className="block max-w-md text-sm text-muted">Search catalog<input value={search} onChange={(event) => { setPage(1); setSearch(event.target.value) }} placeholder="Product name, URL, or category" className="mt-1.5 min-h-11 w-full rounded-xl border border-sand bg-white px-3 text-sm text-plum" /></label>
     {loading ? <p role="status">Loading products…</p> : products.length === 0 ? <div className="rounded-2xl bg-cream p-8 text-center shadow-soft ring-1 ring-sand"><h2 className="font-display text-xl text-plum">{total ? 'No products on this page' : search.trim() ? 'No products match' : 'Your catalog is empty'}</h2><p className="mt-2 text-sm text-muted">{total || search.trim() ? 'Try another page or search.' : 'Add your first product to start building your store.'}</p></div> : <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{products.map((product) => {
       const currentStatus = status(product)
@@ -243,9 +301,84 @@ export default function AdminProducts() {
         <div className="flex items-start justify-between gap-3 pt-4"><div className="min-w-0"><h2 className="break-words font-display text-xl text-plum">{product.name}</h2><p className="mt-1 break-all text-xs text-muted">{product.slug} · {product.category?.name || 'Uncategorized'}</p></div><span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${currentStatus.style}`}>{currentStatus.label}</span></div>
         <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-2 border-y border-sand py-3 text-sm"><span className="text-muted">Price</span><strong>{money(product.price)}</strong><span className="text-muted">Discount</span><strong>{product.discountPercent || 0}%</strong><span className="text-muted">GST</span><strong>{product.gstPercent || 0}%</strong><span className="text-muted">COD + other fees</span><strong>{money((product.codFee || 0) + (product.otherCharge || 0))}</strong><span className="text-muted">Inventory</span><strong>{product.stock} units</strong><span className="text-muted">Listing</span><strong>{product.published ? 'Published' : 'Hidden'}</strong><span className="text-muted">Purchasable</span><strong>{product.availableForSale === false ? 'Paused' : 'Yes'}</strong><span className="text-muted">Payment</span><strong>{(product.allowedPaymentMethods || ['upi']).map((method) => method.toUpperCase()).join(' + ')}</strong><span className="text-muted">Featured</span><strong>{product.featured ? 'Yes' : 'No'}</strong></div>
         <p className="mt-3 min-h-10 text-xs leading-5 text-muted">{restrictedLocations.length ? `Delivery blocked in: ${restrictedLocations.join(', ')}` : 'Delivery available across all locations.'}</p>
-        {canManage && <button disabled={editingId === product.id} onClick={() => openEditor(product)} className="mt-3 min-h-11 w-full rounded-xl border border-plum/30 bg-white px-4 font-semibold text-plum hover:bg-blush/30 disabled:opacity-60">{editingId === product.id ? 'Loading details…' : 'Edit product settings'}</button>}
+        {canManage && (
+          <div className="mt-3 flex items-center gap-2">
+            <button
+              disabled={editingId === product.id}
+              onClick={() => openEditor(product)}
+              className="min-h-11 flex-1 rounded-xl border border-plum/30 bg-white px-4 font-semibold text-plum hover:bg-blush/30 disabled:opacity-60 transition"
+            >
+              {editingId === product.id ? 'Loading details…' : 'Edit product settings'}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setDeleteError('')
+                setDeleteTarget(product)
+              }}
+              className="min-h-11 inline-flex items-center justify-center rounded-xl border border-bloom/30 bg-white px-3.5 text-bloom hover:bg-bloom/10 transition"
+              title="Delete product"
+              aria-label={`Delete ${product.name}`}
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+          </div>
+        )}
       </article>
     })}</div>}
     {!loading && <AdminPagination page={page} pageSize={pageSize} total={total} pages={pages} onPageChange={setPage} onPageSizeChange={(value) => { setPage(1); setPageSize(value) }} />}
+
+    {/* Delete Confirmation Modal */}
+    <Modal
+      open={Boolean(deleteTarget)}
+      onClose={() => {
+        if (!deleting) setDeleteTarget(null)
+      }}
+      title="Delete Product"
+      maxWidth="max-w-md"
+    >
+      <div className="space-y-4">
+        <p className="text-sm text-plum leading-relaxed">
+          Are you sure you want to delete <strong className="font-semibold text-plum">{deleteTarget?.name}</strong>?
+        </p>
+        <div className="rounded-xl bg-bloom/10 border border-bloom/20 p-3 text-xs text-bloom leading-relaxed">
+          <strong>Notice:</strong> This product will be soft-deleted and removed from the storefront and admin catalog.
+        </div>
+        {deleteError && (
+          <div role="alert" className="flex items-center gap-2 rounded-xl bg-bloom/10 p-3 text-xs text-bloom">
+            <AlertCircle className="h-4 w-4 shrink-0" />
+            <span>{deleteError}</span>
+          </div>
+        )}
+        <div className="flex items-center justify-end gap-3 pt-2">
+          <button
+            type="button"
+            disabled={deleting}
+            onClick={() => setDeleteTarget(null)}
+            className="min-h-10 rounded-full border border-sand bg-white px-4 text-xs font-semibold text-plum hover:bg-ivory transition disabled:opacity-60"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            disabled={deleting}
+            onClick={confirmDeleteProduct}
+            className="min-h-10 inline-flex items-center gap-1.5 rounded-full bg-bloom px-5 text-xs font-semibold text-cream shadow-soft hover:bg-ink transition disabled:opacity-60"
+          >
+            {deleting ? (
+              <>
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                <span>Deleting…</span>
+              </>
+            ) : (
+              <>
+                <Trash2 className="h-3.5 w-3.5" />
+                <span>Delete Product</span>
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+    </Modal>
   </section>
 }

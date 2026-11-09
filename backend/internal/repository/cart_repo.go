@@ -66,7 +66,7 @@ func (r *CartRepository) GetCart(ctx context.Context, userID string) ([]models.C
 		FROM "Cart" c
 		JOIN "CartItem" ci ON c.id = ci."cartId"
 		JOIN "Product" p ON ci."productId" = p.id
-		WHERE c."userId" = $1
+		WHERE c."userId" = $1 AND COALESCE(p."softDeleted", false) = false
 		ORDER BY ci."createdAt" ASC;
 	`
 	rows, err := r.db.Pool.Query(ctx, query, userID)
@@ -157,7 +157,7 @@ func (r *CartRepository) SaveCart(ctx context.Context, userID string, items []Ca
 		INSERT INTO "CartItem" (id, "cartId", "productId", quantity, "createdAt", "updatedAt")
 		SELECT item.id, $1, item.product_id, item.quantity, $5, $5
 		FROM unnest($2::text[], $3::text[], $4::integer[]) AS item(id, product_id, quantity)
-		JOIN "Product" p ON p.id = item.product_id;
+		JOIN "Product" p ON p.id = item.product_id AND COALESCE(p."softDeleted", false) = false;
 	`, cartID, itemIDs, productIDs, quantities, now)
 	if err != nil {
 		return fmt.Errorf("failed to insert cart items: %w", err)
@@ -179,7 +179,7 @@ func (r *CartRepository) ValidateCart(ctx context.Context, items []CartItemInput
 		var p models.Product
 		err := r.db.Pool.QueryRow(ctx, `
 			SELECT id, name, price, COALESCE("discountPercent", 0), COALESCE("gstPercent", 0), COALESCE("codFee", 0), COALESCE("otherCharge", 0), stock, COALESCE(published, false), COALESCE("availableForSale", true), COALESCE("allowedPaymentMethods", ARRAY['upi']::TEXT[])
-			FROM "Product" WHERE id = $1;
+			FROM "Product" WHERE id = $1 AND COALESCE("softDeleted", false) = false;
 		`, it.ProductID).Scan(
 			&p.ID, &p.Name, &p.Price, &p.DiscountPercent, &p.GSTPercent, &p.CODFee,
 			&p.OtherCharge, &p.Stock, &p.Published, &p.AvailableForSale, &p.AllowedPaymentMethods,

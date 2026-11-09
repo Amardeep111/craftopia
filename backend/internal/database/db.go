@@ -66,6 +66,12 @@ func Connect(ctx context.Context, cfg *config.Config) (*DB, error) {
 
 	// Idempotent column migrations for live database safety
 	_, _ = pool.Exec(ctx, `ALTER TABLE "Order" ADD COLUMN IF NOT EXISTS "couponCode" TEXT;`)
+	_, _ = pool.Exec(ctx, `ALTER TABLE "Category" ADD COLUMN IF NOT EXISTS "softDeleted" BOOLEAN NOT NULL DEFAULT false;`)
+	_, _ = pool.Exec(ctx, `ALTER TABLE "Category" ADD COLUMN IF NOT EXISTS "deletedAt" TIMESTAMP(3);`)
+	_, _ = pool.Exec(ctx, `ALTER TABLE "Product" ADD COLUMN IF NOT EXISTS "softDeleted" BOOLEAN NOT NULL DEFAULT false;`)
+	_, _ = pool.Exec(ctx, `ALTER TABLE "Product" ADD COLUMN IF NOT EXISTS "deletedAt" TIMESTAMP(3);`)
+	_, _ = pool.Exec(ctx, `CREATE INDEX IF NOT EXISTS "idx_category_soft_deleted" ON "Category" ("softDeleted") WHERE "softDeleted" = false;`)
+	_, _ = pool.Exec(ctx, `CREATE INDEX IF NOT EXISTS "idx_product_soft_deleted" ON "Product" ("softDeleted") WHERE "softDeleted" = false;`)
 
 	slog.Info("Connected to PostgreSQL successfully")
 	return &DB{Pool: pool}, nil

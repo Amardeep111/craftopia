@@ -22,7 +22,7 @@ func (r *ProductRepository) GetCategories(ctx context.Context) ([]models.Categor
 	query := `
 		SELECT id, name, slug, description, accent, image, COALESCE(published, true), COALESCE(hidden, false), COALESCE("order", 0), "createdAt", "updatedAt"
 		FROM "Category"
-		WHERE published = true AND hidden = false
+		WHERE COALESCE("softDeleted", false) = false AND published = true AND hidden = false
 		ORDER BY "order" ASC, name ASC;
 	`
 	rows, err := r.db.Pool.Query(ctx, query)
@@ -52,7 +52,9 @@ func (r *ProductRepository) GetCategories(ctx context.Context) ([]models.Categor
 func (r *ProductRepository) GetAllCategoriesAdmin(ctx context.Context) ([]models.Category, error) {
 	rows, err := r.db.Pool.Query(ctx, `
 		SELECT id, name, slug, description, accent, image, COALESCE(published, true), COALESCE(hidden, false), COALESCE("order", 0), "createdAt", "updatedAt"
-		FROM "Category" ORDER BY "order" ASC, name ASC;
+		FROM "Category"
+		WHERE COALESCE("softDeleted", false) = false
+		ORDER BY "order" ASC, name ASC;
 	`)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query admin categories: %w", err)
@@ -78,7 +80,8 @@ func (r *ProductRepository) GetCategoryByID(ctx context.Context, id string) (*mo
 	var c models.Category
 	err := r.db.Pool.QueryRow(ctx, `
 		SELECT id, name, slug, description, accent, image, COALESCE(published, true), COALESCE(hidden, false), COALESCE("order", 0), "createdAt", "updatedAt"
-		FROM "Category" WHERE id = $1;
+		FROM "Category"
+		WHERE id = $1 AND COALESCE("softDeleted", false) = false;
 	`, id).Scan(&c.ID, &c.Name, &c.Slug, &c.Description, &c.Accent, &c.Image,
 		&c.Published, &c.Hidden, &c.Order, &c.CreatedAt, &c.UpdatedAt)
 	if err != nil {
@@ -101,7 +104,9 @@ func (r *ProductRepository) GetProducts(ctx context.Context, categorySlug string
 		       COALESCE(c.id, p."categoryId"), COALESCE(c.name, ''), COALESCE(c.slug, '')
 		FROM "Product" p
 		LEFT JOIN "Category" c ON p."categoryId" = c.id
-		WHERE p.published = true AND c.published = true AND c.hidden = false
+		WHERE COALESCE(p."softDeleted", false) = false
+		  AND COALESCE(c."softDeleted", false) = false
+		  AND p.published = true AND c.published = true AND c.hidden = false
 	`
 	var args []any
 	argID := 1
@@ -163,6 +168,8 @@ func (r *ProductRepository) GetProductByIDOrSlug(ctx context.Context, identifier
 		FROM "Product" p
 		LEFT JOIN "Category" c ON p."categoryId" = c.id
 		WHERE (p.id = $1 OR p.slug = $1)
+		  AND COALESCE(p."softDeleted", false) = false
+		  AND COALESCE(c."softDeleted", false) = false
 		  AND p.published = true
 		  AND c.published = true
 		  AND c.hidden = false
@@ -188,7 +195,7 @@ func (r *ProductRepository) GetProductByIDOrSlug(ctx context.Context, identifier
 	return &p, nil
 }
 
-// GetAdminProductByID returns the full record for editing, including hidden products.
+// GetAdminProductByID returns the full record for editing, excluding soft-deleted products.
 func (r *ProductRepository) GetAdminProductByID(ctx context.Context, id string) (*models.Product, error) {
 	query := `
 		SELECT p.id, p.name, p.slug, p."categoryId", COALESCE(p.price, 0), COALESCE(p."discountPercent", 0), COALESCE(p."gstPercent", 0),
@@ -200,7 +207,7 @@ func (r *ProductRepository) GetAdminProductByID(ctx context.Context, id string) 
 		       COALESCE(c.id, p."categoryId"), COALESCE(c.name, ''), COALESCE(c.slug, '')
 		FROM "Product" p
 		LEFT JOIN "Category" c ON p."categoryId" = c.id
-		WHERE p.id = $1
+		WHERE p.id = $1 AND COALESCE(p."softDeleted", false) = false
 		LIMIT 1;
 	`
 	var product models.Product
@@ -223,7 +230,7 @@ func (r *ProductRepository) GetAdminProductByID(ctx context.Context, id string) 
 	return &product, nil
 }
 
-// GetAllProductsAdmin returns one searchable page of products, including unpublished listings.
+// GetAllProductsAdmin returns one searchable page of products, excluding soft-deleted products.
 func (r *ProductRepository) GetAllProductsAdmin(ctx context.Context, page, pageSize int, search string) (*PageResult[models.AdminProductSummary], error) {
 	pattern := "%" + search + "%"
 	var total int64
@@ -231,7 +238,8 @@ func (r *ProductRepository) GetAllProductsAdmin(ctx context.Context, page, pageS
 		SELECT COUNT(*)
 		FROM "Product" p
 		LEFT JOIN "Category" c ON p."categoryId" = c.id
-		WHERE $1 = '' OR p.name ILIKE $2 OR p.slug ILIKE $2 OR c.name ILIKE $2;
+		WHERE COALESCE(p."softDeleted", false) = false
+		  AND ($1 = '' OR p.name ILIKE $2 OR p.slug ILIKE $2 OR c.name ILIKE $2);
 	`, search, pattern).Scan(&total); err != nil {
 		return nil, fmt.Errorf("failed to count admin products: %w", err)
 	}
@@ -246,7 +254,8 @@ func (r *ProductRepository) GetAllProductsAdmin(ctx context.Context, page, pageS
 		       COALESCE(c.id, p."categoryId"), COALESCE(c.name, ''), COALESCE(c.slug, '')
 		FROM "Product" p
 		LEFT JOIN "Category" c ON p."categoryId" = c.id
-		WHERE $1 = '' OR p.name ILIKE $2 OR p.slug ILIKE $2 OR c.name ILIKE $2
+		WHERE COALESCE(p."softDeleted", false) = false
+		  AND ($1 = '' OR p.name ILIKE $2 OR p.slug ILIKE $2 OR c.name ILIKE $2)
 		ORDER BY p.name ASC, p.id ASC
 		LIMIT $3 OFFSET $4;
 	`
@@ -329,9 +338,13 @@ func (r *ProductRepository) UpdateProduct(ctx context.Context, p *models.Product
 	return err
 }
 
-// DeleteProduct deletes a product by id
+// DeleteProduct marks a product as soft-deleted
 func (r *ProductRepository) DeleteProduct(ctx context.Context, id string) error {
-	_, err := r.db.Pool.Exec(ctx, `DELETE FROM "Product" WHERE id = $1;`, id)
+	_, err := r.db.Pool.Exec(ctx, `
+		UPDATE "Product"
+		SET "softDeleted" = true, "deletedAt" = NOW(), "updatedAt" = NOW()
+		WHERE id = $1;
+	`, id)
 	return err
 }
 
@@ -365,8 +378,29 @@ func (r *ProductRepository) UpdateCategory(ctx context.Context, c *models.Catego
 	return err
 }
 
-// DeleteCategory deletes category
+// DeleteCategory marks a category as soft-deleted and cascades soft delete to its products
 func (r *ProductRepository) DeleteCategory(ctx context.Context, id string) error {
-	_, err := r.db.Pool.Exec(ctx, `DELETE FROM "Category" WHERE id = $1;`, id)
-	return err
+	tx, err := r.db.Pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+
+	if _, err := tx.Exec(ctx, `
+		UPDATE "Category"
+		SET "softDeleted" = true, "deletedAt" = NOW(), "updatedAt" = NOW()
+		WHERE id = $1;
+	`, id); err != nil {
+		return err
+	}
+
+	if _, err := tx.Exec(ctx, `
+		UPDATE "Product"
+		SET "softDeleted" = true, "deletedAt" = NOW(), "updatedAt" = NOW()
+		WHERE "categoryId" = $1;
+	`, id); err != nil {
+		return err
+	}
+
+	return tx.Commit(ctx)
 }

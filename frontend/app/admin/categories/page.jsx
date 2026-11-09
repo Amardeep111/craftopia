@@ -66,7 +66,7 @@ function toSlug(text) {
     .replace(/(^-|-$)+/g, '')
 }
 
-function CategoryEditor({ initial, onCancel, onSaved }) {
+function CategoryEditor({ initial, onCancel, onSaved, onDelete }) {
   const isEditing = Boolean(initial?.id)
   const [form, setForm] = useState(() => ({
     ...emptyCategory,
@@ -420,28 +420,40 @@ function CategoryEditor({ initial, onCancel, onSaved }) {
       </div>
 
       {/* Modal Actions */}
-      <div className="flex items-center justify-end gap-3 border-t border-sand/70 pt-4">
-        <button
-          type="button"
-          onClick={onCancel}
-          className="min-h-11 rounded-full border border-sand bg-white px-5 text-sm font-semibold text-plum hover:bg-ivory transition"
-        >
-          Cancel
-        </button>
-        <button
-          disabled={saving || uploading}
-          type="submit"
-          className="min-h-11 inline-flex items-center gap-2 rounded-full bg-plum px-6 text-sm font-semibold text-cream shadow-soft hover:bg-ink transition disabled:opacity-60"
-        >
-          {saving ? (
-            <>
-              <Loader2 className="h-4 w-4 animate-spin" />
-              <span>Saving…</span>
-            </>
-          ) : (
-            <span>{isEditing ? 'Save Changes' : 'Create Category'}</span>
-          )}
-        </button>
+      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-sand/70 pt-4">
+        {isEditing && onDelete ? (
+          <button
+            type="button"
+            onClick={() => onDelete(initial)}
+            className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-bloom/40 px-4 text-xs font-semibold text-bloom hover:bg-bloom/10 transition"
+          >
+            <Trash2 className="h-4 w-4" />
+            <span>Delete Category</span>
+          </button>
+        ) : <div />}
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="min-h-11 rounded-full border border-sand bg-white px-5 text-sm font-semibold text-plum hover:bg-ivory transition"
+          >
+            Cancel
+          </button>
+          <button
+            disabled={saving || uploading}
+            type="submit"
+            className="min-h-11 inline-flex items-center gap-2 rounded-full bg-plum px-6 text-sm font-semibold text-cream shadow-soft hover:bg-ink transition disabled:opacity-60"
+          >
+            {saving ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span>Saving…</span>
+              </>
+            ) : (
+              <span>{isEditing ? 'Save Changes' : 'Create Category'}</span>
+            )}
+          </button>
+        </div>
       </div>
     </form>
   )
@@ -453,6 +465,9 @@ export default function AdminCategories() {
   const [loading, setLoading] = useState(true)
   const [editorOpen, setEditorOpen] = useState(false)
   const [editorCategory, setEditorCategory] = useState(null)
+  const [deleteTarget, setDeleteTarget] = useState(null)
+  const [deleting, setDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState('')
   const [error, setError] = useState('')
   const [busyId, setBusyId] = useState(null)
 
@@ -513,6 +528,26 @@ export default function AdminCategories() {
     setError('')
   }
 
+  async function confirmDeleteCategory() {
+    if (!deleteTarget) return
+    setDeleting(true)
+    setDeleteError('')
+    try {
+      const response = await fetch(`/api/admin/categories/${encodeURIComponent(deleteTarget.id)}`, {
+        method: 'DELETE',
+      })
+      const result = await response.json()
+      if (!response.ok || !result.success) throw new Error(result.error || 'Failed to delete category.')
+      setDeleteTarget(null)
+      setEditorOpen(false)
+      await load()
+    } catch (e) {
+      setDeleteError(e.message || 'Failed to delete category.')
+    } finally {
+      setDeleting(false)
+    }
+  }
+
   return (
     <section className="space-y-6">
       {/* Header bar */}
@@ -556,7 +591,64 @@ export default function AdminCategories() {
             setEditorOpen(false)
             await load()
           }}
+          onDelete={(cat) => {
+            setDeleteError('')
+            setDeleteTarget(cat)
+          }}
         />
+      </Modal>
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        open={Boolean(deleteTarget)}
+        onClose={() => {
+          if (!deleting) setDeleteTarget(null)
+        }}
+        title="Delete Category"
+        maxWidth="max-w-md"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-plum leading-relaxed">
+            Are you sure you want to delete <strong className="font-semibold text-plum">{deleteTarget?.name}</strong>?
+          </p>
+          <div className="rounded-xl bg-bloom/10 border border-bloom/20 p-3 text-xs text-bloom leading-relaxed">
+            <strong>Warning:</strong> Soft-deleting this category will remove it and all associated products from the storefront and admin catalog.
+          </div>
+          {deleteError && (
+            <div role="alert" className="flex items-center gap-2 rounded-xl bg-bloom/10 p-3 text-xs text-bloom">
+              <AlertCircle className="h-4 w-4 shrink-0" />
+              <span>{deleteError}</span>
+            </div>
+          )}
+          <div className="flex items-center justify-end gap-3 pt-2">
+            <button
+              type="button"
+              disabled={deleting}
+              onClick={() => setDeleteTarget(null)}
+              className="min-h-10 rounded-full border border-sand bg-white px-4 text-xs font-semibold text-plum hover:bg-ivory transition disabled:opacity-60"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              disabled={deleting}
+              onClick={confirmDeleteCategory}
+              className="min-h-10 inline-flex items-center gap-1.5 rounded-full bg-bloom px-5 text-xs font-semibold text-cream shadow-soft hover:bg-ink transition disabled:opacity-60"
+            >
+              {deleting ? (
+                <>
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  <span>Deleting…</span>
+                </>
+              ) : (
+                <>
+                  <Trash2 className="h-3.5 w-3.5" />
+                  <span>Delete Category</span>
+                </>
+              )}
+            </button>
+          </div>
+        </div>
       </Modal>
 
       {/* Grid of Categories */}
@@ -650,7 +742,7 @@ export default function AdminCategories() {
 
                 {/* Card Actions */}
                 {can('categories.manage') && (
-                  <div className="mt-5 flex gap-2 border-t border-sand/60 pt-3">
+                  <div className="mt-5 flex items-center gap-2 border-t border-sand/60 pt-3">
                     <button
                       type="button"
                       onClick={() => handleOpenEdit(cat)}
@@ -677,6 +769,18 @@ export default function AdminCategories() {
                       ) : (
                         <span>Activate</span>
                       )}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDeleteError('')
+                        setDeleteTarget(cat)
+                      }}
+                      className="inline-flex min-h-10 items-center justify-center rounded-xl border border-bloom/30 bg-white px-3 text-sm font-semibold text-bloom hover:bg-bloom/10 transition shadow-sm"
+                      title="Delete category"
+                      aria-label={`Delete ${cat.name}`}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
                     </button>
                   </div>
                 )}
