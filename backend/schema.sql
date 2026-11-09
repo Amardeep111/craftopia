@@ -102,6 +102,7 @@ CREATE TABLE IF NOT EXISTS "User" (
 );
 
 ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "emailVerified" BOOLEAN DEFAULT false;
+ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "adminActive" BOOLEAN DEFAULT false;
 ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "adminPermissions" JSONB NOT NULL DEFAULT '[]'::JSONB;
 
 -- Shopping cart (required by the authenticated cart endpoints)

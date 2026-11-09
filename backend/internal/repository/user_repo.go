@@ -21,9 +21,26 @@ func NewUserRepository(db *database.DB) *UserRepository {
 	return &UserRepository{db: db}
 }
 
+func decodeAdminPermissions(raw []byte) []string {
+	if len(raw) == 0 || string(raw) == "null" {
+		return []string{}
+	}
+	var permissions []string
+	if err := json.Unmarshal(raw, &permissions); err != nil {
+		return []string{}
+	}
+	if permissions == nil {
+		return []string{}
+	}
+	return permissions
+}
+
 func (r *UserRepository) GetByEmail(ctx context.Context, email string) (*models.User, error) {
 	query := `
-		SELECT id, email, password, name, phone, role, COALESCE("emailVerified", false), "adminActive", "adminPermissions", active, "createdAt", "updatedAt"
+		SELECT id, email, password, name, phone, role, COALESCE("emailVerified", false),
+		       COALESCE("adminActive", (role = 'SUPERADMIN')),
+		       COALESCE(to_jsonb("adminPermissions"), '[]'::jsonb),
+		       COALESCE(active, true), "createdAt", "updatedAt"
 		FROM "User" WHERE email = $1 LIMIT 1;
 	`
 	var u models.User
@@ -38,11 +55,7 @@ func (r *UserRepository) GetByEmail(ctx context.Context, email string) (*models.
 		}
 		return nil, fmt.Errorf("failed to query user: %w", err)
 	}
-	if len(permissionsJSON) > 0 {
-		if err := json.Unmarshal(permissionsJSON, &u.AdminPermissions); err != nil {
-			return nil, fmt.Errorf("failed to decode admin permissions: %w", err)
-		}
-	}
+	u.AdminPermissions = decodeAdminPermissions(permissionsJSON)
 	return &u, nil
 }
 
@@ -54,7 +67,10 @@ func (r *UserRepository) FindByID(ctx context.Context, id string) (*models.User,
 	var u models.User
 	var permissionsJSON []byte
 	err := r.db.Pool.QueryRow(ctx, `
-		SELECT id, email, password, name, phone, role, COALESCE("emailVerified", false), "adminActive", "adminPermissions", active, "createdAt", "updatedAt"
+		SELECT id, email, password, name, phone, role, COALESCE("emailVerified", false),
+		       COALESCE("adminActive", (role = 'SUPERADMIN')),
+		       COALESCE(to_jsonb("adminPermissions"), '[]'::jsonb),
+		       COALESCE(active, true), "createdAt", "updatedAt"
 		FROM "User" WHERE id = $1;
 	`, id).Scan(&u.ID, &u.Email, &u.Password, &u.Name, &u.Phone, &u.Role, &u.EmailVerified, &u.AdminActive, &permissionsJSON, &u.Active, &u.CreatedAt, &u.UpdatedAt)
 	if err != nil {
@@ -63,11 +79,7 @@ func (r *UserRepository) FindByID(ctx context.Context, id string) (*models.User,
 		}
 		return nil, fmt.Errorf("failed to query user by id: %w", err)
 	}
-	if len(permissionsJSON) > 0 {
-		if err := json.Unmarshal(permissionsJSON, &u.AdminPermissions); err != nil {
-			return nil, fmt.Errorf("failed to decode admin permissions: %w", err)
-		}
-	}
+	u.AdminPermissions = decodeAdminPermissions(permissionsJSON)
 	return &u, nil
 }
 
@@ -120,7 +132,10 @@ func (r *UserRepository) ListAllUsersAdmin(ctx context.Context, page, pageSize i
 	offset := (page - 1) * pageSize
 	query := `
 		WITH user_page AS MATERIALIZED (
-			SELECT u.id, u.email, u.name, u.phone, u.role, u."adminActive", u.active, u."createdAt", u."updatedAt"
+			SELECT u.id, u.email, u.name, u.phone, u.role,
+			       COALESCE(u."adminActive", false) AS "adminActive",
+			       COALESCE(u.active, true) AS active,
+			       u."createdAt", u."updatedAt"
 			FROM "User" u
 			WHERE UPPER(COALESCE(u.role, 'CUSTOMER')) NOT IN ('ADMIN', 'SUPERADMIN')
 			  AND ($1 = '' OR u.email ILIKE $2 OR COALESCE(u.name, '') ILIKE $2 OR COALESCE(u.phone, '') ILIKE $2)
@@ -181,11 +196,14 @@ func (r *UserRepository) UpdateProfile(ctx context.Context, id string, name, pho
 
 func (r *UserRepository) ListAdmins(ctx context.Context) ([]models.User, error) {
 	rows, err := r.db.Pool.Query(ctx, `
-		SELECT id, email, name, phone, role, "adminActive", "adminPermissions", active, "createdAt", "updatedAt"
-		FROM "User" WHERE role IN ('ADMIN', 'SUPERADMIN') ORDER BY email ASC;
+		SELECT id, email, name, phone, role,
+		       COALESCE("adminActive", (role = 'SUPERADMIN')),
+		       COALESCE(to_jsonb("adminPermissions"), '[]'::jsonb),
+		       COALESCE(active, true), "createdAt", "updatedAt"
+		FROM "User" WHERE UPPER(COALESCE(role, 'CUSTOMER')) IN ('ADMIN', 'SUPERADMIN') ORDER BY email ASC;
 	`)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to query admins: %w", err)
 	}
 	defer rows.Close()
 	admins := make([]models.User, 0)
@@ -193,14 +211,15 @@ func (r *UserRepository) ListAdmins(ctx context.Context) ([]models.User, error) 
 		var u models.User
 		var permissionsJSON []byte
 		if err := rows.Scan(&u.ID, &u.Email, &u.Name, &u.Phone, &u.Role, &u.AdminActive, &permissionsJSON, &u.Active, &u.CreatedAt, &u.UpdatedAt); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to scan admin: %w", err)
 		}
-		if err := json.Unmarshal(permissionsJSON, &u.AdminPermissions); err != nil {
-			return nil, fmt.Errorf("failed to decode admin permissions: %w", err)
-		}
+		u.AdminPermissions = decodeAdminPermissions(permissionsJSON)
 		admins = append(admins, u)
 	}
-	return admins, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("failed while reading admins: %w", err)
+	}
+	return admins, nil
 }
 
 func (r *UserRepository) SetAdminAccess(ctx context.Context, id, name string, active bool, permissions []string) error {

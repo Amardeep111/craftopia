@@ -280,7 +280,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if req.AdminOnly && (user.Role != "ADMIN" && user.Role != "SUPERADMIN" || !user.AdminActive) {
+	if req.AdminOnly && (user.Role != "ADMIN" && user.Role != "SUPERADMIN" || (user.Role == "ADMIN" && !user.AdminActive)) {
 		utils.Error(w, http.StatusForbidden, "This account does not have administrator access.")
 		return
 	}

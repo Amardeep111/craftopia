@@ -73,6 +73,30 @@ func Connect(ctx context.Context, cfg *config.Config) (*DB, error) {
 	_, _ = pool.Exec(ctx, `CREATE INDEX IF NOT EXISTS "idx_category_soft_deleted" ON "Category" ("softDeleted") WHERE "softDeleted" = false;`)
 	_, _ = pool.Exec(ctx, `CREATE INDEX IF NOT EXISTS "idx_product_soft_deleted" ON "Product" ("softDeleted") WHERE "softDeleted" = false;`)
 
+	// Admin access column safety on User table
+	_, _ = pool.Exec(ctx, `ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "adminActive" BOOLEAN DEFAULT false;`)
+	_, _ = pool.Exec(ctx, `ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "adminPermissions" JSONB NOT NULL DEFAULT '[]'::JSONB;`)
+	_, _ = pool.Exec(ctx, `
+		DO $$
+		BEGIN
+			IF EXISTS (
+				SELECT 1 FROM information_schema.columns
+				WHERE table_schema = current_schema()
+				  AND table_name = 'User'
+				  AND column_name = 'adminPermissions'
+				  AND data_type = 'ARRAY'
+			) THEN
+				ALTER TABLE "User" ALTER COLUMN "adminPermissions" DROP DEFAULT;
+				ALTER TABLE "User" ALTER COLUMN "adminPermissions" TYPE JSONB
+					USING to_jsonb("adminPermissions");
+				ALTER TABLE "User" ALTER COLUMN "adminPermissions" SET DEFAULT '[]'::JSONB;
+			END IF;
+		END $$;
+	`)
+	_, _ = pool.Exec(ctx, `UPDATE "User" SET "adminActive" = true WHERE UPPER(COALESCE(role, 'CUSTOMER')) IN ('ADMIN', 'SUPERADMIN') AND ("adminActive" IS NULL OR role = 'SUPERADMIN');`)
+	_, _ = pool.Exec(ctx, `UPDATE "User" SET "adminActive" = false WHERE "adminActive" IS NULL;`)
+	_, _ = pool.Exec(ctx, `UPDATE "User" SET "adminPermissions" = '[]'::JSONB WHERE "adminPermissions" IS NULL;`)
+
 	slog.Info("Connected to PostgreSQL successfully")
 	return &DB{Pool: pool}, nil
 }

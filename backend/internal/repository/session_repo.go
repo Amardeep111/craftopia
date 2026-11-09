@@ -54,7 +54,9 @@ func (r *SessionRepository) Verify(ctx context.Context, token string) (*models.S
 	query := `
 		SELECT 
 			s.id, s."userId", s.token, s."expiresAt", s."revokedAt", s."createdAt",
-			u.id, u.email, u.password, u.name, u.phone, u.role, u."adminActive", u.active, u."createdAt", u."updatedAt"
+			u.id, u.email, u.password, u.name, u.phone, u.role,
+			COALESCE(u."adminActive", (u.role = 'SUPERADMIN')),
+			COALESCE(u.active, true), u."createdAt", u."updatedAt"
 		FROM "Session" s
 		JOIN "User" u ON s."userId" = u.id
 		WHERE s.token = $1 AND s."revokedAt" IS NULL AND s."expiresAt" > NOW() AND u.active = true
@@ -93,7 +95,7 @@ func (r *SessionRepository) ExtendAdminSession(ctx context.Context, token string
 			  AND s."expiresAt" <= NOW() + $3
 			  AND u.active = true
 			  AND u.role IN ('ADMIN', 'SUPERADMIN')
-			  AND u."adminActive" = true
+			  AND (u."adminActive" = true OR u.role = 'SUPERADMIN')
 			RETURNING s."expiresAt"
 		)
 		SELECT "expiresAt" FROM extended
@@ -106,7 +108,7 @@ func (r *SessionRepository) ExtendAdminSession(ctx context.Context, token string
 		  AND s."expiresAt" > NOW()
 		  AND u.active = true
 		  AND u.role IN ('ADMIN', 'SUPERADMIN')
-		  AND u."adminActive" = true
+		  AND (u."adminActive" = true OR u.role = 'SUPERADMIN')
 		  AND NOT EXISTS (SELECT 1 FROM extended)
 		LIMIT 1;
 	`, token, duration, renewWindow).Scan(&expiresAt)
