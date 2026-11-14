@@ -11,10 +11,10 @@ export default function CodForm({ total, fee, onSubmit, loading, error }) {
     <div>
       <div className="rounded-2xl bg-ivory/70 border border-sand/60 p-5">
         <div className="flex items-center gap-3 mb-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-bloom/10 text-bloom">
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-bloom/10 text-accent">
             <Truck className="h-5 w-5" aria-hidden="true" />
           </div>
-          <h3 className="font-display text-xl text-plum">Cash on Delivery</h3>
+          <h3 className="font-display text-xl text-brand">Cash on Delivery</h3>
         </div>
         <p className="text-sm text-muted leading-relaxed">
           Pay when your order is delivered to your address. No pre-payment required.
@@ -23,10 +23,10 @@ export default function CodForm({ total, fee, onSubmit, loading, error }) {
         <div className="mt-4 space-y-2 text-sm border-t border-sand/60 pt-3">
           <div className="flex justify-between">
             <span className="text-muted">Order amount</span>
-            <span className="font-semibold text-plum">{formatPrice(total)}</span>
+            <span className="font-semibold text-brand">{formatPrice(total)}</span>
           </div>
           {hasFee ? (
-            <div className="flex justify-between text-bloom">
+            <div className="flex justify-between text-accent">
               <span>COD handling fee</span>
               <span>+{formatPrice(fee)}</span>
             </div>
@@ -37,8 +37,8 @@ export default function CodForm({ total, fee, onSubmit, loading, error }) {
             </div>
           )}
           <div className="flex justify-between border-t border-sand/60 pt-2 mt-2">
-            <span className="font-medium text-plum">Total payable</span>
-            <span className="font-display text-xl text-plum">{formatPrice(total + fee)}</span>
+            <span className="font-medium text-brand">Total payable</span>
+            <span className="font-display text-xl text-brand">{formatPrice(total + fee)}</span>
           </div>
         </div>
       </div>
@@ -49,7 +49,7 @@ export default function CodForm({ total, fee, onSubmit, loading, error }) {
       </div>
 
       {error && (
-        <p className="mt-3 text-sm text-bloom" role="alert">{error}</p>
+        <p className="mt-3 text-sm text-accent" role="alert">{error}</p>
       )}
 
       <div className="mt-5">

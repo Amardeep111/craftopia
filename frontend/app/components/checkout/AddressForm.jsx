@@ -1,13 +1,14 @@
 'use client'
 
-import { useState, useCallback, useEffect, useRef } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import dynamic from 'next/dynamic'
 import {
-  MapPin, Compass, RotateCcw, ChevronDown, ChevronUp,
+  MapPin, Compass, ChevronDown, ChevronUp,
   User, Home, Building, Check, Navigation, Loader2,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import Input from '@/components/ui/Input'
+import Modal from '@/components/ui/Modal'
 import Select from '@/components/ui/Select'
 import { ADDRESS_TYPES, validateAddress, blankAddress } from '@/lib/address'
 import { STATE_OPTIONS, getStateAndCityFromPin, normalizeStateName, normalizeCountryName } from '@/lib/address/india'
@@ -24,7 +25,6 @@ export default function AddressForm({ open, onClose, onSave, initial = null, sav
   const [addressMode, setAddressMode] = useState(initial ? 'manual' : 'method-selection') // 'method-selection' | 'manual' | 'location' | 'manual-after-location'
   const [confirmedLocationData, setConfirmedLocationData] = useState(null)
   const [submitting, setSubmitting] = useState(false)
-  const formRef = useRef(null)
 
   const isSaving = saving || submitting
 
@@ -148,8 +148,8 @@ export default function AddressForm({ open, onClose, onSave, initial = null, sav
 
   const SectionHead = ({ icon: Icon, title, k }) => (
     <button type="button" onClick={() => toggle(k)} className="w-full flex items-center gap-2 py-2 text-left focus:outline-none" aria-expanded={openSections[k]}>
-      <Icon className="h-4 w-4 text-bloom" aria-hidden="true" />
-      <span className="font-display text-base text-plum">{title}</span>
+      <Icon className="h-4 w-4 text-accent" aria-hidden="true" />
+      <span className="text-sm font-semibold text-ink">{title}</span>
       <span className="ml-auto text-sand">{openSections[k] ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}</span>
     </button>
   )
@@ -157,42 +157,29 @@ export default function AddressForm({ open, onClose, onSave, initial = null, sav
   if (!open) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 backdrop-blur-sm p-4" role="dialog" aria-modal="true" aria-label="Address form" onClick={() => { if (!isSaving) onClose() }}>
-      <div ref={formRef} className="w-full max-w-2xl max-h-[92vh] overflow-y-auto rounded-3xl bg-cream shadow-lift p-6 md:p-8" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between gap-3 mb-2">
-          <h2 className="font-display text-2xl text-plum">{initial ? 'Edit address' : 'Add new address'}</h2>
-          <button type="button" onClick={onClose} disabled={isSaving} className="rounded-full bg-ivory p-2 text-plum hover:bg-blush/30 transition disabled:opacity-50" aria-label="Close address form"><RotateCcw className="h-5 w-5" aria-hidden="true" /></button>
-        </div>
-        <p className="text-xs text-muted mb-4">Use your current location or enter manually. All fields validated for Indian addresses.</p>
-
+    <Modal open={open} onClose={onClose} dismissible={!isSaving} title={initial ? 'Edit address' : 'Add a delivery address'} description="Choose your location or enter the address where you’d like your order delivered." maxWidth="max-w-2xl" className="studio-address-dialog">
         {/* ====== METHOD SELECTION (only initially) ====== */}
         {addressMode === 'method-selection' && (
-          <div className="rounded-3xl bg-ivory/60 ring-1 ring-sand p-5 mb-6">
-            <h3 className="font-display text-xl text-plum flex items-center gap-2 mb-3"><Navigation className="h-5 w-5 text-bloom" aria-hidden="true" /> Select method</h3>
+          <div className="grid gap-3 mb-2">
             <button
               type="button"
               onClick={() => setAddressMode('location')}
-              className="w-full rounded-2xl bg-bloom text-cream px-5 py-4 text-left shadow-soft hover:bg-plum transition flex items-start gap-4 group"
+              className="studio-address-method"
             >
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-cream/20 group-hover:bg-cream/30 transition"><Compass className="h-5 w-5" aria-hidden="true" /></div>
+              <Compass className="mt-0.5 h-5 w-5 shrink-0 text-brand" aria-hidden="true" />
               <div>
-                <p className="font-display text-lg">Use your current location</p>
-                <p className="text-sm text-cream/90">Automatically find your address with a real interactive map.</p>
+                <p className="text-base font-semibold">Use your current location</p>
+                <p className="mt-1 text-sm text-muted">Locate your area, then confirm your delivery details.</p>
               </div>
             </button>
-            <div className="flex items-center gap-3 my-4">
-              <div className="h-px flex-1 bg-sand" />
-              <span className="text-xs font-bold uppercase tracking-widest text-muted">OR</span>
-              <div className="h-px flex-1 bg-sand" />
-            </div>
             <button
               type="button"
               onClick={() => setAddressMode('manual')}
-              className="w-full rounded-2xl bg-cream ring-1 ring-sand px-5 py-4 text-left hover:ring-blush/40 transition flex items-start gap-4 group"
+              className="studio-address-method"
             >
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blush/60 group-hover:bg-blush transition"><MapPin className="h-5 w-5 text-plum" aria-hidden="true" /></div>
+              <MapPin className="mt-0.5 h-5 w-5 shrink-0 text-brand" aria-hidden="true" />
               <div>
-                <p className="font-display text-lg text-plum">Enter address manually</p>
+                <p className="text-base font-semibold text-brand">Enter address manually</p>
                 <p className="text-sm text-muted">Type your full delivery address yourself.</p>
               </div>
             </button>
@@ -201,11 +188,11 @@ export default function AddressForm({ open, onClose, onSave, initial = null, sav
 
         {/* ====== LOCATION PICKER FLOW ====== */}
         {addressMode === 'location' && (
-          <div className="rounded-3xl bg-ivory/60 ring-1 ring-sand p-5 mb-6">
+          <div className="space-y-3 mb-6">
             <div className="flex items-center justify-between gap-3 mb-3">
-              <h3 className="font-display text-xl text-plum flex items-center gap-2"><Compass className="h-5 w-5 text-bloom" aria-hidden="true" /> Use current location</h3>
+              <h3 className="font-display text-xl text-brand flex items-center gap-2"><Compass className="h-5 w-5 text-accent" aria-hidden="true" /> Use current location</h3>
             </div>
-            <button type="button" onClick={() => setAddressMode('method-selection')} className="mb-3 text-xs font-semibold text-bloom hover:text-plum underline underline-offset-2">← Change method</button>
+            <button type="button" onClick={() => setAddressMode('method-selection')} className="mb-3 text-xs font-semibold text-accent hover:text-brand underline underline-offset-2">← Change method</button>
             <InteractiveLocationPicker
               initialLat={data.lat || null}
               initialLng={data.lng || null}
@@ -219,10 +206,10 @@ export default function AddressForm({ open, onClose, onSave, initial = null, sav
         {/* ====== UNIFIED MANUAL FORM (manual OR after location confirm) ====== */}
         {(addressMode === 'manual' || addressMode === 'manual-after-location') && (
           <div>
-            <button type="button" onClick={() => { setAddressMode('method-selection'); setConfirmedLocationData(null); }} className="mb-4 text-xs font-semibold text-bloom hover:text-plum underline underline-offset-2">← Change method</button>
+            <button type="button" onClick={() => { setAddressMode('method-selection'); setConfirmedLocationData(null); }} className="mb-4 text-xs font-semibold text-accent hover:text-brand underline underline-offset-2">← Change method</button>
             {confirmedLocationData && (
-              <div className="rounded-2xl bg-sage/10 ring-1 ring-sage/30 p-4 mb-4">
-                <p className="text-sm text-sage font-semibold">Location detected from GPS · <span className="text-xs font-normal text-muted">{confirmedLocationData.city || ''}, {confirmedLocationData.state || ''}</span></p>
+              <div className="rounded-lg bg-sage/50 p-4 mb-4">
+                <p className="text-sm text-moss font-semibold">Location detected from GPS · <span className="text-xs font-normal text-muted">{confirmedLocationData.city || ''}, {confirmedLocationData.state || ''}</span></p>
               </div>
             )}
           </div>
@@ -232,7 +219,7 @@ export default function AddressForm({ open, onClose, onSave, initial = null, sav
         {(addressMode === 'manual' || addressMode === 'manual-after-location') && (
           <form onSubmit={submit} className="space-y-4" noValidate>
           {/* Contact Info */}
-          <section className="paper-card p-5 bg-ivory/40" aria-label="Contact information">
+          <section className="studio-address-section" aria-label="Contact information">
             <SectionHead icon={User} title="Contact information" k="info" />
             {openSections.info && (
               <div className="grid gap-4 sm:grid-cols-2 pt-3">
@@ -243,7 +230,7 @@ export default function AddressForm({ open, onClose, onSave, initial = null, sav
           </section>
 
           {/* Address Lines */}
-          <section className="paper-card p-5 bg-ivory/40" aria-label="Address details">
+          <section className="studio-address-section" aria-label="Address details">
             <SectionHead icon={Home} title="Address details" k="address" />
             {openSections.address && (
               <div className="space-y-4 pt-3">
@@ -257,12 +244,12 @@ export default function AddressForm({ open, onClose, onSave, initial = null, sav
           </section>
 
           {/* Location */}
-          <section className="paper-card p-5 bg-ivory/40" aria-label="Location">
+          <section className="studio-address-section" aria-label="Location">
             <SectionHead icon={MapPin} title="Location" k="location" />
             {openSections.location && (
               <div className="pt-3 space-y-4">
                 <div>
-                  <label htmlFor="pin-code" className="block text-sm font-medium text-plum mb-1">PIN code *</label>
+                  <label htmlFor="pin-code" className="block text-sm font-medium text-brand mb-1">PIN code *</label>
                   <div className="flex gap-2">
                     <input
                       id="pin-code"
@@ -272,27 +259,28 @@ export default function AddressForm({ open, onClose, onSave, initial = null, sav
                       value={data.pinCode}
                       onChange={(e) => handlePinChange(e.target.value)}
                       onBlur={handlePinBlur}
-                      className={cn('w-36 rounded-2xl border bg-cream px-4 py-3 text-sm outline-none transition focus:ring-2', errors.pinCode ? 'border-bloom focus:ring-bloom/30' : 'border-sand focus:ring-bloom/30')}
+                      className={cn('w-36 rounded-lg border bg-surface px-4 py-3 text-sm outline-none transition focus:ring-2', errors.pinCode ? 'border-bloom focus:ring-bloom/30' : 'border-sand focus:ring-bloom/30')}
                       placeholder="400001"
                       autoComplete="postal-code"
                     />
                   </div>
-                  {errors.pinCode && <p className="mt-1.5 text-sm text-bloom">{errors.pinCode}</p>}
+                  {errors.pinCode && <p className="mt-1.5 text-sm text-accent">{errors.pinCode}</p>}
                 </div>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <Input label="City *" value={data.city} onChange={(e) => update('city', e.target.value)} error={errors.city} placeholder="Mumbai" autoComplete="address-level2" />
                   <div>
-                    <label htmlFor="addr-state" className="block text-sm font-medium text-plum mb-1">State *</label>
+                    <label htmlFor="addr-state" className="block text-sm font-medium text-brand mb-1">State *</label>
                     <Select
                       id="addr-state"
+                      ariaLabel="State"
                       value={data.state}
                       onChange={(v) => update('state', v)}
                       options={STATE_OPTIONS}
                       placeholder="Select state"
                       error={!!errors.state}
-                      className="!w-full !bg-cream !rounded-2xl"
+                      className="!w-full"
                     />
-                    {errors.state && <p className="mt-1.5 text-sm text-bloom">{errors.state}</p>}
+                    {errors.state && <p className="mt-1.5 text-sm text-accent">{errors.state}</p>}
                   </div>
                 </div>
               </div>
@@ -300,41 +288,42 @@ export default function AddressForm({ open, onClose, onSave, initial = null, sav
           </section>
 
           {/* Preferences */}
-          <section className="paper-card p-5 bg-ivory/40" aria-label="Address preferences">
+          <section className="studio-address-section" aria-label="Address preferences">
             <SectionHead icon={Building} title="Preferences" k="prefs" />
             {openSections.prefs && (
               <div className="pt-3 grid gap-4 sm:grid-cols-2">
                 <div>
-                  <label htmlFor="addr-type" className="block text-sm font-medium text-plum mb-1">Address type</label>
+                  <label htmlFor="addr-type" className="block text-sm font-medium text-brand mb-1">Address type</label>
                   <Select
                     id="addr-type"
+                    ariaLabel="Address type"
                     value={data.addressType}
                     onChange={(v) => update('addressType', v)}
                     options={ADDRESS_TYPES.map((t) => ({ value: t.id, label: t.label }))}
                     placeholder="Select address type"
-                    className="!w-full !bg-cream !rounded-2xl"
+                    className="!w-full"
                   />
                 </div>
-                <label className="flex items-center gap-3 rounded-2xl border border-sand bg-cream px-4 py-3 cursor-pointer transition hover:border-bloom/30"><input type="checkbox" checked={!!data.isDefault} onChange={(e) => update('isDefault', e.target.checked)} className="h-5 w-5 rounded border-sand text-bloom focus:ring-2 focus:ring-bloom/30" /><span className="text-sm font-medium text-plum">Set as default address</span></label>
+                <label className="flex items-center gap-3 rounded-lg border border-sand bg-surface px-4 py-3 cursor-pointer transition hover:border-bloom/30"><input type="checkbox" checked={!!data.isDefault} onChange={(e) => update('isDefault', e.target.checked)} className="h-5 w-5 rounded border-sand text-accent focus:ring-2 focus:ring-bloom/30" /><span className="text-sm font-medium text-brand">Set as default address</span></label>
               </div>
             )}
           </section>
 
-          <div className="flex justify-end gap-3 pt-2">
+          <div className="studio-dialog-actions">
             <button
               type="button"
               onClick={onClose}
               disabled={isSaving}
-              className="rounded-full px-5 py-2.5 text-sm font-semibold text-muted hover:text-plum transition ring-1 ring-sand hover:ring-blush/40 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="studio-button-secondary rounded-lg px-5 py-3 text-sm font-semibold transition-colors disabled:opacity-50"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isSaving}
-              className="inline-flex items-center justify-center gap-2 rounded-full bg-plum px-6 py-2.5 text-sm font-semibold text-cream shadow-soft hover:bg-ink transition active:translate-y-0 disabled:opacity-75 disabled:cursor-not-allowed min-w-[145px]"
+              className="studio-button-primary inline-flex items-center justify-center gap-2 rounded-lg px-6 py-3 text-sm font-semibold transition-colors disabled:opacity-60 min-w-[145px]"
             >
-              {isSaving && <Loader2 className="h-4 w-4 animate-spin text-cream" aria-hidden="true" />}
+              {isSaving && <Loader2 className="h-4 w-4 animate-spin text-on-primary" aria-hidden="true" />}
               <span>
                 {isSaving
                   ? (initial ? 'Updating address…' : 'Saving address…')
@@ -344,7 +333,6 @@ export default function AddressForm({ open, onClose, onSave, initial = null, sav
           </div>
         </form>
         )}
-      </div>
-    </div>
+    </Modal>
   )
 }

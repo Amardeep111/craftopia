@@ -64,17 +64,17 @@ function MyOrdersContent() {
       <div className="container-page pb-24 pt-8 md:pt-12">
         <div className="flex items-end justify-between flex-wrap gap-3">
           <div>
-            <h1 className="font-display text-3xl text-plum">My Orders</h1>
+            <h1 className="font-display text-3xl text-brand">My Orders</h1>
             <p className="mt-1 text-sm text-muted">Track, view and manage your orders.</p>
           </div>
         </div>
         <div className="mt-8 mx-auto max-w-md rounded-3xl bg-ivory/60 p-10 text-center">
-          <Package className="mx-auto h-12 w-12 text-bloom" aria-hidden="true" />
-          <h2 className="mt-4 font-display text-2xl text-plum">Please log in</h2>
+          <Package className="mx-auto h-12 w-12 text-accent" aria-hidden="true" />
+          <h2 className="mt-4 font-display text-2xl text-brand">Please log in</h2>
           <p className="mt-2 text-sm text-muted">Log in to view your order history.</p>
           <Link
             href="/account/login"
-            className="mt-5 inline-flex items-center gap-1.5 rounded-full bg-plum px-5 py-2.5 text-sm font-semibold text-cream hover:bg-ink transition"
+            className="mt-5 inline-flex items-center gap-1.5 rounded-full bg-plum px-5 py-2.5 text-sm font-semibold text-on-primary hover:bg-overlay-ink transition"
           >
             Log in
           </Link>
@@ -89,7 +89,7 @@ function MyOrdersContent() {
       <div className="container-page pb-24 pt-8 md:pt-12">
         <div className="flex items-end justify-between flex-wrap gap-3">
           <div>
-            <h1 className="font-display text-3xl text-plum">My Orders</h1>
+            <h1 className="font-display text-3xl text-brand">My Orders</h1>
             <p className="mt-1 text-sm text-muted">Track, view and manage your orders.</p>
           </div>
         </div>
@@ -119,18 +119,18 @@ function MyOrdersContent() {
       {/* Header */}
       <div className="flex items-end justify-between flex-wrap gap-3">
         <div>
-          <h1 className="font-display text-3xl text-plum">My Orders</h1>
+          <h1 className="font-display text-3xl text-brand">My Orders</h1>
           <p className="mt-1 text-sm text-muted">Track, view and manage your orders.</p>
         </div>
       </div>
 
       {/* Error */}
       {error && (
-        <div className="mt-8 mx-auto max-w-md rounded-2xl bg-bloom/10 border border-bloom/30 p-5 text-sm text-plum text-center">
+        <div className="mt-8 mx-auto max-w-md rounded-2xl bg-bloom/10 border border-bloom/30 p-5 text-sm text-brand text-center">
           {error}
           <button
             onClick={() => window.location.reload()}
-            className="mt-3 inline-flex items-center gap-1 rounded-full bg-plum px-4 py-2 text-sm font-semibold text-cream hover:bg-ink transition"
+            className="mt-3 inline-flex items-center gap-1 rounded-full bg-plum px-4 py-2 text-sm font-semibold text-on-primary hover:bg-overlay-ink transition"
           >
             Try Again
           </button>
@@ -142,16 +142,16 @@ function MyOrdersContent() {
         <div className="mt-12 flex flex-col items-center text-center">
           <div className="paper-card rounded-3xl p-10 sm:p-14 max-w-md w-full shadow-soft">
             <div className="mx-auto h-16 w-16 rounded-full bg-blush/50 flex items-center justify-center" aria-hidden="true">
-              <Package className="h-8 w-8 text-bloom" />
+              <Package className="h-8 w-8 text-accent" />
             </div>
-            <h2 className="mt-6 font-display text-2xl text-plum">No orders yet</h2>
+            <h2 className="mt-6 font-display text-2xl text-brand">No orders yet</h2>
             <p className="mt-2 text-sm text-muted leading-relaxed">
               You haven&apos;t placed any orders yet.<br />
               Start exploring our handmade creations.
             </p>
             <Link
               href="/shop"
-              className="mt-6 inline-flex items-center gap-2 rounded-full bg-plum px-6 py-2.5 text-sm font-semibold text-cream hover:bg-ink transition shadow-soft"
+              className="mt-6 inline-flex items-center gap-2 rounded-full bg-plum px-6 py-2.5 text-sm font-semibold text-on-primary hover:bg-overlay-ink transition shadow-soft"
             >
               <ShoppingBag className="h-4 w-4" aria-hidden="true" />
               Start Shopping
@@ -179,7 +179,7 @@ function MyOrdersContent() {
                 onClick={() => setTab(s.value)}
                 className={[
                   'rounded-full px-4 py-1.5 text-sm font-semibold transition',
-                  active ? 'bg-plum text-cream shadow-soft' : 'bg-ivory/60 text-plum hover:bg-ivory',
+                  active ? 'bg-plum text-on-primary shadow-soft' : 'bg-ivory/60 text-brand hover:bg-ivory',
                 ].join(' ')}
                 aria-pressed={active}
               >
@@ -226,7 +226,7 @@ function MyOrdersContent() {
 
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <p className="font-mono text-sm font-semibold text-plum">{o.orderNumber}</p>
+                        <p className="font-mono text-sm font-semibold text-brand">{o.orderNumber}</p>
                         <span className={['inline-flex items-center gap-1 rounded-full bg-ivory px-2 py-0.5 text-xs font-semibold', meta.color].join(' ')}>
                           <span className={['h-1.5 w-1.5 rounded-full', meta.dot].join(' ')} />
                           {meta.label}
@@ -236,7 +236,7 @@ function MyOrdersContent() {
                         {new Date(o.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })} ·{' '}
                         {o.items?.length || 0} {o.items?.length === 1 ? 'item' : 'items'}
                       </p>
-                      <p className="mt-2 text-sm font-semibold text-plum">{formatPrice(o.totalAmount)}</p>
+                      <p className="mt-2 text-sm font-semibold text-brand">{formatPrice(o.totalAmount)}</p>
                       {o.paymentMethod && (
                         <p className="mt-0.5 text-xs text-muted">{o.paymentMethod}</p>
                       )}
@@ -261,7 +261,7 @@ export default function MyOrdersPage() {
   return (
     <Suspense fallback={
       <div className="container-page pb-20 pt-10 text-center">
-        <Loader2 className="mx-auto h-12 w-12 text-bloom animate-spin" aria-hidden="true" />
+        <Loader2 className="mx-auto h-12 w-12 text-accent animate-spin" aria-hidden="true" />
         <p className="mt-3 text-sm text-muted">Loading orders…</p>
       </div>
     }>

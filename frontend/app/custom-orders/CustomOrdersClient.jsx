@@ -167,7 +167,7 @@ export default function CustomOrders({ initialCustomer }) {
               <ScrollReveal key={text} delay={i * 0.07}>
                 <div className="paper-card p-6">
                   <p className="font-display text-3xl text-petal">0{i + 1}</p>
-                  <p className="mt-2 font-display text-xl text-plum">{text}</p>
+                  <p className="mt-2 font-display text-xl text-brand">{text}</p>
                 </div>
               </ScrollReveal>
             ),
@@ -217,7 +217,7 @@ export default function CustomOrders({ initialCustomer }) {
         </section>
 
         <section className="container-page pb-20">
-          {!customer ? <div className="paper-card mx-auto max-w-xl px-6 py-10 text-center sm:px-10"><h2 className="heading-display text-3xl">Sign in to send a custom request</h2><p className="mt-3 text-muted">We’ll save your idea to your account and email you when it’s reviewed or a price is ready.</p><div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row"><Link href={`/account/login?redirect=${encodeURIComponent('/custom-orders')}`} className="inline-flex min-h-11 items-center justify-center rounded-full bg-plum px-6 font-semibold text-cream">Sign in</Link><Link href={`/account/signup?redirect=${encodeURIComponent('/custom-orders')}`} className="inline-flex min-h-11 items-center justify-center rounded-full border border-sand px-6 font-semibold text-plum">Create an account</Link></div></div> : <form onSubmit={onSubmit} className="paper-card mx-auto max-w-2xl p-6 sm:p-10" noValidate>
+          {!customer ? <div className="paper-card mx-auto max-w-xl px-6 py-10 text-center sm:px-10"><h2 className="heading-display text-3xl">Sign in to send a custom request</h2><p className="mt-3 text-muted">We’ll save your idea to your account and email you when it’s reviewed or a price is ready.</p><div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row"><Link href={`/account/login?redirect=${encodeURIComponent('/custom-orders')}`} className="inline-flex min-h-11 items-center justify-center rounded-full bg-plum px-6 font-semibold text-on-primary">Sign in</Link><Link href={`/account/signup?redirect=${encodeURIComponent('/custom-orders')}`} className="inline-flex min-h-11 items-center justify-center rounded-full border border-sand px-6 font-semibold text-brand">Create an account</Link></div></div> : <form onSubmit={onSubmit} className="paper-card mx-auto max-w-2xl p-6 sm:p-10" noValidate>
             <h2 className="heading-display text-3xl">Tell us what to make</h2>
             <p className="mt-2 text-muted">Name, idea, category, and special request are required. Colours, budget, occasion, and photos are optional. We’ll send updates to your signed-in email.</p>
 
@@ -231,7 +231,7 @@ export default function CustomOrders({ initialCustomer }) {
                 />
               </Field>
               <Field label="Email for updates" error={errors.contact}>
-                <input type="email" value={customer.email} readOnly aria-label="Email for request updates" className={`${inputClass(errors.contact)} bg-ink/5`} />
+                <input type="email" value={customer.email} readOnly aria-label="Email for request updates" className={`${inputClass(errors.contact)} bg-overlay-ink/5`} />
               </Field>
               <Field label="What would you like to create?" className="sm:col-span-2" error={errors.idea}>
                 <input
@@ -293,11 +293,11 @@ export default function CustomOrders({ initialCustomer }) {
               <div className="sm:col-span-2">
                 <div className={`rounded-2xl border border-dashed px-4 py-5 text-center ${errors.referenceImages ? 'border-bloom bg-bloom/5' : 'border-petal bg-blush/20'}`}>
                   <input id="custom-reference-images" type="file" accept="image/jpeg,image/png,image/webp" multiple className="sr-only" disabled={uploadingImages || referenceImages.length >= 3} onChange={(event) => { uploadReferenceImages(event.target.files); event.target.value = '' }} />
-                  <label htmlFor="custom-reference-images" className={`inline-flex min-h-11 items-center gap-2 rounded-full px-5 text-sm font-semibold text-cream ${uploadingImages || referenceImages.length >= 3 ? 'cursor-not-allowed bg-plum/50' : 'cursor-pointer bg-plum hover:bg-plum/90'}`}><ImagePlus className="h-4 w-4" aria-hidden="true" />{uploadingImages ? 'Uploading photos…' : 'Add reference photos'}</label>
+                  <label htmlFor="custom-reference-images" className={`inline-flex min-h-11 items-center gap-2 rounded-full px-5 text-sm font-semibold text-on-primary ${uploadingImages || referenceImages.length >= 3 ? 'cursor-not-allowed bg-plum/50' : 'cursor-pointer bg-plum hover:bg-plum/90'}`}><ImagePlus className="h-4 w-4" aria-hidden="true" />{uploadingImages ? 'Uploading photos…' : 'Add reference photos'}</label>
                   <p className="mt-2 text-xs text-muted">Optional · Up to 3 JPEG, PNG, or WebP images · 4 MB each</p>
-                  {errors.referenceImages && <p role="alert" className="mt-2 text-sm text-bloom">{errors.referenceImages}</p>}
+                  {errors.referenceImages && <p role="alert" className="mt-2 text-sm text-accent">{errors.referenceImages}</p>}
                 </div>
-                {referenceImages.length > 0 && <div className="mt-3 grid grid-cols-3 gap-2">{referenceImages.map((image) => <div key={image.url} className="relative aspect-square overflow-hidden rounded-xl border border-sand bg-white"><img src={image.url} alt={`Reference photo: ${image.name}`} className="h-full w-full object-cover" /><button type="button" aria-label={`Remove ${image.name}`} onClick={() => setReferenceImages((current) => current.filter((item) => item.url !== image.url))} className="absolute right-1 top-1 rounded-full bg-white p-1.5 text-plum shadow"><X className="h-4 w-4" /></button><p className="absolute inset-x-0 bottom-0 truncate bg-ink/70 px-2 py-1 text-left text-[10px] text-white">{image.name}</p></div>)}</div>}
+                {referenceImages.length > 0 && <div className="mt-3 grid grid-cols-3 gap-2">{referenceImages.map((image) => <div key={image.url} className="relative aspect-square overflow-hidden rounded-xl border border-sand bg-surface"><img src={image.url} alt={`Reference photo: ${image.name}`} className="h-full w-full object-cover" /><button type="button" aria-label={`Remove ${image.name}`} onClick={() => setReferenceImages((current) => current.filter((item) => item.url !== image.url))} className="absolute right-1 top-1 rounded-full bg-surface p-1.5 text-brand shadow"><X className="h-4 w-4" /></button><p className="absolute inset-x-0 bottom-0 truncate bg-overlay-ink/70 px-2 py-1 text-left text-[10px] text-white">{image.name}</p></div>)}</div>}
               </div>
             </div>
 
@@ -306,7 +306,7 @@ export default function CustomOrders({ initialCustomer }) {
                 {submitting ? 'Sending…' : 'Send my custom request'}
               </Button>
             </div>
-            {submitError ? <p role="alert" className="mt-4 text-sm font-medium text-bloom">{submitError}</p> : null}
+            {submitError ? <p role="alert" className="mt-4 text-sm font-medium text-accent">{submitError}</p> : null}
           </form>}
     </section>
     </>
@@ -316,9 +316,9 @@ export default function CustomOrders({ initialCustomer }) {
 function Field({ label, error, className = '', children }) {
   return (
     <label className={`block ${className}`}>
-      <span className="mb-1.5 block text-sm font-semibold text-plum">{label}</span>
+      <span className="mb-1.5 block text-sm font-semibold text-brand">{label}</span>
       {children}
-      {error ? <span className="mt-1 block text-sm text-bloom">{error}</span> : null}
+      {error ? <span className="mt-1 block text-sm text-accent">{error}</span> : null}
     </label>
   )
 }

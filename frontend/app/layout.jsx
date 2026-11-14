@@ -1,11 +1,17 @@
+import localFont from 'next/font/local'
+import { Suspense } from 'react'
 import './globals.css'
 import Navbar from './components/layout/Navbar'
+import { NavigationProgress } from './components/layout/PendingLinkIndicator'
 import Footer from './components/layout/Footer'
 import ScrollToTop from './components/layout/ScrollToTop'
 import PageTransition from './components/layout/PageTransition'
 import ConditionalStorefrontChrome from './components/layout/ConditionalStorefrontChrome'
 import CartSync from './components/cart/CartSync'
 import { getServerCart, getServerUser } from './lib/auth/server'
+
+const craftopiaDisplay = localFont({ src: './fonts/craftopia-display.woff2', weight: '700', display: 'optional', variable: '--font-craftopia-display', adjustFontFallback: 'Arial', fallback: ['Arial', 'sans-serif'] })
+const themeInit = `(function(){var p='system';try{p=localStorage.getItem('jamaes:theme')||'system'}catch(e){}if(!['light','dark','system'].includes(p))p='system';var d=p==='dark'||(p==='system'&&matchMedia('(prefers-color-scheme: dark)').matches);var r=document.documentElement;r.dataset.theme=d?'dark':'light';r.dataset.themePreference=p;r.style.colorScheme=d?'dark':'light'})()`
 
 const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://craftopia-store.vercel.app').replace(/\/$/, '')
 
@@ -63,14 +69,10 @@ export default async function RootLayout({ children }) {
   }
 
   return (
-    <html lang="en">
+    <html lang="en" className={craftopiaDisplay.variable} suppressHydrationWarning>
       <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500;1,9..144,600&family=Nunito:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap"
-          rel="stylesheet"
-        />
+        <script dangerouslySetInnerHTML={{ __html: themeInit }} />
+        <link rel="preconnect" href="https://res.cloudinary.com" />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
@@ -78,10 +80,11 @@ export default async function RootLayout({ children }) {
       </head>
       <body>
         <CartSync initialUser={initialUser} initialCart={initialCart} />
+        <Suspense fallback={null}><NavigationProgress /></Suspense>
         <div className="flex min-h-screen flex-col">
           <a
             href="#main"
-            className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[60] focus:rounded-full focus:bg-plum focus:px-4 focus:py-2 focus:text-cream"
+            className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[60] focus:rounded-full focus:bg-plum focus:px-4 focus:py-2 focus:text-on-primary"
           >
             Skip to content
           </a>
@@ -92,7 +95,7 @@ export default async function RootLayout({ children }) {
               {children}
             </PageTransition>
           </main>
-          <ConditionalStorefrontChrome><Footer /></ConditionalStorefrontChrome>
+          <Suspense fallback={null}><ConditionalStorefrontChrome><Footer /></ConditionalStorefrontChrome></Suspense>
         </div>
       </body>
     </html>

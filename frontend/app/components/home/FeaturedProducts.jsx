@@ -17,7 +17,13 @@ export default function FeaturedProducts({ initialProducts }) {
   const [containerRef, inView] = useInView({ rootMargin: '350px' })
 
   useEffect(() => {
-    // If SSR already pre-loaded featured products, skip client fetch
+    if (!Array.isArray(initialProducts)) return
+    setFeatured(initialProducts)
+    if (initialProducts.length) setLoading(false)
+  }, [initialProducts])
+
+  useEffect(() => {
+    // SSR data is refreshed by the parent server view; preserve the existing fallback fetch.
     if (!inView || hasInitial) return
     let active = true
     api.products.list({ featured: true, limit: 8 })
@@ -34,17 +40,17 @@ export default function FeaturedProducts({ initialProducts }) {
   }, [inView, hasInitial])
 
   return (
-    <section ref={containerRef} className="container-page mt-20 sm:mt-28">
+    <section ref={containerRef} className="container-page studio-section">
       <SectionHeading
         eyebrow="On the table right now"
         title="Featured creations"
         description="A handful of pieces we love — each one handmade, each one a little different from the last."
       />
-      <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="studio-product-grid mt-10">
         {Array.isArray(featured) && featured.length > 0 ? (
           featured.map((product, i) => (
             <ScrollReveal key={product.id} delay={i * 0.04}>
-              <ProductCard product={product} />
+              <ProductCard product={product} imageSizes="(max-width: 1023px) 50vw, 25vw" />
             </ScrollReveal>
           ))
         ) : loading ? (

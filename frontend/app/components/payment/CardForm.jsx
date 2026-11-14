@@ -88,8 +88,8 @@ export default function CardForm({ total, testMode, onSubmit, loading, error }) 
     <div>
       {testMode && (
         <div className="mb-4 flex items-start gap-2 rounded-xl bg-peach/30 border border-peach/50 p-3 text-sm">
-          <AlertCircle className="h-4 w-4 text-bloom shrink-0 mt-0.5" aria-hidden="true" />
-          <p className="text-plum">
+          <AlertCircle className="h-4 w-4 text-accent shrink-0 mt-0.5" aria-hidden="true" />
+          <p className="text-brand">
             <strong>Test mode.</strong> Use test card numbers (e.g. 4111 1111 1111 1111) for validation; no real charge will occur.
           </p>
         </div>
@@ -147,7 +147,7 @@ export default function CardForm({ total, testMode, onSubmit, loading, error }) 
         </div>
 
         {error && (
-          <p className="mt-3 text-sm text-bloom" role="alert">{error}</p>
+          <p className="mt-3 text-sm text-accent" role="alert">{error}</p>
         )}
 
         <div className="mt-5">

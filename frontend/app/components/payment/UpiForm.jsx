@@ -72,8 +72,8 @@ export default function UpiForm({ total, orderId, onSubmit, loading, error }) {
 
   if (configurationError) {
     return (
-      <div role="alert" className="flex items-start gap-3 rounded-2xl bg-peach/20 p-4 text-sm text-plum">
-        <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-bloom" />
+      <div role="alert" className="flex items-start gap-3 rounded-2xl bg-peach/20 p-4 text-sm text-brand">
+        <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-accent" />
         <p>{configurationError}</p>
       </div>
     )
@@ -81,8 +81,8 @@ export default function UpiForm({ total, orderId, onSubmit, loading, error }) {
 
   if (!merchant) {
     return (
-      <div role="status" className="flex items-center gap-3 rounded-2xl bg-ivory/80 p-5 text-sm text-plum animate-pulse">
-        <Loader2 className="h-5 w-5 animate-spin text-plum" />
+      <div role="status" className="flex items-center gap-3 rounded-2xl bg-ivory/80 p-5 text-sm text-brand animate-pulse">
+        <Loader2 className="h-5 w-5 animate-spin text-brand" />
         <p>Loading secure UPI payment details…</p>
       </div>
     )
@@ -94,8 +94,8 @@ export default function UpiForm({ total, orderId, onSubmit, loading, error }) {
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-sand/60 pb-3">
         <div className="flex items-center gap-2">
           <CheckCircle2 className="h-5 w-5 text-sage" aria-hidden="true" />
-          <span className="font-semibold text-plum">Amount to pay:</span>
-          <span className="font-display text-xl font-bold text-plum">{formattedTotal}</span>
+          <span className="font-semibold text-brand">Amount to pay:</span>
+          <span className="font-display text-xl font-bold text-brand">{formattedTotal}</span>
         </div>
         <span className="rounded-full bg-sage/15 px-3 py-1 text-xs font-semibold text-sage">
           Zero extra fee
@@ -105,12 +105,12 @@ export default function UpiForm({ total, orderId, onSubmit, loading, error }) {
       {/* 1-Tap Mobile UPI App Opener (GPay, PhonePe, Paytm, BHIM) */}
       {isMobile && upiDeepLink && (
         <div className="rounded-2xl border border-plum/20 bg-plum/5 p-4 text-center">
-          <p className="text-xs font-medium text-plum/80 mb-2.5">
+          <p className="text-xs font-medium text-brand/80 mb-2.5">
             Paying from this phone? Tap below to launch your UPI app directly:
           </p>
           <a
             href={upiDeepLink}
-            className="flex w-full items-center justify-center gap-2.5 rounded-xl bg-plum px-5 py-3.5 text-base font-semibold text-cream shadow-soft transition hover:bg-ink active:scale-[0.99]"
+            className="flex w-full items-center justify-center gap-2.5 rounded-xl bg-plum px-5 py-3.5 text-base font-semibold text-on-primary shadow-soft transition hover:bg-overlay-ink active:scale-[0.99]"
           >
             <Smartphone className="h-5 w-5 shrink-0" aria-hidden="true" />
             <span>Open UPI App to Pay ({formattedTotal})</span>
@@ -140,19 +140,19 @@ export default function UpiForm({ total, orderId, onSubmit, loading, error }) {
         <div className="min-w-0 space-y-3">
           <div>
             <p className="text-xs font-medium uppercase tracking-wider text-muted">Merchant Name</p>
-            <p className="font-display text-base font-bold text-plum">{merchant.name}</p>
+            <p className="font-display text-base font-bold text-brand">{merchant.name}</p>
           </div>
 
           <div>
             <p className="text-xs font-medium uppercase tracking-wider text-muted">UPI ID / VPA</p>
             <div className="mt-1 flex items-center gap-2 flex-wrap">
-              <code className="rounded-lg bg-white px-2.5 py-1 text-sm font-mono font-semibold text-plum border border-sand">
+              <code className="rounded-lg bg-surface px-2.5 py-1 text-sm font-mono font-semibold text-brand border border-sand">
                 {merchant.vpa}
               </code>
               <button
                 type="button"
                 onClick={handleCopyVpa}
-                className="inline-flex items-center gap-1 rounded-lg border border-sand bg-white px-2.5 py-1 text-xs font-medium text-plum hover:bg-cream transition"
+                className="inline-flex items-center gap-1 rounded-lg border border-sand bg-surface px-2.5 py-1 text-xs font-medium text-brand hover:bg-cream transition"
                 title="Copy UPI ID"
               >
                 {copiedVpa ? (
@@ -172,15 +172,15 @@ export default function UpiForm({ total, orderId, onSubmit, loading, error }) {
 
           <ol className="space-y-1.5 text-xs text-ink/85 border-t border-sand/50 pt-2.5">
             <li className="flex items-start gap-1.5">
-              <strong className="text-bloom">1.</strong>
+              <strong className="text-accent">1.</strong>
               <span>{isMobile ? 'Tap the "Open UPI App" button above, or copy the UPI ID.' : 'Scan the QR code or copy the UPI ID above.'}</span>
             </li>
             <li className="flex items-start gap-1.5">
-              <strong className="text-bloom">2.</strong>
+              <strong className="text-accent">2.</strong>
               <span>Pay <strong>{formattedTotal}</strong> in your UPI app.</span>
             </li>
             <li className="flex items-start gap-1.5">
-              <strong className="text-bloom">3.</strong>
+              <strong className="text-accent">3.</strong>
               <span>Enter your UTR number below and place your order.</span>
             </li>
           </ol>
@@ -189,7 +189,7 @@ export default function UpiForm({ total, orderId, onSubmit, loading, error }) {
 
       {/* UTR Reference Input */}
       <div className="space-y-1.5">
-        <label className="block text-sm font-medium text-plum" htmlFor="upi-utr">
+        <label className="block text-sm font-medium text-brand" htmlFor="upi-utr">
           UPI Reference / UTR Number <span className="text-xs font-normal text-muted">(Optional, recommended)</span>
         </label>
         <input
@@ -200,7 +200,7 @@ export default function UpiForm({ total, orderId, onSubmit, loading, error }) {
           maxLength={40}
           autoComplete="off"
           placeholder="e.g. 431289567123 (12-digit UTR from your bank or UPI app)"
-          className="w-full rounded-xl border border-sand bg-white px-3.5 py-2.5 font-mono text-sm tracking-wide text-plum placeholder:font-sans placeholder:text-muted placeholder:tracking-normal focus:border-bloom focus:outline-none focus:ring-2 focus:ring-bloom/20"
+          className="w-full rounded-xl border border-sand bg-surface px-3.5 py-2.5 font-mono text-sm tracking-wide text-brand placeholder:font-sans placeholder:text-muted placeholder:tracking-normal focus:border-bloom focus:outline-none focus:ring-2 focus:ring-bloom/20"
         />
         <p className="text-[11px] text-muted">
           Entering your UTR number allows our team to verify and confirm your order promptly.
@@ -208,7 +208,7 @@ export default function UpiForm({ total, orderId, onSubmit, loading, error }) {
       </div>
 
       {error && (
-        <div role="alert" className="rounded-xl bg-peach/30 p-3 text-sm text-bloom">
+        <div role="alert" className="rounded-xl bg-peach/30 p-3 text-sm text-accent">
           {error}
         </div>
       )}
@@ -220,7 +220,7 @@ export default function UpiForm({ total, orderId, onSubmit, loading, error }) {
           type="button"
           disabled={loading}
           onClick={() => handlePlaceOrder(false)}
-          className="w-full inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-plum px-6 py-3 font-semibold text-cream shadow-soft transition hover:bg-ink hover:shadow-lift disabled:pointer-events-none disabled:opacity-60"
+          className="w-full inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-plum px-6 py-3 font-semibold text-on-primary shadow-soft transition hover:bg-overlay-ink hover:shadow-lift disabled:pointer-events-none disabled:opacity-60"
         >
           {loading ? (
             <>

@@ -27,8 +27,8 @@ export default function CheckoutProgress({ current = 'address' }) {
               <div
                 className={`
                   flex h-8 w-8 items-center justify-center rounded-full border-2 text-sm font-bold transition-all
-                  ${isDone  ? 'border-bloom bg-bloom text-cream' : ''}
-                  ${isActive ? 'border-bloom bg-bloom text-cream shadow-soft' : ''}
+                  ${isDone  ? 'border-bloom bg-bloom text-on-primary' : ''}
+                  ${isActive ? 'border-bloom bg-bloom text-on-primary shadow-soft' : ''}
                   ${isPending ? 'border-sand bg-cream text-sand' : ''}
                 `}
               >
@@ -41,7 +41,7 @@ export default function CheckoutProgress({ current = 'address' }) {
               <span
                 className={`
                   whitespace-nowrap text-xs font-semibold transition-colors
-                  ${isActive ? 'text-bloom' : ''}
+                  ${isActive ? 'text-accent' : ''}
                   ${isDone  ? 'text-sage' : ''}
                   ${isPending ? 'text-sand' : ''}
                 `}

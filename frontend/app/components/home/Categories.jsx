@@ -13,7 +13,11 @@ export default function Categories({ initialCategories }) {
   const [containerRef, inView] = useInView({ rootMargin: '350px' })
 
   useEffect(() => {
-    // If SSR already pre-loaded categories, skip client-side fetch
+    if (Array.isArray(initialCategories)) setCategories(initialCategories)
+  }, [initialCategories])
+
+  useEffect(() => {
+    // The parent refreshes SSR data in place; retain the original fallback fetch.
     if (!inView || (Array.isArray(initialCategories) && initialCategories.length > 0)) return
     let active = true
     api.categories.list()
@@ -27,7 +31,7 @@ export default function Categories({ initialCategories }) {
   }, [inView, initialCategories])
 
   return (
-    <section ref={containerRef} className="container-page mt-20 sm:mt-28">
+    <section ref={containerRef} className="container-page studio-section">
       <SectionHeading
         eyebrow="Wander the shelves"
         title="Shop by category"

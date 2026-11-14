@@ -1,3 +1,4 @@
+import PendingLinkIndicator from '../layout/PendingLinkIndicator'
 /**
  * Button Component - Unified polymorphic button/link styles.
  * Renders as a real <a> tag when `as={Link}` is passed,
@@ -12,14 +13,14 @@ export default function Button({
   href,
   ...props
 }) {
-  const baseClasses = 'inline-flex items-center justify-center gap-2 rounded-full font-semibold tracking-wide transition duration-300 ease-out disabled:pointer-events-none disabled:opacity-50'
+  const baseClasses = 'inline-flex items-center justify-center gap-2 rounded-md font-semibold transition-colors duration-200 disabled:pointer-events-none disabled:opacity-50'
 
   const variants = {
-    primary: 'bg-plum text-cream shadow-soft hover:bg-ink hover:-translate-y-0.5 hover:shadow-lift active:translate-y-0',
-    secondary: 'bg-ivory text-plum ring-1 ring-blush/80 hover:bg-blush/60 hover:-translate-y-0.5',
-    outline: 'border-2 border-sand text-plum hover:border-bloom hover:text-bloom',
-    ghost: 'text-bloom hover:bg-blush/30',
-    blush: 'bg-blush text-plum hover:bg-petal/70 hover:-translate-y-0.5',
+    primary: 'studio-button-primary',
+    secondary: 'studio-button-secondary',
+    outline: 'border-2 border-sand text-brand hover:border-bloom hover:text-accent',
+    ghost: 'text-accent hover:bg-blush/30',
+    blush: 'bg-blush text-brand hover:bg-petal',
   }
 
   const sizes = {
@@ -42,6 +43,7 @@ export default function Button({
   return (
     <Component href={href} className={classes} {...props}>
       {children}
+      <PendingLinkIndicator />
     </Component>
   )
 }

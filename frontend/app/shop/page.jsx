@@ -1,5 +1,7 @@
 import { Suspense } from 'react'
 import ShopClient from './ShopClient'
+import PageHeader from '@/components/layout/PageHeader'
+import LoadingCollection from './loading'
 
 export const dynamic = 'force-dynamic'
 
@@ -38,22 +40,20 @@ async function getCategories() {
   }
 }
 
+async function ShopContent({ productsPromise, categoriesPromise, category }) {
+  // Category labels must not hold back the actual product grid.
+  const products = await productsPromise
+  return <ShopClient initialProducts={products} categoriesPromise={categoriesPromise} initialCategory={category} />
+}
 export default async function ShopPage({ searchParams }) {
   const sp = await searchParams
   const category = sp?.category || 'all'
-
-  const [products, categories] = await Promise.all([
-    getInitialProducts(category),
-    getCategories(),
-  ])
-
-  return (
-    <Suspense fallback={<div className="container-page py-20 text-center text-muted">Opening the workshop doors…</div>}>
-      <ShopClient
-        initialProducts={products}
-        initialCategories={categories}
-        initialCategory={category}
-      />
+  const productsPromise = getInitialProducts(category)
+  const categoriesPromise = getCategories()
+  return <>
+    <PageHeader eyebrow="The collection" title="Shop handmade pieces" description="Browse toys, flowers, accessories, and custom-ready keepsakes. Filter by what you are in the mood for." />
+    <Suspense fallback={<LoadingCollection showHeader={false} />}>
+      <ShopContent productsPromise={productsPromise} categoriesPromise={categoriesPromise} category={category} />
     </Suspense>
-  )
+  </>
 }

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Home, Briefcase, MapPin, Pencil, Trash2, Star, Check, AlertTriangle } from 'lucide-react'
+import { Home, Briefcase, MapPin, Pencil, Trash2, Star, Check, AlertTriangle, Phone } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { ADDRESS_TYPES } from '@/lib/address'
 
@@ -28,9 +28,9 @@ export default function AddressCard({
   return (
     <article
       className={cn(
-        'group relative rounded-2xl border-2 bg-ivory/40 p-5 transition-all hover:shadow-soft',
+        'group relative rounded-xl border bg-surface p-5 transition-colors',
         selected
-          ? 'border-bloom ring-1 ring-bloom/20 shadow-soft'
+          ? 'border-plum bg-blush/20'
           : 'border-sand hover:border-blush/60'
       )}
     >
@@ -50,7 +50,7 @@ export default function AddressCard({
             <span
               className={cn(
                 'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider',
-                selected ? 'bg-bloom text-cream' : 'bg-blush/60 text-plum'
+                selected ? 'bg-bloom text-on-primary' : 'bg-blush/60 text-brand'
               )}
             >
               <TypeIcon type={address.addressType} className="h-3.5 w-3.5" />
@@ -69,7 +69,7 @@ export default function AddressCard({
             className={cn(
               'flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition',
               selected
-                ? 'border-bloom bg-bloom text-cream'
+                ? 'border-bloom bg-bloom text-on-primary'
                 : 'border-sand bg-cream'
             )}
             aria-hidden="true"
@@ -80,7 +80,7 @@ export default function AddressCard({
 
         {/* Body */}
         <div className="mt-3">
-          <h3 className="font-display text-lg text-plum">{address.fullName}</h3>
+          <h3 className="font-display text-lg text-brand">{address.fullName}</h3>
           <p className="mt-1 text-sm text-muted leading-relaxed">
             {address.houseFlatBuilding}
             {address.areaStreet ? `, ${address.areaStreet}` : ''}
@@ -89,7 +89,7 @@ export default function AddressCard({
           <p className="text-sm text-muted">
             {address.city}, {address.state} — <span className="tabular-nums">{address.pinCode}</span>
           </p>
-          <p className="mt-1 text-sm text-muted tabular-nums">📞 +91 {address.mobileNumber}</p>
+          <p className="mt-2 flex items-center gap-2 text-sm text-muted tabular-nums"><Phone className="h-3.5 w-3.5" aria-hidden="true" /> +91 {address.mobileNumber}</p>
         </div>
       </div>
 
@@ -99,7 +99,7 @@ export default function AddressCard({
           <button
             type="button"
             onClick={(e) => { e.stopPropagation(); onMakeDefault?.(address.id) }}
-            className="inline-flex items-center gap-1.5 rounded-full bg-cream px-3 py-1.5 text-xs font-semibold text-plum ring-1 ring-sand transition hover:ring-bloom/40 hover:text-bloom"
+            className="inline-flex items-center gap-1.5 rounded-md bg-surface px-3 py-1.5 text-xs font-semibold text-brand ring-1 ring-sand transition hover:ring-bloom/40 hover:text-accent"
           >
             <Star className="h-3.5 w-3.5" aria-hidden="true" />
             Make default
@@ -108,7 +108,7 @@ export default function AddressCard({
         <button
           type="button"
           onClick={(e) => { e.stopPropagation(); onEdit?.(address) }}
-          className="inline-flex items-center gap-1.5 rounded-full bg-cream px-3 py-1.5 text-xs font-semibold text-plum ring-1 ring-sand transition hover:ring-bloom/40 hover:text-bloom"
+          className="inline-flex items-center gap-1.5 rounded-md bg-surface px-3 py-1.5 text-xs font-semibold text-brand ring-1 ring-sand transition hover:ring-bloom/40 hover:text-accent"
         >
           <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
           Edit
@@ -116,7 +116,7 @@ export default function AddressCard({
         <button
           type="button"
           onClick={(e) => { e.stopPropagation(); setConfirmDelete(true) }}
-          className="inline-flex items-center gap-1.5 rounded-full bg-cream px-3 py-1.5 text-xs font-semibold text-bloom ring-1 ring-sand transition hover:ring-bloom/40"
+          className="inline-flex items-center gap-1.5 rounded-md bg-surface px-3 py-1.5 text-xs font-semibold text-accent ring-1 ring-sand transition hover:ring-bloom/40"
         >
           <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
           Remove
@@ -126,18 +126,18 @@ export default function AddressCard({
       {/* Delete confirmation popover */}
       {confirmDelete && (
         <div
-          className="absolute inset-0 z-30 flex items-center justify-center rounded-2xl bg-ink/30 backdrop-blur-sm p-4"
+          className="absolute inset-0 z-30 flex items-center justify-center rounded-2xl bg-surface/95 p-4"
           role="alertdialog"
           aria-label="Confirm delete address"
           onClick={(e) => e.stopPropagation()}
         >
           <div className="w-full max-w-sm rounded-2xl bg-cream p-5 shadow-lift">
             <div className="flex items-start gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-bloom/15 text-bloom">
+              <div className="shrink-0 text-accent">
                 <AlertTriangle className="h-5 w-5" aria-hidden="true" />
               </div>
               <div className="min-w-0">
-                <h4 className="font-display text-lg text-plum">Remove this address?</h4>
+                <h4 className="font-display text-lg text-brand">Remove this address?</h4>
                 <p className="mt-1 text-sm text-muted">
                   This will delete the {typeLabel(address.addressType).toLowerCase()} address for {address.fullName}. You can re-add it later.
                 </p>
@@ -147,14 +147,14 @@ export default function AddressCard({
               <button
                 type="button"
                 onClick={() => setConfirmDelete(false)}
-                className="rounded-full px-4 py-2 text-sm font-semibold text-muted hover:text-plum transition"
+                className="rounded-full px-4 py-2 text-sm font-semibold text-muted hover:text-brand transition"
               >
                 Cancel
               </button>
               <button
                 type="button"
                 onClick={() => { setConfirmDelete(false); onDelete?.(address.id) }}
-                className="rounded-full bg-bloom px-4 py-2 text-sm font-semibold text-cream hover:bg-plum transition"
+                className="rounded-full bg-bloom px-4 py-2 text-sm font-semibold text-on-primary hover:bg-plum transition"
               >
                 Yes, remove
               </button>

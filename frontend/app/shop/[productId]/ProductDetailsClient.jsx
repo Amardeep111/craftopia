@@ -59,8 +59,8 @@ export default function ProductDetailsClient({ initialProduct, initialRelatedPro
     const purchaseOptions = purchaseOptionsRef.current
     if (!purchaseOptions) return
     const observer = new IntersectionObserver(([entry]) => {
-      setShowStickyPurchase(!entry.isIntersecting)
-    }, { threshold: 0.05 })
+      setShowStickyPurchase(!entry.isIntersecting || entry.intersectionRatio < 0.95)
+    }, { threshold: [0, 0.95], rootMargin: '-80px 0px 0px 0px' })
     observer.observe(purchaseOptions)
     return () => observer.disconnect()
   }, [product?.id])
@@ -144,6 +144,7 @@ export default function ProductDetailsClient({ initialProduct, initialRelatedPro
   const outOfStock = Boolean(product && (product.availableForSale === false || maxOrderQuantity <= 0))
   const deliveryRestricted = deliveryResult?.restricted === true
   const purchaseBlocked = outOfStock || deliveryRestricted
+  const addToBagLabel = product?.availableForSale === false ? 'Unavailable' : maxOrderQuantity <= 0 ? 'Stock limit reached' : deliveryRestricted ? 'Not deliverable here' : goToBag ? 'Go to bag' : addedConfirm ? 'Added to bag' : 'Add to bag'
 
   useEffect(() => {
     setQty((quantity) => Math.min(Math.max(1, quantity), Math.max(1, maxOrderQuantity)))
@@ -207,13 +208,13 @@ export default function ProductDetailsClient({ initialProduct, initialRelatedPro
       <div className="container-page py-20">
         <div className="paper-card mx-auto max-w-lg px-8 py-14 text-center">
           <Flower2 className="mx-auto h-10 w-10 text-petal" aria-hidden="true" />
-          <h2 className="mt-4 font-display text-3xl text-plum">This piece is not on the shelf</h2>
+          <h2 className="mt-4 font-display text-3xl text-brand">This piece is not on the shelf</h2>
           <p className="mt-3 text-muted">
             It may have been a mistyped link. Wander back to the shop to find something lovely.
           </p>
           <Link
             href="/shop"
-            className="mt-6 inline-flex items-center justify-center rounded-full bg-plum px-5 py-2.5 text-sm font-semibold text-cream shadow-soft transition hover:bg-ink hover:-translate-y-0.5 hover:shadow-lift active:translate-y-0"
+            className="mt-6 inline-flex items-center justify-center rounded-full bg-plum px-5 py-2.5 text-sm font-semibold text-on-primary shadow-soft transition hover:bg-overlay-ink hover:-translate-y-0.5 hover:shadow-lift active:translate-y-0"
           >
             Back to shop
           </Link>
@@ -239,29 +240,29 @@ export default function ProductDetailsClient({ initialProduct, initialRelatedPro
   }
 
   return (
-    <>
+    <div className="studio-product-page">
       <div className="container-page pb-32 pt-6 lg:pb-20">
         {/* Breadcrumb */}
         <nav className="flex flex-wrap items-center gap-2 text-sm text-muted" aria-label="Breadcrumb">
           <Link
             href="/shop"
-            className="inline-flex items-center gap-1 font-semibold text-plum hover:text-bloom"
+            className="inline-flex items-center gap-1 font-semibold text-brand hover:text-accent"
           >
             <ChevronLeft className="h-4 w-4" />
             Shop
           </Link>
           <span aria-hidden="true">/</span>
-          <Link href={`/shop?category=${categoryId || ''}`} className="hover:text-plum">
+          <Link href={`/shop?category=${categoryId || ''}`} className="hover:text-brand">
             {category?.name || product?.categoryName || product?.category?.name || 'Collection'}
           </Link>
           <span aria-hidden="true">/</span>
-          <span className="text-plum">{product.name}</span>
+          <span className="text-brand">{product.name}</span>
         </nav>
 
         {/* Product layout */}
         <div className="mt-8 grid gap-10 lg:grid-cols-2">
           {/* Images: Shows collage loading state while images are fetching */}
-          <div>
+          <div className="self-start lg:sticky lg:top-24">
             <ProductImageGallery product={product} />
           </div>
 
@@ -270,38 +271,38 @@ export default function ProductDetailsClient({ initialProduct, initialRelatedPro
             <p className="inline-flex items-center gap-2 text-sm font-semibold text-moss"><Flower2 className="h-4 w-4" aria-hidden="true" /> Handmade</p>
             <h1 className="heading-display mt-2 text-3xl sm:text-4xl">{product.name}</h1>
             <div className="mt-2 flex flex-wrap items-center gap-3">
-              <span className="text-sm font-semibold text-bloom">
+              <span className="text-sm font-semibold text-accent">
                 {category?.name || product?.categoryName || product?.category?.name || ''}
               </span>
               {reviewStats.count > 0 ? (
                 <button
                   type="button"
                   onClick={() => document.getElementById('customer-reviews')?.scrollIntoView({ behavior: 'smooth' })}
-                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-plum hover:text-bloom transition"
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-brand hover:text-accent transition"
                 >
                   <span className="flex items-center gap-0.5 text-amber-500 font-bold">
                     <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
                     {reviewStats.avg.toFixed(1)}
                   </span>
                   <span className="text-muted">({reviewStats.count} {reviewStats.count === 1 ? 'review' : 'reviews'})</span>
-                  <span className="text-bloom underline underline-offset-2">See reviews ↓</span>
+                  <span className="text-accent underline underline-offset-2">See reviews ↓</span>
                 </button>
               ) : (
                 <button
                   type="button"
                   onClick={() => document.getElementById('customer-reviews')?.scrollIntoView({ behavior: 'smooth' })}
-                  className="text-xs text-muted hover:text-plum transition underline underline-offset-2"
+                  className="text-xs text-muted hover:text-brand transition underline underline-offset-2"
                 >
                   Write first review ↓
                 </button>
               )}
             </div>
             <div className="mt-4 flex flex-wrap items-baseline gap-3">
-              <p className="text-3xl font-semibold tracking-tight text-plum">{formatPrice(salePrice)}</p>
+              <p className="text-3xl font-semibold tracking-tight text-brand">{formatPrice(salePrice)}</p>
               {discountPercent > 0 && (
                 <>
                   <span className="text-base text-muted line-through">{formatPrice(product.price)}</span>
-                  <span className="rounded-full bg-bloom/10 px-3 py-1 text-sm font-bold text-bloom">
+                  <span className="rounded-full bg-bloom/10 px-3 py-1 text-sm font-bold text-accent">
                     {discountPercent}% off
                   </span>
                 </>
@@ -309,18 +310,18 @@ export default function ProductDetailsClient({ initialProduct, initialRelatedPro
             </div>
             <div className="mt-3 flex items-center gap-2">
               {outOfStock ? (
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-rose-50 border border-rose-200 px-3 py-1 text-xs font-semibold text-rose-700">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-danger-surface border border-rose-200 px-3 py-1 text-xs font-semibold text-danger">
                   <span className="h-1.5 w-1.5 rounded-full bg-rose-600" />
                   Out of stock
                 </span>
               ) : hasStockCount && stockCount > 0 && stockCount <= 5 ? (
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 border border-amber-300 px-3 py-1 text-xs font-semibold text-amber-900 shadow-sm animate-pulse">
-                  <span className="text-amber-600 font-bold">⚡</span>
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-warning-surface border border-amber-300 px-3 py-1 text-xs font-semibold text-warning shadow-sm animate-pulse">
+                  <span className="text-warning font-bold">⚡</span>
                   Only {stockCount} left in stock — order soon
                 </span>
               ) : (
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 border border-emerald-200 px-3 py-1 text-xs font-semibold text-emerald-800">
-                  <span className="text-emerald-600 font-bold">✓</span>
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-success-surface border border-emerald-200 px-3 py-1 text-xs font-semibold text-success">
+                  <span className="text-success font-bold">✓</span>
                   In stock · Ready to dispatch
                 </span>
               )}
@@ -341,33 +342,33 @@ export default function ProductDetailsClient({ initialProduct, initialRelatedPro
               <div>
                 <h2 className="heading-display text-xl">Description</h2>
                 <div className="relative mt-1">
-                  <div ref={descriptionRef} className={`overflow-hidden text-muted transition-[max-height] duration-300 ${descriptionExpanded ? 'max-h-[200rem]' : 'max-h-48'}`}>
+                  <div id="product-description" ref={descriptionRef} className={`overflow-hidden text-muted ${descriptionExpanded ? 'max-h-none' : 'max-h-48'}`}>
                     {descriptionContent || product.description || product.short}
                   </div>
                   {!descriptionExpanded && descriptionHasOverflow && <div className="pointer-events-none absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-cream to-transparent" aria-hidden="true" />}
                 </div>
                 {(descriptionHasOverflow || descriptionExpanded) && (
-                  <button type="button" aria-expanded={descriptionExpanded} onClick={() => setDescriptionExpanded((expanded) => !expanded)} className="mt-2 inline-flex min-h-10 items-center gap-1 rounded-full px-3 text-sm font-semibold text-plum transition hover:bg-blush/25">
+                  <button type="button" aria-controls="product-description" aria-expanded={descriptionExpanded} onClick={() => setDescriptionExpanded((expanded) => !expanded)} className="mt-2 inline-flex min-h-10 items-center gap-1 rounded-full px-3 text-sm font-semibold text-brand transition hover:bg-blush/25">
                     {descriptionExpanded ? 'Read less' : 'Read more'} <span aria-hidden="true">{descriptionExpanded ? '↑' : '↓'}</span>
                   </button>
                 )}
               </div>
               <details className="group border-y border-sand/80 py-4">
-                <summary className="flex cursor-pointer list-none items-center justify-between gap-4 font-semibold text-plum focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-plum">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-4 font-semibold text-brand focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-plum">
                   <span>Materials, care & customization</span>
                   <ChevronDown className="h-4 w-4 shrink-0 text-moss transition-transform group-open:rotate-180" aria-hidden="true" />
                 </summary>
                 <div className="mt-4 space-y-4">
                   <div>
-                    <h3 className="text-sm font-medium text-plum">Customization</h3>
+                    <h3 className="text-sm font-medium text-brand">Customization</h3>
                     <div className="mt-1 text-sm text-muted">{customizationContent || product.customization || 'Made with care to your preferences.'}</div>
                   </div>
                   <div>
-                    <h3 className="text-sm font-medium text-plum">Materials</h3>
+                    <h3 className="text-sm font-medium text-brand">Materials</h3>
                     <div className="mt-1 text-sm text-muted">{materialsContent || product.materials || 'Soft cotton-blend yarn and fine details.'}</div>
                   </div>
                   <div>
-                    <h3 className="text-sm font-medium text-plum">Care</h3>
+                    <h3 className="text-sm font-medium text-brand">Care</h3>
                     <div className="mt-1 text-sm text-muted">{careContent || product.care || 'Spot clean gently with a damp cloth.'}</div>
                   </div>
                 </div>
@@ -375,7 +376,7 @@ export default function ProductDetailsClient({ initialProduct, initialRelatedPro
             </section>
 
             <details className="group mt-5 border-y border-sand/80 py-4" aria-label="Delivery availability">
-              <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-sm font-semibold text-plum focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-plum">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-sm font-semibold text-brand focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-plum">
                 <span>Check delivery to your area <span className="mt-1 block text-xs font-normal text-muted">Use your state or PIN code</span></span>
                 <ChevronDown className="h-4 w-4 shrink-0 text-moss transition-transform group-open:rotate-180" aria-hidden="true" />
               </summary>
@@ -393,7 +394,7 @@ export default function ProductDetailsClient({ initialProduct, initialRelatedPro
                     showSearch
                     searchPlaceholder="Search states..."
                   />
-                  <label className="block text-sm font-semibold text-plum">
+                  <label className="block text-sm font-semibold text-brand">
                     PIN code (optional)
                     <input
                       aria-label="Delivery PIN code"
@@ -405,13 +406,13 @@ export default function ProductDetailsClient({ initialProduct, initialRelatedPro
                         setDeliveryResult(null)
                       }}
                       placeholder="6-digit PIN"
-                      className="mt-1.5 min-h-11 w-full rounded-xl border border-sand bg-white px-3 text-sm font-normal"
+                      className="mt-1.5 min-h-11 w-full rounded-xl border border-sand bg-surface px-3 text-sm font-normal"
                     />
                   </label>
                   <button
                     type="button"
                     onClick={checkDelivery}
-                    className="min-h-11 self-end rounded-xl bg-plum px-4 text-sm font-semibold text-cream"
+                    className="min-h-11 self-end rounded-xl bg-plum px-4 text-sm font-semibold text-on-primary"
                   >
                     Check
                   </button>
@@ -419,7 +420,7 @@ export default function ProductDetailsClient({ initialProduct, initialRelatedPro
                 {deliveryResult && (
                   <p
                     role={deliveryResult.available ? 'status' : 'alert'}
-                    className={`mt-2 text-sm ${deliveryResult.available ? 'text-green-800' : 'text-bloom'}`}
+                    className={`mt-2 text-sm ${deliveryResult.available ? 'text-success' : 'text-accent'}`}
                   >
                     {deliveryResult.message}
                   </p>
@@ -434,21 +435,21 @@ export default function ProductDetailsClient({ initialProduct, initialRelatedPro
               </div>
             </details>
 
-            <section ref={purchaseOptionsRef} className="mt-6 border-y border-sand py-4" aria-label="Purchase options">
-              <div className="flex items-center gap-2 sm:gap-3">
+            <section className="mt-6 border-y border-sand py-4" aria-label="Purchase options">
+              <div ref={purchaseOptionsRef} className="flex items-center gap-2 sm:gap-3">
                 <div className="inline-flex shrink-0 items-center rounded-full bg-ivory ring-1 ring-sand">
-                  <button type="button" disabled={qty <= 1} className="p-3 text-plum disabled:opacity-40" aria-label="Decrease quantity" onClick={() => setQty((q) => Math.max(1, q - 1))}><Minus className="h-4 w-4" /></button>
+                  <button type="button" disabled={qty <= 1} className="p-3 text-brand disabled:opacity-40" aria-label="Decrease quantity" onClick={() => setQty((q) => Math.max(1, q - 1))}><Minus className="h-4 w-4" /></button>
                   <span className="min-w-7 text-center text-sm font-semibold" aria-live="polite">{qty}</span>
-                  <button type="button" disabled={qty >= maxOrderQuantity} className="p-3 text-plum disabled:opacity-40" aria-label="Increase quantity" onClick={() => setQty((q) => Math.min(maxOrderQuantity, q + 1))}><Plus className="h-4 w-4" /></button>
+                  <button type="button" disabled={qty >= maxOrderQuantity} className="p-3 text-brand disabled:opacity-40" aria-label="Increase quantity" onClick={() => setQty((q) => Math.min(maxOrderQuantity, q + 1))}><Plus className="h-4 w-4" /></button>
                 </div>
-                <Button disabled={purchaseBlocked} onClick={handleAddToCart} className="min-h-11 min-w-0 flex-1 px-3 text-sm">{product.availableForSale === false ? 'Unavailable' : maxOrderQuantity <= 0 ? 'Stock limit reached' : deliveryRestricted ? 'Not deliverable here' : goToBag ? 'Go to bag' : addedConfirm ? 'Added to bag' : 'Add to bag'}</Button>
+                <Button disabled={purchaseBlocked} onClick={handleAddToCart} className="min-h-11 min-w-0 flex-1 px-3 text-sm">{addToBagLabel}</Button>
                 <Button disabled={purchaseBlocked} onClick={handleBuyNow} variant="outline" className="min-h-11 min-w-0 flex-1 border-plum/30 px-3 text-sm">Buy now</Button>
               </div>
               <div className="mt-3 flex min-h-8 items-center justify-between gap-3">
-                <button type="button" onClick={() => setCustomOpen(true)} className="text-left text-xs font-medium text-plum underline decoration-plum/30 underline-offset-4 hover:decoration-plum">Request a custom version</button>
+                <button type="button" onClick={() => setCustomOpen(true)} className="text-left text-xs font-medium text-brand underline decoration-brand/30 underline-offset-4 hover:decoration-brand">Request a custom version</button>
                 {hasStockCount && maxOrderQuantity > 0 && maxOrderQuantity <= 5 && <span className="text-right text-xs text-muted">Only {maxOrderQuantity} left</span>}
               </div>
-              {cartFeedback && <p className="mt-2 text-sm text-plum" role="status" aria-live="polite">{cartFeedback}</p>}
+              {cartFeedback && <p className="mt-2 text-sm text-brand">{cartFeedback}</p>}
             </section>
 
           </div>
@@ -484,29 +485,36 @@ export default function ProductDetailsClient({ initialProduct, initialRelatedPro
             <Link
               href="/custom-orders"
               onClick={() => setCustomOpen(false)}
-              className="inline-flex items-center justify-center rounded-full bg-plum px-5 py-2.5 text-sm font-semibold text-cream shadow-soft transition hover:bg-ink hover:-translate-y-0.5 hover:shadow-lift active:translate-y-0"
+              className="inline-flex items-center justify-center rounded-full bg-plum px-5 py-2.5 text-sm font-semibold text-on-primary shadow-soft transition hover:bg-overlay-ink hover:-translate-y-0.5 hover:shadow-lift active:translate-y-0"
             >
               Start a custom request
             </Link>
           </div>
         </Modal>
       </div>
-      {showStickyPurchase && <section className="fixed inset-x-0 bottom-0 z-40 border-t border-sand bg-white/95 px-3 pt-2 shadow-[0_-8px_24px_rgba(95,45,75,0.10)] backdrop-blur lg:hidden" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 0.5rem)' }} aria-label="Quick purchase options">
-        <div className="mx-auto flex max-w-xl items-center gap-2">
-          <div className="inline-flex shrink-0 items-center rounded-full bg-ivory ring-1 ring-sand">
-            <button type="button" disabled={qty <= 1} className="p-2.5 text-plum disabled:opacity-40" aria-label="Decrease quantity" onClick={() => setQty((q) => Math.max(1, q - 1))}><Minus className="h-4 w-4" /></button>
-            <span className="min-w-6 text-center text-sm font-semibold" aria-live="polite">{qty}</span>
-            <button type="button" disabled={qty >= maxOrderQuantity} className="p-2.5 text-plum disabled:opacity-40" aria-label="Increase quantity" onClick={() => setQty((q) => Math.min(maxOrderQuantity, q + 1))}><Plus className="h-4 w-4" /></button>
+      {showStickyPurchase && <section className="studio-purchase-bar" aria-label="Quick purchase options">
+        <div className="container-page studio-purchase-bar-inner">
+          <div className="studio-purchase-summary">
+            <p className="truncate text-sm font-semibold text-ink">{product.name}</p>
+            <p className="shrink-0 text-sm font-semibold text-brand">{formatPrice(salePrice)}<span className="sr-only"> per item</span></p>
           </div>
-          <Button disabled={purchaseBlocked} onClick={handleAddToCart} variant="outline" size="sm" className="min-h-11 flex-1 px-3">{maxOrderQuantity <= 0 ? 'Unavailable' : goToBag ? 'Go to Bag' : addedConfirm ? 'Added' : 'Add to cart'}</Button>
-          <Button disabled={purchaseBlocked} onClick={handleBuyNow} size="sm" className="min-h-11 flex-1 px-3">Buy now · {formatPrice(salePrice)}</Button>
+          <div className="studio-purchase-actions">
+          <div className="inline-flex shrink-0 items-center rounded-full bg-ivory ring-1 ring-sand">
+            <button type="button" disabled={qty <= 1} className="min-h-11 min-w-9 text-brand disabled:opacity-40" aria-label="Decrease quantity" onClick={() => setQty((q) => Math.max(1, q - 1))}><Minus className="mx-auto h-4 w-4" /></button>
+            <span className="min-w-6 text-center text-sm font-semibold" aria-live="polite">{qty}</span>
+            <button type="button" disabled={qty >= maxOrderQuantity} className="min-h-11 min-w-9 text-brand disabled:opacity-40" aria-label="Increase quantity" onClick={() => setQty((q) => Math.min(maxOrderQuantity, q + 1))}><Plus className="mx-auto h-4 w-4" /></button>
+          </div>
+          <Button disabled={purchaseBlocked} onClick={handleAddToCart} size="sm" className="min-h-11 min-w-0 flex-1 px-3">{addToBagLabel}</Button>
+          <Button disabled={purchaseBlocked} onClick={handleBuyNow} variant="outline" size="sm" className="min-h-11 min-w-0 flex-1 px-3">Buy now</Button>
+          </div>
         </div>
-        {cartFeedback && <p role="status" aria-live="polite" className="mx-auto max-w-xl truncate pb-1 pt-1 text-center text-xs text-plum">{cartFeedback}</p>}
+        {cartFeedback && <p className="container-page pb-1 pt-1 text-xs text-brand">{cartFeedback}</p>}
       </section>}
+      <p className="sr-only" role="status" aria-live="polite">{cartFeedback}</p>
 
       {/* Customer Reviews — below product */}
       <CustomerReviews product={product} onReviewsUpdated={setReviewStats} />
-    </>
+    </div>
   )
 }
 

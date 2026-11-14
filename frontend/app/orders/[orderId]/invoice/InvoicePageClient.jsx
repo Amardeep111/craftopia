@@ -19,11 +19,11 @@ export default function InvoicePageClient({ order, orderId }) {
     return (
       <main className="container-page py-20 text-center">
         <div className="mx-auto max-w-md rounded-3xl bg-ivory/60 p-10">
-          <h1 className="font-display text-2xl text-plum">Invoice not available</h1>
+          <h1 className="font-display text-2xl text-brand">Invoice not available</h1>
           <p className="mt-2 text-sm text-muted">We could not load this order invoice. It may have expired or been moved.</p>
           <Link
             href="/orders/me"
-            className="mt-6 inline-flex rounded-full bg-plum px-5 py-2.5 text-sm font-semibold text-cream"
+            className="mt-6 inline-flex rounded-full bg-plum px-5 py-2.5 text-sm font-semibold text-on-primary"
           >
             Go to My Orders
           </Link>
@@ -38,7 +38,7 @@ export default function InvoicePageClient({ order, orderId }) {
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3 print:hidden">
         <Link
           href={`/orders/${order.id || orderId}`}
-          className="inline-flex items-center gap-1.5 text-sm font-semibold text-muted hover:text-plum transition"
+          className="inline-flex items-center gap-1.5 text-sm font-semibold text-muted hover:text-brand transition"
         >
           <ArrowLeft className="h-4 w-4" />
           Back to order details
@@ -46,7 +46,7 @@ export default function InvoicePageClient({ order, orderId }) {
         <button
           type="button"
           onClick={() => printInvoice(order)}
-          className="inline-flex items-center gap-2 rounded-full bg-plum px-5 py-2.5 text-sm font-semibold text-cream shadow-soft transition hover:bg-ink hover:-translate-y-0.5 hover:shadow-lift active:translate-y-0"
+          className="inline-flex items-center gap-2 rounded-full bg-plum px-5 py-2.5 text-sm font-semibold text-on-primary shadow-soft transition hover:bg-overlay-ink hover:-translate-y-0.5 hover:shadow-lift active:translate-y-0"
         >
           <Printer className="h-4 w-4" aria-hidden="true" />
           Download PDF / Print

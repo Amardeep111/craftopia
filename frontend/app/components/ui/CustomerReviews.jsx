@@ -17,7 +17,7 @@ function StarRating({ rating, max = 5, size = 'md', interactive = false, onSelec
   return (
     <div
       className={cn('flex items-center gap-0.5', interactive && 'cursor-pointer')}
-      role={interactive ? 'radiogroup' : undefined}
+      role={interactive ? 'radiogroup' : 'img'}
       aria-label={interactive ? 'Select star rating' : `Rating ${rating} out of ${max}`}
       onMouseLeave={() => interactive && setHoverStar(0)}
     >
@@ -33,7 +33,7 @@ function StarRating({ rating, max = 5, size = 'md', interactive = false, onSelec
             role={interactive ? 'radio' : undefined}
             onClick={interactive ? () => onSelect(starValue) : undefined}
             onMouseEnter={interactive ? () => setHoverStar(starValue) : undefined}
-            aria-label={interactive ? `Rate ${starValue} stars` : undefined}
+            aria-label={interactive ? `Rate ${starValue} stars` : `${starValue} of ${max} stars`}
             aria-checked={interactive ? starValue === rating : undefined}
             disabled={!interactive}
             className={cn(
@@ -44,8 +44,8 @@ function StarRating({ rating, max = 5, size = 'md', interactive = false, onSelec
             <Star
               className={cn(
                 sz,
-                isFilled ? 'fill-bloom text-bloom' : 'fill-sand/30 text-sand/30',
-                interactive ? 'hover:text-bloom' : ''
+                isFilled ? 'fill-accent text-accent' : 'fill-sand/30 text-sand/30',
+                interactive ? 'hover:text-accent' : ''
               )}
               aria-hidden="true"
             />
@@ -192,7 +192,7 @@ export default function CustomerReviews({ product, onReviewsUpdated }) {
       {/* ====== RATING SUMMARY ====== */}
       <div className="mt-10 grid gap-8 lg:grid-cols-[13rem_1fr] lg:gap-14 items-start">
         <div className="w-full sm:w-56">
-          <div className="text-5xl font-display text-plum">{avg.toFixed(1)}</div>
+          <div className="text-5xl font-display text-brand">{avg.toFixed(1)}</div>
           <div className="mt-1"><StarRating rating={avg} size="lg" /></div>
           <p className="text-sm text-muted mt-2">Based on {total} review{total !== 1 ? 's' : ''}</p>
         </div>
@@ -203,8 +203,8 @@ export default function CustomerReviews({ product, onReviewsUpdated }) {
             const pct = total ? (count / total) * 100 : 0
             return (
               <div key={star} className="flex items-center gap-3 text-sm">
-                <span className="w-3 font-semibold text-plum">{star}</span>
-                <Star className="h-3.5 w-3.5 fill-bloom text-bloom shrink-0" aria-hidden="true" />
+                <span className="w-3 font-semibold text-brand">{star}</span>
+                <Star className="h-3.5 w-3.5 fill-accent text-accent shrink-0" aria-hidden="true" />
                 <div className="flex-1 h-2.5 rounded-full bg-sand overflow-hidden">
                   <div
                     className="h-full rounded-full bg-bloom transition-all duration-700 ease-out"
@@ -219,31 +219,31 @@ export default function CustomerReviews({ product, onReviewsUpdated }) {
       </div>
 
       <section className="mt-10 rounded-3xl bg-cream p-5 shadow-soft ring-1 ring-sand sm:p-7" aria-label="Write a verified review">
-        <h3 className="font-display text-2xl text-plum">Your experience matters</h3>
-        {formSuccess && <p role="status" className="mt-3 text-sm text-green-800">{formSuccess}</p>}
+        <h3 className="font-display text-2xl text-brand">Your experience matters</h3>
+        {formSuccess && <p role="status" className="mt-3 text-sm text-success">{formSuccess}</p>}
         {reviewAccess.canReview ? <form onSubmit={submitReview} className="mt-5 space-y-5">
           <div className="grid gap-4 md:grid-cols-3">{[
             ['Product quality', productRating, setProductRating],
             ['Delivery experience', deliveryRating, setDeliveryRating],
             ['Packaging', packagingRating, setPackagingRating],
-          ].map(([label, value, setter]) => <div key={label}><p className="text-sm font-semibold text-plum">{label}</p><div className="mt-2"><StarRating rating={value} interactive onSelect={setter} /></div></div>)}</div>
-          <label className="block text-sm font-medium text-plum">Review title <span className="font-normal text-muted">(optional)</span><input value={formTitle} onChange={(event) => setFormTitle(event.target.value)} maxLength={120} className="mt-1.5 min-h-11 w-full rounded-xl border border-sand bg-white px-3" placeholder="What stood out?" /></label>
-          <label className="block text-sm font-medium text-plum">Your review<textarea required minLength={5} maxLength={2000} value={formText} onChange={(event) => setFormText(event.target.value)} rows={4} className="mt-1.5 w-full rounded-xl border border-sand bg-white p-3" placeholder="Tell other shoppers about the product, packaging, and delivery." /></label>
-          <div><label htmlFor="review-photos" className="block text-sm font-medium text-plum">Add customer photos <span className="font-normal text-muted">(up to 5, 4 MB total)</span></label><input id="review-photos" type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={(event) => setFormPhotos([...(event.target.files || [])].slice(0, 5))} className="mt-2 block w-full rounded-xl border border-sand bg-white p-2 text-sm file:mr-3 file:rounded-full file:border-0 file:bg-plum file:px-4 file:py-2 file:font-semibold file:text-cream" />{formPhotos.length > 0 && <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-5">{formPhotos.map((file, index) => <figure key={`${file.name}-${file.lastModified}`} className="overflow-hidden rounded-xl border border-sand bg-white"><img src={formPhotoPreviews[index]} alt={`Review photo preview ${index + 1}`} className="aspect-square w-full object-cover" /><figcaption className="truncate px-2 py-1 text-xs text-muted">{file.name}</figcaption></figure>)}</div>}</div>
-          {formError && <p role="alert" className="text-sm text-bloom">{formError}</p>}
-          <button disabled={formSubmitting} className="min-h-11 rounded-full bg-plum px-6 font-semibold text-cream disabled:opacity-60">{formSubmitting ? 'Posting review…' : 'Post verified review'}</button>
+          ].map(([label, value, setter]) => <div key={label}><p className="text-sm font-semibold text-brand">{label}</p><div className="mt-2"><StarRating rating={value} interactive onSelect={setter} /></div></div>)}</div>
+          <label className="block text-sm font-medium text-brand">Review title <span className="font-normal text-muted">(optional)</span><input value={formTitle} onChange={(event) => setFormTitle(event.target.value)} maxLength={120} className="mt-1.5 min-h-11 w-full rounded-xl border border-sand bg-surface px-3" placeholder="What stood out?" /></label>
+          <label className="block text-sm font-medium text-brand">Your review<textarea required minLength={5} maxLength={2000} value={formText} onChange={(event) => setFormText(event.target.value)} rows={4} className="mt-1.5 w-full rounded-xl border border-sand bg-surface p-3" placeholder="Tell other shoppers about the product, packaging, and delivery." /></label>
+          <div><label htmlFor="review-photos" className="block text-sm font-medium text-brand">Add customer photos <span className="font-normal text-muted">(up to 5, 4 MB total)</span></label><input id="review-photos" type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={(event) => setFormPhotos([...(event.target.files || [])].slice(0, 5))} className="mt-2 block w-full rounded-xl border border-sand bg-surface p-2 text-sm file:mr-3 file:rounded-full file:border-0 file:bg-plum file:px-4 file:py-2 file:font-semibold file:text-on-primary" />{formPhotos.length > 0 && <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-5">{formPhotos.map((file, index) => <figure key={`${file.name}-${file.lastModified}`} className="overflow-hidden rounded-xl border border-sand bg-surface"><img src={formPhotoPreviews[index]} alt={`Review photo preview ${index + 1}`} className="aspect-square w-full object-cover" /><figcaption className="truncate px-2 py-1 text-xs text-muted">{file.name}</figcaption></figure>)}</div>}</div>
+          {formError && <p role="alert" className="text-sm text-accent">{formError}</p>}
+          <button disabled={formSubmitting} className="min-h-11 rounded-full bg-plum px-6 font-semibold text-on-primary disabled:opacity-60">{formSubmitting ? 'Posting review…' : 'Post verified review'}</button>
           <p className="text-xs text-muted">Only customers with a delivered order can post one verified review per product.</p>
-        </form> : <p className="mt-2 max-w-2xl text-sm text-muted">{reviewAccess.authenticated ? 'You can write a verified review once this product has been delivered to you.' : <><Link className="font-semibold text-plum underline underline-offset-4" href={`/account/login?redirect=${encodeURIComponent(`/shop/${product?.id || ''}`)}`}>Sign in</Link> after delivery to rate the product, packaging, and delivery and share customer photos.</>}</p>}
+        </form> : <p className="mt-2 max-w-2xl text-sm text-muted">{reviewAccess.authenticated ? 'You can write a verified review once this product has been delivered to you.' : <><Link className="font-semibold text-brand underline underline-offset-4" href={`/account/login?redirect=${encodeURIComponent(`/shop/${product?.id || ''}`)}`}>Sign in</Link> after delivery to rate the product, packaging, and delivery and share customer photos.</>}</p>}
       </section>
 
       {/* ====== CUSTOMER PHOTO GALLERY ====== */}
       <div className="mt-14">
         <div className="flex items-center justify-between gap-2 mb-4">
-          <h3 className="font-display text-xl text-plum">Customer Photos</h3>
+          <h3 className="font-display text-xl text-brand">Customer Photos</h3>
           {allCustomerPhotos.length > 5 && (
             <button
               onClick={() => openLightbox(allCustomerPhotos.map(p => p.src), 0)}
-              className="text-sm font-semibold text-bloom hover:text-plum transition underline underline-offset-4"
+              className="text-sm font-semibold text-accent hover:text-brand transition underline underline-offset-4"
               aria-label={`View all ${allCustomerPhotos.length} customer photos`}
             >
               View All Photos
@@ -292,7 +292,7 @@ export default function CustomerReviews({ product, onReviewsUpdated }) {
                 className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
                 loading="lazy"
               />
-              <span className="absolute bottom-2 left-2 rounded-full bg-plum/70 px-2 py-0.5 text-[10px] font-semibold text-cream backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity">
+              <span className="absolute bottom-2 left-2 rounded-full bg-plum/70 px-2 py-0.5 text-[10px] font-semibold text-on-primary backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity">
                 {allCustomerPhotos[0].reviewName}
               </span>
             </button>
@@ -329,7 +329,7 @@ export default function CustomerReviews({ product, onReviewsUpdated }) {
                     />
                     {isLastVisible && remaining > 0 && (
                       <div className="absolute inset-0 flex items-center justify-center bg-plum/40 backdrop-blur-[1px] transition-colors group-hover:bg-plum/50">
-                        <span className="font-display text-2xl text-cream drop-shadow-sm">
+                        <span className="font-display text-2xl text-on-primary drop-shadow-sm">
                           +{remaining}
                         </span>
                       </div>
@@ -373,8 +373,8 @@ export default function CustomerReviews({ product, onReviewsUpdated }) {
                 className={cn(
                   'rounded-full px-3 py-1.5 text-xs font-semibold transition',
                   active
-                    ? 'bg-plum text-cream shadow-soft'
-                    : 'bg-ivory text-muted ring-1 ring-sand hover:text-plum hover:ring-bloom/30'
+                    ? 'bg-plum text-on-primary shadow-soft'
+                    : 'bg-ivory text-muted ring-1 ring-sand hover:text-brand hover:ring-bloom/30'
                 )}
                 aria-pressed={active}
               >
@@ -392,7 +392,7 @@ export default function CustomerReviews({ product, onReviewsUpdated }) {
             <p className="text-muted">{reviews.length ? 'No reviews match the current filters. Try changing the filter.' : 'No verified customer reviews yet. Customers can review the product, packaging, and delivery after the order arrives.'}</p>
             {reviews.length > 0 && <button
               onClick={() => { setFilterStars(0); setSortBy('newest') }}
-              className="mt-3 text-sm font-semibold text-bloom hover:text-plum underline underline-offset-4"
+              className="mt-3 text-sm font-semibold text-accent hover:text-brand underline underline-offset-4"
             >
               Clear filters
             </button>}
@@ -403,9 +403,9 @@ export default function CustomerReviews({ product, onReviewsUpdated }) {
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <h4 className="font-display text-lg text-plum">{review.name}</h4>
+                    <h4 className="font-display text-lg text-brand">{review.name}</h4>
                     {review.verifiedPurchase && (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-bloom/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-bloom">
+                      <span className="inline-flex items-center gap-1 rounded-full bg-bloom/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-accent">
                         <Check className="h-3 w-3" /> Verified Purchase
                       </span>
                     )}
@@ -421,7 +421,7 @@ export default function CustomerReviews({ product, onReviewsUpdated }) {
               </div>
 
               {review.title && (
-                <h5 className="mt-3 font-display text-base text-plum">{review.title}</h5>
+                <h5 className="mt-3 font-display text-base text-brand">{review.title}</h5>
               )}
 
               <blockquote className="mt-3 leading-relaxed text-muted max-w-prose">"{review.text}"</blockquote>
@@ -449,13 +449,13 @@ export default function CustomerReviews({ product, onReviewsUpdated }) {
                   className={cn(
                     'inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition shadow-soft',
                     helpful[review.id]
-                      ? 'bg-bloom/15 text-bloom ring-1 ring-bloom/20'
-                      : 'bg-ivory text-muted ring-1 ring-sand hover:text-plum hover:ring-bloom/30'
+                      ? 'bg-bloom/15 text-accent ring-1 ring-bloom/20'
+                      : 'bg-ivory text-muted ring-1 ring-sand hover:text-brand hover:ring-bloom/30'
                   )}
                   aria-label={`Mark review by ${review.name} as helpful`}
                   aria-pressed={!!helpful[review.id]}
                 >
-                  <ThumbsUp className={cn('h-3.5 w-3.5', helpful[review.id] && 'fill-bloom')} aria-hidden="true" />
+                  <ThumbsUp className={cn('h-3.5 w-3.5', helpful[review.id] && 'fill-accent')} aria-hidden="true" />
                   <span>
                     Helpful
                     {(() => {
@@ -483,7 +483,7 @@ export default function CustomerReviews({ product, onReviewsUpdated }) {
             type="button"
             onClick={closeLightbox}
             aria-label="Close photo viewer"
-            className="absolute top-5 right-5 rounded-full bg-cream/90 p-2.5 text-plum shadow-md hover:bg-cream transition z-10"
+            className="absolute top-5 right-5 rounded-full bg-cream/90 p-2.5 text-brand shadow-md hover:bg-cream transition z-10"
           >
             <X className="h-5 w-5" aria-hidden="true" />
           </button>
@@ -492,7 +492,7 @@ export default function CustomerReviews({ product, onReviewsUpdated }) {
             type="button"
             onClick={(e) => { e.stopPropagation(); prevImg() }}
             aria-label="Previous photo"
-            className="absolute left-4 sm:left-8 top-1/2 -translate-y-1/2 rounded-full bg-cream/90 p-3 text-plum shadow-md hover:bg-cream transition z-10"
+            className="absolute left-4 sm:left-8 top-1/2 -translate-y-1/2 rounded-full bg-cream/90 p-3 text-brand shadow-md hover:bg-cream transition z-10"
           >
             <ChevronLeft className="h-6 w-6" aria-hidden="true" />
           </button>
@@ -501,7 +501,7 @@ export default function CustomerReviews({ product, onReviewsUpdated }) {
             type="button"
             onClick={(e) => { e.stopPropagation(); nextImg() }}
             aria-label="Next photo"
-            className="absolute right-4 sm:right-8 top-1/2 -translate-y-1/2 rounded-full bg-cream/90 p-3 text-plum shadow-md hover:bg-cream transition z-10"
+            className="absolute right-4 sm:right-8 top-1/2 -translate-y-1/2 rounded-full bg-cream/90 p-3 text-brand shadow-md hover:bg-cream transition z-10"
           >
             <ChevronRight className="h-6 w-6" aria-hidden="true" />
           </button>
@@ -514,7 +514,7 @@ export default function CustomerReviews({ product, onReviewsUpdated }) {
           />
 
           {lightbox.images.length > 1 && (
-            <div className="absolute bottom-5 left-1/2 -translate-x-1/2 rounded-full bg-plum/70 px-4 py-1 text-xs font-semibold text-cream backdrop-blur-sm">
+            <div className="absolute bottom-5 left-1/2 -translate-x-1/2 rounded-full bg-plum/70 px-4 py-1 text-xs font-semibold text-on-primary backdrop-blur-sm">
               {lightbox.index + 1} / {lightbox.images.length}
             </div>
           )}

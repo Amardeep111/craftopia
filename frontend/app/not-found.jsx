@@ -7,7 +7,7 @@ export default function NotFound() {
     <div className="flex min-h-screen flex-col">
       <div className="container-page flex flex-1 flex-col items-center justify-center py-20 text-center">
         <FlowerBurst className="h-16 w-16 text-petal" />
-        <p className="mt-4 text-xs font-semibold uppercase tracking-[0.22em] text-bloom">404</p>
+        <p className="mt-4 text-xs font-semibold uppercase tracking-[0.22em] text-accent">404</p>
         <h1 className="heading-display mt-3 max-w-lg text-4xl sm:text-5xl">
           This page wandered off the craft table.
         </h1>

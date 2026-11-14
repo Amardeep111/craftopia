@@ -1,5 +1,6 @@
 'use client'
 
+import PendingLinkIndicator from '../layout/PendingLinkIndicator'
 import Link from 'next/link'
 import { ArrowUpRight } from 'lucide-react'
 import Badge from './Badge'
@@ -10,7 +11,7 @@ import { categories } from '@/data/categories'
 import { cn } from '@/lib/cn'
 import { discountedPrice, useProductDiscount } from '@/lib/promotions'
 
-export default function ProductCard({ product, className }) {
+export default function ProductCard({ product, className, priority = false, imageSizes }) {
   const discountPercent = useProductDiscount(product.id)
   const salePrice = discountedPrice(product.price, discountPercent)
   const categoryName =
@@ -57,11 +58,13 @@ export default function ProductCard({ product, className }) {
   return (
     <Card
       hoverable
-      className={cn('group flex h-full flex-col overflow-hidden', className)}
+      className={cn('studio-product group flex h-full flex-col overflow-hidden', className)}
     >
-      <Link href={`/shop/${product.id}`} prefetch={true} className="relative block aspect-[4/5] overflow-hidden bg-sand">
+      <Link href={`/shop/${product.id}`} prefetch="auto" className="relative block aspect-[4/5] overflow-hidden rounded bg-ivory">
         <ProductImage
           src={photo}
+          priority={priority}
+          sizes={imageSizes}
           alt={product.name}
           visual={product.visual}
           palette={palette}
@@ -70,29 +73,32 @@ export default function ProductCard({ product, className }) {
           imgClassName="object-cover"
         />
         <Badge className="absolute left-3 top-3">Handmade</Badge>
-        {product.stock <= 0 && <span className="absolute inset-x-0 bottom-0 bg-ink/80 px-3 py-2 text-center text-sm font-semibold text-white">Out of stock</span>}
-        {product.availableForSale === false && product.stock > 0 && <span className="absolute inset-x-0 bottom-0 bg-ink/80 px-3 py-2 text-center text-sm font-semibold text-white">Temporarily unavailable</span>}
+        {product.stock <= 0 && <span className="absolute inset-x-0 bottom-0 bg-overlay-ink/80 px-3 py-2 text-center text-sm font-semibold text-white">Out of stock</span>}
+        {product.availableForSale === false && product.stock > 0 && <span className="absolute inset-x-0 bottom-0 bg-overlay-ink/80 px-3 py-2 text-center text-sm font-semibold text-white">Temporarily unavailable</span>}
         {discountPercent > 0 && <span className="absolute right-3 top-3 rounded-full bg-bloom px-3 py-1 text-xs font-bold text-white">{discountPercent}% OFF</span>}
+        <PendingLinkIndicator />
       </Link>
-      <div className="flex flex-1 flex-col p-5">
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-bloom">
+      <div className="flex flex-1 flex-col pt-4 pb-2">
+        <p className="text-xs font-medium text-muted">
           {categoryName}
         </p>
-        <h3 className="mt-2 font-display text-2xl text-plum">
-          <Link href={`/shop/${product.id}`} prefetch={true} className="transition hover:text-bloom">
+        <h3 className="mt-2 font-display text-base sm:text-lg font-semibold leading-snug text-brand">
+          <Link href={`/shop/${product.id}`} prefetch="auto" className="transition hover:text-accent">
             {product.name}
+            <PendingLinkIndicator />
           </Link>
         </h3>
-        <p className="mt-2 flex-1 text-sm leading-relaxed text-muted">{product.short}</p>
-        <div className="mt-4 flex items-center justify-between gap-3">
-          <div className="flex flex-wrap items-baseline gap-2"><p className="font-semibold text-plum">{formatPrice(salePrice)}</p>{discountPercent > 0 && <><span className="text-sm text-muted line-through">{formatPrice(product.price)}</span><span className="text-xs font-semibold text-moss">{discountPercent}% off</span></>}</div>
+        <p className="studio-product-description mt-2 flex-1 text-sm leading-relaxed text-muted">{product.short}</p>
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-baseline gap-2"><p className="font-semibold text-brand">{formatPrice(salePrice)}</p>{discountPercent > 0 && <><span className="text-sm text-muted line-through">{formatPrice(product.price)}</span><span className="text-xs font-semibold text-moss">{discountPercent}% off</span></>}</div>
           <Link
             href={`/shop/${product.id}`}
-            prefetch={true}
-            className="inline-flex items-center gap-1 text-sm font-semibold text-plum transition hover:text-bloom"
+            prefetch="auto"
+            className="inline-flex items-center gap-1 text-xs sm:text-sm font-semibold text-brand transition hover:text-accent"
           >
             View details
             <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
+            <PendingLinkIndicator />
           </Link>
         </div>
       </div>

@@ -5,7 +5,7 @@ import TestimonialCard from '../ui/TestimonialCard'
 
 export default function Testimonials() {
   return (
-    <section className="container-page mt-20 sm:mt-28">
+    <section className="container-page studio-section">
       <SectionHeading
         eyebrow="Kind words"
         title="What people are saying"

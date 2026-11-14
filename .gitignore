@@ -37,3 +37,9 @@ yarn-error.log*
 
 # Vercel
 .vercel
+
+frontend/docs/
+# Isolated local production preview
+frontend/.next-review/
+frontend/.next-home-speed/
+frontend/.next-product-review/

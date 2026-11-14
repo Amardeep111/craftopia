@@ -77,11 +77,11 @@ export default function CurrentLocationPicker({ onSelect, disabled }) {
 
   return (
     <div className="space-y-2">
-      <button type="button" onClick={handleUseCurrent} disabled={disabled || loading} className="inline-flex items-center gap-2 rounded-full bg-plum/10 border-2 border-plum/20 text-plum px-4 py-2 text-sm font-semibold hover:bg-plum hover:text-cream transition">
+      <button type="button" onClick={handleUseCurrent} disabled={disabled || loading} className="inline-flex items-center gap-2 rounded-full bg-plum/10 border-2 border-plum/20 text-brand px-4 py-2 text-sm font-semibold hover:bg-plum hover:text-on-primary transition">
         {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <MapPin className="h-4 w-4" />}
         Use my current location
       </button>
-      {errorMsg && <p className="text-xs text-bloom">{errorMsg}</p>}
+      {errorMsg && <p className="text-xs text-accent">{errorMsg}</p>}
     </div>
   )
 }

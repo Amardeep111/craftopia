@@ -93,9 +93,9 @@ export default function PaymentPage() {
     return (
       <div className="container-page pb-20 pt-10 text-center">
         <div className="mx-auto max-w-md rounded-3xl bg-ivory/60 p-10">
-          <p className="font-display text-2xl text-plum">Nothing here yet</p>
+          <p className="font-display text-2xl text-brand">Nothing here yet</p>
           <p className="mt-2 text-sm text-muted">Add something to your bag before checking out.</p>
-          <Link href="/shop" className="mt-5 inline-block rounded-full bg-plum px-5 py-2.5 text-sm font-semibold text-cream">
+          <Link href="/shop" className="mt-5 inline-block rounded-full bg-plum px-5 py-2.5 text-sm font-semibold text-on-primary">
             Browse the shop
           </Link>
         </div>
@@ -108,7 +108,7 @@ export default function PaymentPage() {
     return (
       <div className="container-page pb-20 pt-10 text-center">
         <div className="mx-auto max-w-md rounded-3xl bg-ivory/60 p-10">
-          <p className="font-display text-2xl text-plum">Verifying checkout details…</p>
+          <p className="font-display text-2xl text-brand">Verifying checkout details…</p>
           <p className="mt-2 text-sm text-muted">Directing you to the delivery address step.</p>
         </div>
       </div>
@@ -322,14 +322,14 @@ export default function PaymentPage() {
       <div className="mt-5 flex items-center gap-3">
         <Link
           href="/checkout"
-          className="inline-flex items-center gap-1 text-sm font-semibold text-muted transition hover:text-plum"
+          className="inline-flex items-center gap-1 text-sm font-semibold text-muted transition hover:text-brand"
         >
           <ArrowLeft className="h-4 w-4" />
           Back to order summary
         </Link>
       </div>
 
-      <h1 className="mt-4 font-display text-3xl text-plum">Payment</h1>
+      <h1 className="mt-4 font-display text-3xl text-brand">Payment</h1>
 
       {/* ── Two-column layout (desktop) ───────────────────────────────────── */}
       <div className="mt-6 grid gap-8 lg:grid-cols-[1fr_22rem] lg:items-start">
@@ -338,14 +338,14 @@ export default function PaymentPage() {
           {submitState === 'form' ? (
             <>
               <div className="paper-card p-5 sm:p-6">
-                <h2 className="font-display text-xl text-plum mb-4">Payment Methods</h2>
+                <h2 className="font-display text-xl text-brand mb-4">Payment Methods</h2>
                 <PaymentMethodList selected={selectedMethod} onSelect={setSelectedMethod} availableMethods={availableMethods} />
               </div>
 
               {/* Selected method form */}
               {availableMethods.includes(selectedMethod) && (
                 <div className="paper-card mt-4 p-5 sm:p-6">
-                  <h2 className="font-display text-xl text-plum mb-5">
+                  <h2 className="font-display text-xl text-brand mb-5">
                     {PAYMENT_METHODS[selectedMethod]?.label}
                   </h2>
                   {renderForm()}

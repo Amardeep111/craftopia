@@ -1,3 +1,5 @@
+import './admin.css';
+import ThemeControl from '../components/layout/ThemeControl';
 import Link from 'next/link';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
@@ -20,19 +22,19 @@ export default async function AdminLayout({ children }) {
   const can = (permission) => isSuperadmin || permissions.includes(permission) || (permission.endsWith('.view') && permissions.includes(`${permission.slice(0, -'.view'.length)}.manage`));
   return (
     <AdminAccessProvider role={role} permissions={permissions}>
-    <div className="min-h-screen bg-ink/5">
+    <div className="studio-admin min-h-screen">
       <AdminSessionHeartbeat />
-      <nav className="sticky top-0 z-40 flex min-h-[64px] flex-wrap items-center justify-between gap-2 border-b border-plum/20 bg-plum px-3 py-3 shadow-soft sm:px-4 md:px-6">
+      <nav className="studio-admin-header sticky top-0 z-40 flex h-16 items-center justify-between gap-2 border-b border-sand bg-surface px-4 sm:px-6">
         <div className="flex items-center gap-3">
-          <Shield className="h-6 w-6 text-cream" aria-hidden="true" />
-          <span className="font-display text-lg font-bold text-cream sm:text-xl">Admin</span>
+          <Shield className="h-5 w-5 text-brand" aria-hidden="true" />
+          <span className="text-base font-semibold text-ink">Manage store</span>
         </div>
-        <div className="hidden gap-4 text-sm text-cream/90 sm:flex">
-          <Link href="/" target="_blank" rel="noopener noreferrer" className="hover:text-cream underline underline-offset-2">Open storefront ↗</Link>
+        <div className="hidden gap-4 text-sm text-brand sm:flex">
+          <Link href="/" target="_blank" rel="noopener noreferrer" className="hover:text-ink underline underline-offset-2">Open storefront ↗</Link>
         </div>
-        <AdminLogoutButton />
+        <div className="flex items-center gap-3"><AdminLogoutButton /><ThemeControl /></div>
       </nav>
-      <aside className="fixed left-0 top-[72px] bottom-0 w-52 bg-ink border-r border-sand/20 hidden md:block">
+      <aside className="fixed left-0 top-16 bottom-0 w-56 overflow-y-auto border-r border-sand bg-surface hidden md:block">
         <div className="p-4 space-y-1">
           {can('dashboard.view') && <AdminNavLink href="/admin" icon={<TrendingUp className="h-4 w-4" />} label="Dashboard" />}
           {can('orders.view') && <AdminNavLink href="/admin/orders" icon={<Package className="h-4 w-4" />} label="Orders" />}
@@ -46,7 +48,7 @@ export default async function AdminLayout({ children }) {
           <AdminNavLink href="/admin/account" icon={<UserRound className="h-4 w-4" />} label="My account" />
         </div>
       </aside>
-      <nav aria-label="Admin navigation" className="grid grid-cols-3 gap-1 bg-ink px-1 py-2 sm:px-2 md:hidden [&_a]:flex-col [&_a]:gap-1 [&_a]:px-1 [&_a]:py-2 [&_a]:text-center [&_a]:text-xs [&_a_span]:text-[11px]">
+      <nav aria-label="Admin navigation" className="flex gap-1 overflow-x-auto border-b border-sand bg-surface px-3 py-2 md:hidden [&_a]:shrink-0 [&_a]:gap-2 [&_a]:px-3 [&_a]:text-xs">
         {can('dashboard.view') && <AdminNavLink href="/admin" icon={<TrendingUp className="h-4 w-4" />} label="Dashboard" />}
         {can('orders.view') && <AdminNavLink href="/admin/orders" icon={<Package className="h-4 w-4" />} label="Orders" />}
         {can('customRequests.view') && <AdminNavLink href="/admin/custom-requests" icon={<ClipboardList className="h-4 w-4" />} label="Custom requests" />}
@@ -57,7 +59,7 @@ export default async function AdminLayout({ children }) {
         {isSuperadmin && <AdminNavLink href="/admin/admins" icon={<Shield className="h-4 w-4" />} label="Admin access" />}
         <AdminNavLink href="/admin/account" icon={<UserRound className="h-4 w-4" />} label="My account" />
       </nav>
-      <main className="min-w-0 px-3 py-5 sm:px-5 sm:py-6 md:ml-52 md:px-8 md:py-10">
+      <main className="min-w-0 px-4 py-6 sm:px-6 md:ml-56 md:px-8 md:py-8">
         {children}
       </main>
     </div>

@@ -12,7 +12,7 @@ const ICONS = {
 
 export default function PaymentMethodList({ selected, onSelect, availableMethods = PAYMENT_METHOD_ORDER }) {
   const methods = PAYMENT_METHOD_ORDER.filter((id) => availableMethods.includes(id))
-  if (!methods.length) return <p role="alert" className="rounded-xl bg-peach/30 p-4 text-sm text-plum">The items in your cart have different payment restrictions. Please place them in separate orders.</p>
+  if (!methods.length) return <p role="alert" className="rounded-xl bg-peach/30 p-4 text-sm text-brand">The items in your cart have different payment restrictions. Please place them in separate orders.</p>
   return (
     <ul role="radiogroup" aria-label="Choose a payment method" className="space-y-2.5">
       {methods.map((id) => {
@@ -41,7 +41,7 @@ export default function PaymentMethodList({ selected, onSelect, availableMethods
               <span
                 className={`
                   flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition
-                  ${isSelected ? 'bg-bloom text-cream' : 'bg-cream text-plum ring-1 ring-sand group-hover:ring-bloom/30'}
+                  ${isSelected ? 'bg-bloom text-on-primary' : 'bg-cream text-brand ring-1 ring-sand group-hover:ring-bloom/30'}
                 `}
                 aria-hidden="true"
               >
@@ -50,7 +50,7 @@ export default function PaymentMethodList({ selected, onSelect, availableMethods
               <span className="min-w-0 flex-1">
                 <span
                   id={`pm-${id}-label`}
-                  className={`block font-display text-base sm:text-lg font-semibold ${isSelected ? 'text-plum' : 'text-plum'}`}
+                  className={`block font-display text-base sm:text-lg font-semibold ${isSelected ? 'text-brand' : 'text-brand'}`}
                 >
                   {method.label}
                 </span>
@@ -61,7 +61,7 @@ export default function PaymentMethodList({ selected, onSelect, availableMethods
               <span
                 className={`
                   flex h-5 w-5 shrink-0 items-center justify-center rounded-full transition
-                  ${isSelected ? 'bg-bloom text-cream' : 'border border-sand text-transparent group-hover:border-bloom/50'}
+                  ${isSelected ? 'bg-bloom text-on-primary' : 'border border-sand text-transparent group-hover:border-bloom/50'}
                 `}
                 aria-hidden="true"
               >

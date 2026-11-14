@@ -3,8 +3,7 @@
 import { useState } from 'react'
 import CraftIllustration from './CraftIllustration'
 import { cn } from '@/lib/cn'
-import Image from 'next/image'
-import { getOptimizedImageUrl } from '@/lib/images'
+import Image from './StorefrontImage'
 
 export default function ProductImage({
   src,
@@ -18,31 +17,30 @@ export default function ProductImage({
   height,
   priority = false,
   fit = 'contain',
+  sizes = '(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw',
 }) {
   const [error, setError] = useState(false)
   const [loaded, setLoaded] = useState(false)
 
   if (src && !error) {
-    const imageSrc = src.startsWith('http')
-      ? getOptimizedImageUrl(src, { width: 800, quality: 85 })
-      : src
     return (
       <div className={cn('overflow-hidden relative bg-sand/30', className)}>
         {!loaded && (
-          <div className="absolute inset-0 bg-gradient-to-br from-sand/40 to-blush/30 animate-pulse" />
+          <div className="absolute inset-0 bg-ivory animate-pulse" />
         )}
         <Image
-          src={imageSrc}
+          src={src}
           alt={alt || ''}
           fill={!width && !height}
           width={width}
           height={height}
           priority={priority}
-          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+          fetchPriority={priority ? 'high' : 'auto'}
+          sizes={sizes}
           className={cn(
             fit === 'contain' ? 'object-contain' : 'object-cover',
             'transition-opacity duration-300',
-            loaded ? 'opacity-100' : 'opacity-0',
+            'opacity-100',
             imgClassName
           )}
           onLoad={() => setLoaded(true)}

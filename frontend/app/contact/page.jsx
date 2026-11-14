@@ -100,17 +100,17 @@ export default function Contact() {
             ) : (
               <form onSubmit={onSubmit} className="paper-card p-6 sm:p-10" noValidate>
                 <label className="block">
-                  <span className="mb-1.5 block text-sm font-semibold text-plum">Name</span>
+                  <span className="mb-1.5 block text-sm font-semibold text-brand">Name</span>
                   <input
                     value={form.name}
                     onChange={(e) => setField('name', e.target.value)}
                     autoComplete="name"
                     className={field(errors.name)}
                   />
-                  {errors.name ? <span className="mt-1 block text-sm text-bloom">{errors.name}</span> : null}
+                  {errors.name ? <span className="mt-1 block text-sm text-accent">{errors.name}</span> : null}
                 </label>
                 <label className="mt-5 block">
-                  <span className="mb-1.5 block text-sm font-semibold text-plum">Email</span>
+                  <span className="mb-1.5 block text-sm font-semibold text-brand">Email</span>
                   <input
                     type="email"
                     value={form.email}
@@ -118,19 +118,19 @@ export default function Contact() {
                     autoComplete="email"
                     className={field(errors.email)}
                   />
-                  {errors.email ? <span className="mt-1 block text-sm text-bloom">{errors.email}</span> : null}
+                  {errors.email ? <span className="mt-1 block text-sm text-accent">{errors.email}</span> : null}
                 </label>
                 <label className="mt-5 block">
-                  <span className="mb-1.5 block text-sm font-semibold text-plum">Message</span>
+                  <span className="mb-1.5 block text-sm font-semibold text-brand">Message</span>
                   <textarea
                     rows={6}
                     value={form.message}
                     onChange={(e) => setField('message', e.target.value)}
                     className={field(errors.message)}
                   />
-                  {errors.message ? <span className="mt-1 block text-sm text-bloom">{errors.message}</span> : null}
+                  {errors.message ? <span className="mt-1 block text-sm text-accent">{errors.message}</span> : null}
                 </label>
-                {submitError ? <p role="alert" className="mt-4 text-sm font-medium text-bloom">{submitError}</p> : null}
+                {submitError ? <p role="alert" className="mt-4 text-sm font-medium text-accent">{submitError}</p> : null}
                 <Button type="submit" className="mt-6" disabled={submitting}>
                   {submitting ? 'Sending…' : 'Send message'}
                 </Button>
@@ -143,22 +143,22 @@ export default function Contact() {
               (siteInfo.visibility?.email !== false && siteInfo.email) ||
               (siteInfo.visibility?.phone !== false && siteInfo.phone)) && (
               <div className="paper-card p-6">
-                <MapPin className="h-5 w-5 text-bloom" />
-                <h2 className="mt-3 font-display text-2xl text-plum">Find us</h2>
+                <MapPin className="h-5 w-5 text-accent" />
+                <h2 className="mt-3 font-display text-2xl text-brand">Find us</h2>
                 {siteInfo.visibility?.location !== false && siteInfo.location && (
                   <p className="mt-2 text-muted">{siteInfo.location}</p>
                 )}
                 {siteInfo.visibility?.email !== false && siteInfo.email && (
                   <p className="mt-2 text-sm text-muted">
-                    <a href={`mailto:${siteInfo.email}`} className="hover:text-plum transition">
+                    <a href={`mailto:${siteInfo.email}`} className="hover:text-brand transition">
                       {siteInfo.email}
                     </a>
                   </p>
                 )}
                 {siteInfo.visibility?.phone !== false && siteInfo.phone && (
                   <p className="mt-1 flex items-center gap-2 text-sm text-muted">
-                    <Phone className="h-3.5 w-3.5 text-bloom shrink-0" />
-                    <a href={`tel:${siteInfo.phone.replace(/[^0-9+]/g, '')}`} className="hover:text-plum transition">
+                    <Phone className="h-3.5 w-3.5 text-accent shrink-0" />
+                    <a href={`tel:${siteInfo.phone.replace(/[^0-9+]/g, '')}`} className="hover:text-brand transition">
                       {siteInfo.phone}
                     </a>
                   </p>
@@ -167,33 +167,33 @@ export default function Contact() {
             )}
             {siteInfo.visibility?.instagram !== false && siteInfo.social?.instagram?.trim() && (
               <a href={siteInfo.social.instagram} target="_blank" rel="noopener noreferrer" className="paper-card flex items-center gap-4 p-6 transition hover:-translate-y-0.5 hover:shadow-lift">
-                <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blush text-plum">
+                <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blush text-brand">
                   <InstagramIcon className="h-6 w-6" />
                 </span>
                 <span>
-                  <span className="block font-display text-xl text-plum">Instagram</span>
+                  <span className="block font-display text-xl text-brand">Instagram</span>
                   <span className="text-sm text-muted">Follow the craft table</span>
                 </span>
               </a>
             )}
             {siteInfo.visibility?.facebook !== false && siteInfo.social?.facebook?.trim() && (
               <a href={siteInfo.social.facebook} target="_blank" rel="noopener noreferrer" className="paper-card flex items-center gap-4 p-6 transition hover:-translate-y-0.5 hover:shadow-lift">
-                <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-lavender/70 text-plum">
+                <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-lavender/70 text-brand">
                   <FacebookIcon className="h-6 w-6" />
                 </span>
                 <span>
-                  <span className="block font-display text-xl text-plum">Facebook</span>
+                  <span className="block font-display text-xl text-brand">Facebook</span>
                   <span className="text-sm text-muted">Say hello there too</span>
                 </span>
               </a>
             )}
             {siteInfo.visibility?.whatsapp !== false && siteInfo.whatsapp?.trim() && (
               <a href={whatsappLink} target="_blank" rel="noopener noreferrer" className="paper-card flex items-center gap-4 p-6 transition hover:-translate-y-0.5 hover:shadow-lift">
-                <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-sage/70 text-plum">
+                <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-sage/70 text-brand">
                   <MessageCircle />
                 </span>
                 <span>
-                  <span className="block font-display text-xl text-plum">WhatsApp</span>
+                  <span className="block font-display text-xl text-brand">WhatsApp</span>
                   <span className="text-sm text-muted">A quick, personal chat</span>
                 </span>
               </a>

@@ -13,11 +13,11 @@ const label = (value = '') => value === 'IN_PROGRESS' ? 'Being crafted' : value.
 const money = (amount) => `₹${Number(amount || 0).toLocaleString('en-IN')}`
 
 function paymentBadgeStyle(status) {
-  if (status === 'PAID' || status === 'COD_COLLECTED' || status === 'REFUNDED') return 'bg-sage/20 text-emerald-800 border-sage/40'
-  if (status === 'AWAITING_VERIFICATION' || status === 'REFUND_REQUESTED') return 'bg-amber-100 text-amber-800 border-amber-300'
+  if (status === 'PAID' || status === 'COD_COLLECTED' || status === 'REFUNDED') return 'bg-sage/20 text-success border-sage/40'
+  if (status === 'AWAITING_VERIFICATION' || status === 'REFUND_REQUESTED') return 'bg-warning-surface text-warning border-amber-300'
   if (status === 'COD_PENDING_COLLECTION') return 'bg-sky-100 text-sky-800 border-sky-300'
-  if (status === 'FAILED' || status === 'CANCELLED') return 'bg-rose-100 text-rose-800 border-rose-300'
-  return 'bg-sand/40 text-plum border-sand'
+  if (status === 'FAILED' || status === 'CANCELLED') return 'bg-danger-surface text-danger border-rose-300'
+  return 'bg-sand/40 text-brand border-sand'
 }
 
 export default function AdminOrderDetail() {
@@ -149,8 +149,8 @@ export default function AdminOrderDetail() {
   if (!order) {
     return (
       <section className="space-y-4">
-        <p role="alert" className="rounded-xl bg-bloom/10 p-3 text-bloom">{error || 'Order not found.'}</p>
-        <Link href="/admin/orders" className="text-plum underline">Back to orders</Link>
+        <p role="alert" className="rounded-xl bg-bloom/10 p-3 text-accent">{error || 'Order not found.'}</p>
+        <Link href="/admin/orders" className="text-brand underline">Back to orders</Link>
       </section>
     )
   }
@@ -163,28 +163,28 @@ export default function AdminOrderDetail() {
 
   return (
     <section className="min-w-0 space-y-5 sm:space-y-6">
-      <Link href="/admin/orders" className="inline-flex min-h-10 items-center text-sm text-plum underline underline-offset-4">
+      <Link href="/admin/orders" className="inline-flex min-h-10 items-center text-sm text-brand underline underline-offset-4">
         ← Back to orders
       </Link>
 
       <header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <p className="text-sm text-muted">Order details</p>
-          <h1 className="break-all font-display text-2xl text-plum sm:text-3xl">{order.orderNumber}</h1>
+          <h1 className="break-all font-display text-2xl text-brand sm:text-3xl">{order.orderNumber}</h1>
           <p className="mt-1 text-sm text-muted">Placed {new Date(order.createdAt).toLocaleString()}</p>
         </div>
         <div className="flex items-center gap-2.5 flex-wrap">
           <button
             type="button"
             onClick={() => printInvoice(order)}
-            className="inline-flex min-h-11 items-center gap-1.5 rounded-xl border border-sand bg-white px-3.5 py-2 text-sm font-semibold text-plum hover:bg-cream shadow-sm transition"
+            className="inline-flex min-h-11 items-center gap-1.5 rounded-xl border border-sand bg-surface px-3.5 py-2 text-sm font-semibold text-brand hover:bg-surface shadow-sm transition"
             title="Download or Print PDF Tax Invoice"
           >
-            <Printer className="h-4 w-4 text-plum" aria-hidden="true" />
+            <Printer className="h-4 w-4 text-brand" aria-hidden="true" />
             Print Invoice
           </button>
           {canManage ? (
-          <label className="text-sm font-medium text-plum">
+          <label className="text-sm font-medium text-brand">
             Fulfillment status
             <select
               aria-label="Fulfillment status"
@@ -202,7 +202,7 @@ export default function AdminOrderDetail() {
                 }
                 patchOrder({ status: nextStatus })
               }}
-              className="mt-1 min-h-11 w-full rounded-xl border border-sand bg-white px-3 sm:w-auto"
+              className="mt-1 min-h-11 w-full rounded-xl border border-sand bg-surface px-3 sm:w-auto"
             >
               {STATUSES.map((value) => {
                 const isShippedOrBeyond = order.status === 'SHIPPED' || order.status === 'DELIVERED'
@@ -224,17 +224,17 @@ export default function AdminOrderDetail() {
             </select>
           </label>
         ) : (
-          <span className="rounded-full bg-blush/40 px-3 py-2 text-sm text-plum">{label(order.status)}</span>
+          <span className="rounded-full bg-blush/40 px-3 py-2 text-sm text-brand">{label(order.status)}</span>
         )}
         </div>
       </header>
 
-      {error && <p role="alert" className="rounded-xl bg-bloom/10 p-3 text-sm text-bloom">{error}</p>}
+      {error && <p role="alert" className="rounded-xl bg-bloom/10 p-3 text-sm text-accent">{error}</p>}
       {notice && <p role="status" className="rounded-xl bg-sage/20 p-3 text-sm">{notice}</p>}
       {canManage && isUpi && order.status === 'CONFIRMED' && order.paymentStatus !== 'PAID' && (
-        <div role="status" className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+        <div role="status" className="rounded-xl border border-amber-300 bg-warning-surface px-4 py-3 text-sm text-amber-950">
           <p className="font-semibold">Order confirmed · payment not verified</p>
-          <p className="mt-1 text-amber-900">This order was confirmed before its UPI payment was recorded. Verify the transfer below to update the payment status to Paid.</p>
+          <p className="mt-1 text-warning">This order was confirmed before its UPI payment was recorded. Verify the transfer below to update the payment status to Paid.</p>
         </div>
       )}
 
@@ -244,14 +244,14 @@ export default function AdminOrderDetail() {
           {/* ══════════════════════════════════════════════════════════════
               1. PAYMENT & VERIFICATION (Primary Step)
              ══════════════════════════════════════════════════════════════ */}
-          <section className="rounded-2xl bg-cream p-4 shadow-soft ring-1 ring-sand sm:p-5">
+          <section className="rounded-lg bg-surface p-4 shadow-none ring-1 ring-sand sm:p-5">
             <div className="flex items-center justify-between gap-2 border-b border-sand pb-3">
               <div className="flex items-center gap-2.5">
-                <span className="p-2 rounded-xl bg-sand/30">
-                  <CreditCard className="h-5 w-5 text-plum" />
+                <span className="text-brand">
+                  <CreditCard className="h-5 w-5 text-brand" />
                 </span>
                 <div>
-                  <h2 className="font-display text-xl text-plum">1. Payment & Verification</h2>
+                  <h2 className="font-display text-xl text-brand">1. Payment & Verification</h2>
                   <p className="text-xs text-muted">Verify transaction and payment state before fulfillment</p>
                 </div>
               </div>
@@ -261,22 +261,22 @@ export default function AdminOrderDetail() {
             </div>
 
             <dl className="mt-4 grid gap-3 sm:grid-cols-2 text-sm">
-              <div className="rounded-xl bg-white p-3 border border-sand/60">
+              <div className="rounded-xl bg-surface p-3 border border-sand/60">
                 <dt className="text-xs text-muted">Payment Method</dt>
-                <dd className="font-semibold text-plum mt-0.5">{order.paymentMethod || 'Not recorded'}</dd>
+                <dd className="font-semibold text-brand mt-0.5">{order.paymentMethod || 'Not recorded'}</dd>
               </div>
-              <div className="rounded-xl bg-white p-3 border border-sand/60">
+              <div className="rounded-xl bg-surface p-3 border border-sand/60">
                 <dt className="text-xs text-muted">Payment Status</dt>
-                <dd className="font-semibold text-plum mt-0.5">{label(order.paymentStatus)}</dd>
+                <dd className="font-semibold text-brand mt-0.5">{label(order.paymentStatus)}</dd>
               </div>
-              <div className="rounded-xl bg-white p-3 border border-sand/60 sm:col-span-2">
+              <div className="rounded-xl bg-surface p-3 border border-sand/60 sm:col-span-2">
                 <dt className="text-xs text-muted">Customer Payment Reference / UTR</dt>
-                <dd className="font-mono text-sm text-plum break-all mt-0.5">
+                <dd className="font-mono text-sm text-brand break-all mt-0.5">
                   {order.paymentReference || <span className="text-muted font-sans italic">No reference entered by customer</span>}
                 </dd>
               </div>
               {order.notes && (
-                <div className="rounded-xl bg-white p-3 border border-sand/60 sm:col-span-2">
+                <div className="rounded-xl bg-surface p-3 border border-sand/60 sm:col-span-2">
                   <dt className="text-xs text-muted">Customer Notes</dt>
                   <dd className="text-xs text-muted whitespace-pre-wrap mt-0.5">{order.notes}</dd>
                 </div>
@@ -287,15 +287,15 @@ export default function AdminOrderDetail() {
               <div className="mt-4 space-y-3">
                 {/* UPI Verification Flow */}
                 {isUpi && (
-                  <div className={`rounded-xl border p-4 ${isPaid ? 'border-sage/40 bg-sage/10' : 'border-amber-300 bg-amber-50/60'}`}>
+                  <div className={`rounded-xl border p-4 ${isPaid ? 'border-sage/40 bg-sage/10' : 'border-amber-300 bg-warning-surface/60'}`}>
                     <div className="flex items-start gap-2.5">
                       {isPaid ? (
-                        <CheckCircle2 className="h-5 w-5 text-emerald-700 shrink-0 mt-0.5" />
+                        <CheckCircle2 className="h-5 w-5 text-success shrink-0 mt-0.5" />
                       ) : (
-                        <AlertTriangle className="h-5 w-5 text-amber-700 shrink-0 mt-0.5" />
+                        <AlertTriangle className="h-5 w-5 text-warning shrink-0 mt-0.5" />
                       )}
                       <div className="flex-1 min-w-0">
-                        <p className={`text-sm font-semibold ${isPaid ? 'text-emerald-900' : 'text-amber-950'}`}>
+                        <p className={`text-sm font-semibold ${isPaid ? 'text-success' : 'text-amber-950'}`}>
                           {isPaid ? 'UPI Payment Verified & Recorded' : 'Verify UPI Payment from Customer'}
                         </p>
                         <p className="text-xs text-muted mt-0.5">
@@ -305,9 +305,9 @@ export default function AdminOrderDetail() {
                         </p>
 
                         <div className="mt-3">
-                          <label className="block text-xs font-semibold text-plum mb-1">
+                          <label className="block text-xs font-semibold text-brand mb-1">
                             Verified UTR / Transaction Reference
-                            {!isPaid && <span className="text-bloom ml-1 font-normal">*Required</span>}
+                            {!isPaid && <span className="text-accent ml-1 font-normal">*Required</span>}
                           </label>
                           <div className="flex flex-col sm:flex-row gap-2">
                             <input
@@ -317,7 +317,7 @@ export default function AdminOrderDetail() {
                               onChange={(e) => setPaymentRefDraft(e.target.value)}
                               placeholder={isPaid ? 'Payment verified' : 'Enter 12-digit UPI UTR number'}
                               maxLength={80}
-                              className="min-h-11 flex-1 rounded-xl border border-sand bg-white px-3 text-sm text-plum disabled:bg-sand/20"
+                              className="min-h-11 flex-1 rounded-xl border border-sand bg-surface px-3 text-sm text-brand disabled:bg-sand/20"
                             />
                             {isPendingVerification && (
                               <button
@@ -372,19 +372,19 @@ export default function AdminOrderDetail() {
           {/* ══════════════════════════════════════════════════════════════
               2. SHIPPING & TRACKING (Immediately following Payment)
              ══════════════════════════════════════════════════════════════ */}
-          <section className="rounded-2xl bg-cream p-4 shadow-soft ring-1 ring-sand sm:p-5">
+          <section className="rounded-lg bg-surface p-4 shadow-none ring-1 ring-sand sm:p-5">
             <div className="flex items-center justify-between gap-2 border-b border-sand pb-3">
               <div className="flex items-center gap-2.5">
-                <span className="p-2 rounded-xl bg-sand/30">
-                  <Truck className="h-5 w-5 text-plum" />
+                <span className="text-brand">
+                  <Truck className="h-5 w-5 text-brand" />
                 </span>
                 <div>
-                  <h2 className="font-display text-xl text-plum">2. Shipping and tracking</h2>
+                  <h2 className="font-display text-xl text-brand">2. Shipping and tracking</h2>
                   <p className="text-xs text-muted">Courier dispatch partner, tracking reference, and expected arrival</p>
                 </div>
               </div>
               {order.trackingNumber && (
-                <span className="text-xs font-mono bg-white px-2.5 py-1 rounded-lg border border-sand text-plum">
+                <span className="text-xs font-mono bg-surface px-2.5 py-1 rounded-lg border border-sand text-brand">
                   {order.trackingNumber}
                 </span>
               )}
@@ -392,7 +392,7 @@ export default function AdminOrderDetail() {
 
             {/* Warning if payment is not yet verified */}
             {isUpi && !isPaid && (
-              <div className="mt-3 rounded-xl border border-amber-300 bg-amber-50 p-3 text-xs text-amber-900">
+              <div className="mt-3 rounded-xl border border-amber-300 bg-warning-surface p-3 text-xs text-warning">
                 <strong>Attention:</strong> Payment is awaiting verification. Verify payment above before dispatching packages to the courier.
               </div>
             )}
@@ -405,7 +405,7 @@ export default function AdminOrderDetail() {
                   value={draft.shippingPartner}
                   onChange={(event) => setDraft({ ...draft, shippingPartner: event.target.value })}
                   placeholder="e.g. India Post, Blue Dart, DTDC, Delhivery"
-                  className="mt-1 min-h-11 w-full rounded-xl border border-sand bg-white px-3 text-plum read-only:bg-ink/5"
+                  className="mt-1 min-h-11 w-full rounded-xl border border-sand bg-surface px-3 text-brand read-only:bg-overlay-ink/5"
                 />
               </label>
               <label className="text-sm text-muted">
@@ -415,7 +415,7 @@ export default function AdminOrderDetail() {
                   value={draft.trackingNumber}
                   onChange={(event) => setDraft({ ...draft, trackingNumber: event.target.value })}
                   placeholder="e.g. AW123456789IN"
-                  className="mt-1 min-h-11 w-full rounded-xl border border-sand bg-white px-3 text-plum font-mono read-only:bg-ink/5"
+                  className="mt-1 min-h-11 w-full rounded-xl border border-sand bg-surface px-3 text-brand font-mono read-only:bg-overlay-ink/5"
                 />
               </label>
               <label className="text-sm text-muted sm:col-span-2">
@@ -425,7 +425,7 @@ export default function AdminOrderDetail() {
                   value={draft.estimatedDelivery}
                   onChange={(event) => setDraft({ ...draft, estimatedDelivery: event.target.value })}
                   placeholder="e.g. 3–5 business days"
-                  className="mt-1 min-h-11 w-full rounded-xl border border-sand bg-white px-3 text-plum read-only:bg-ink/5"
+                  className="mt-1 min-h-11 w-full rounded-xl border border-sand bg-surface px-3 text-brand read-only:bg-overlay-ink/5"
                 />
               </label>
             </div>
@@ -434,7 +434,7 @@ export default function AdminOrderDetail() {
                 type="button"
                 disabled={saving}
                 onClick={() => patchOrder(draft)}
-                className="mt-4 min-h-11 w-full rounded-xl bg-plum px-4 py-2 font-medium text-cream shadow-sm hover:bg-plum/90 disabled:opacity-60 sm:w-auto"
+                className="mt-4 min-h-11 w-full rounded-xl bg-plum px-4 py-2 font-medium text-on-primary shadow-sm hover:bg-plum/90 disabled:opacity-60 sm:w-auto"
               >
                 {saving ? 'Saving…' : 'Save tracking details'}
               </button>
@@ -444,13 +444,13 @@ export default function AdminOrderDetail() {
           {/* ══════════════════════════════════════════════════════════════
               3. ORDER ITEMS
              ══════════════════════════════════════════════════════════════ */}
-          <section className="rounded-2xl bg-cream p-4 shadow-soft ring-1 ring-sand sm:p-5">
+          <section className="rounded-lg bg-surface p-4 shadow-none ring-1 ring-sand sm:p-5">
             <div className="flex items-center gap-2.5 border-b border-sand pb-3">
-              <span className="p-2 rounded-xl bg-sand/30">
-                <Package className="h-5 w-5 text-plum" />
+              <span className="text-brand">
+                <Package className="h-5 w-5 text-brand" />
               </span>
               <div>
-                <h2 className="font-display text-xl text-plum">3. Order Items</h2>
+                <h2 className="font-display text-xl text-brand">3. Order Items</h2>
                 <p className="text-xs text-muted">{(order.items || []).length} unique item{(order.items || []).length === 1 ? '' : 's'}</p>
               </div>
             </div>
@@ -458,7 +458,7 @@ export default function AdminOrderDetail() {
               {(order.items || []).map((item) => (
                 <div key={item.id} className="flex min-w-0 flex-col justify-between gap-2 py-3 sm:flex-row sm:items-center">
                   <div className="min-w-0">
-                    <p className="break-words font-medium text-plum">{item.product?.name || 'Product unavailable'}</p>
+                    <p className="break-words font-medium text-brand">{item.product?.name || 'Product unavailable'}</p>
                     <p className="text-sm text-muted">
                       Qty {item.quantity} · {money(item.unitPrice)} each{item.customization ? ` · ${item.customization}` : ''}
                     </p>
@@ -466,7 +466,7 @@ export default function AdminOrderDetail() {
                       GST {item.gstPercent}% ({money(item.gstAmount)}) · COD fee {money(item.codFee)} · Other charge {money(item.otherCharge)}
                     </p>
                   </div>
-                  <strong className="shrink-0 text-plum font-semibold">
+                  <strong className="shrink-0 text-brand font-semibold">
                     {money(item.unitPrice * item.quantity + item.gstAmount + item.codFee + item.otherCharge)}
                   </strong>
                 </div>
@@ -477,36 +477,36 @@ export default function AdminOrderDetail() {
           {/* ══════════════════════════════════════════════════════════════
               4. CUSTOMER AND DELIVERY
              ══════════════════════════════════════════════════════════════ */}
-          <section className="rounded-2xl bg-cream p-4 shadow-soft ring-1 ring-sand sm:p-5">
+          <section className="rounded-lg bg-surface p-4 shadow-none ring-1 ring-sand sm:p-5">
             <div className="flex items-center gap-2.5 border-b border-sand pb-3">
-              <span className="p-2 rounded-xl bg-sand/30">
-                <UserCheck className="h-5 w-5 text-plum" />
+              <span className="text-brand">
+                <UserCheck className="h-5 w-5 text-brand" />
               </span>
               <div>
-                <h2 className="font-display text-xl text-plum">4. Customer and delivery</h2>
+                <h2 className="font-display text-xl text-brand">4. Customer and delivery</h2>
                 <p className="text-xs text-muted">Recipient contact details and destination address</p>
               </div>
             </div>
             <dl className="mt-4 grid gap-4 text-sm sm:grid-cols-2">
               <div>
                 <dt className="text-muted">Customer</dt>
-                <dd className="break-words font-medium text-plum">{order.customerName}</dd>
+                <dd className="break-words font-medium text-brand">{order.customerName}</dd>
               </div>
               <div>
                 <dt className="text-muted">Email</dt>
-                <dd className="break-all font-medium text-plum">{order.customerEmail}</dd>
+                <dd className="break-all font-medium text-brand">{order.customerEmail}</dd>
               </div>
               <div>
                 <dt className="text-muted">Phone</dt>
-                <dd className="break-words font-medium text-plum">{order.customerPhone || addressParts.phone || order.user?.phone || 'Not provided'}</dd>
+                <dd className="break-words font-medium text-brand">{order.customerPhone || addressParts.phone || order.user?.phone || 'Not provided'}</dd>
               </div>
               <div>
                 <dt className="text-muted">Account type</dt>
-                <dd className="font-medium text-plum">{order.user ? 'Registered customer' : 'Guest order'}</dd>
+                <dd className="font-medium text-brand">{order.user ? 'Registered customer' : 'Guest order'}</dd>
               </div>
             </dl>
             <div className="mt-4 border-t border-sand pt-3 text-sm">
-              <p className="font-medium text-plum">Shipping address</p>
+              <p className="font-medium text-brand">Shipping address</p>
               {addressParts.house || addressParts.area || addressParts.city ? (
                 <div className="mt-2 space-y-1 break-words text-muted">
                   <p className="font-medium text-ink">
@@ -527,8 +527,8 @@ export default function AdminOrderDetail() {
           {/* ══════════════════════════════════════════════════════════════
               5. REFUND REQUESTS (If any)
              ══════════════════════════════════════════════════════════════ */}
-          <section className="rounded-2xl bg-cream p-4 shadow-soft ring-1 ring-sand sm:p-5">
-            <h2 className="font-display text-xl text-plum">Refund requests</h2>
+          <section className="rounded-lg bg-surface p-4 shadow-none ring-1 ring-sand sm:p-5">
+            <h2 className="font-display text-xl text-brand">Refund requests</h2>
             {!order.refundRequests?.length ? (
               <p className="mt-2 text-sm text-muted">No refund requests for this order.</p>
             ) : (
@@ -539,51 +539,51 @@ export default function AdminOrderDetail() {
                   const isCODOrder = order.paymentMethod?.toLowerCase().includes('cash') || order.paymentMethod?.toLowerCase().includes('cod')
                   const canApprove = !isCODOrder || ['RETURN_APPROVED', 'RETURNED'].includes(order.status)
                   return (
-                    <div key={refund.id} className="rounded-xl border border-sand bg-white p-3 sm:p-4">
+                    <div key={refund.id} className="rounded-xl border border-sand bg-surface p-3 sm:p-4">
                       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                        <strong className="text-plum">{label(refund.status)} · {money(refund.amount)}</strong>
+                        <strong className="text-brand">{label(refund.status)} · {money(refund.amount)}</strong>
                         {isTerminal && <span className="text-xs text-muted">This request is closed.</span>}
                       </div>
-                      <p className="mt-2 break-all text-sm text-muted">Refund UPI: <strong className="text-plum">{refund.refundUpiId || 'Not provided'}</strong></p>
+                      <p className="mt-2 break-all text-sm text-muted">Refund UPI: <strong className="text-brand">{refund.refundUpiId || 'Not provided'}</strong></p>
                       <p className="mt-1 break-words text-sm text-muted">{refund.reason}</p>
                       <p className="mt-1 text-xs text-muted">Requested {new Date(refund.createdAt).toLocaleString()}</p>
                       {refund.adminNote && <p className="mt-2 rounded-lg bg-ivory px-3 py-2 text-sm text-muted">Admin note: {refund.adminNote}</p>}
 
                       {canManage && !isTerminal && (
                         <div className="mt-4 space-y-3 border-t border-sand pt-4">
-                          <label className="block text-xs font-medium text-plum">
+                          <label className="block text-xs font-medium text-brand">
                             Admin note <span className="font-normal text-muted">(optional)</span>
-                            <textarea value={refundAdminNoteDraft} onChange={(event) => setRefundAdminNoteDraft(event.target.value)} maxLength={1000} rows={2} className="mt-1 w-full rounded-xl border border-sand bg-white p-3 text-sm" placeholder="Add a reason or update for the customer" />
+                            <textarea value={refundAdminNoteDraft} onChange={(event) => setRefundAdminNoteDraft(event.target.value)} maxLength={1000} rows={2} className="mt-1 w-full rounded-xl border border-sand bg-surface p-3 text-sm" placeholder="Add a reason or update for the customer" />
                           </label>
 
                           {refund.status === 'REQUESTED' && (
                             <>
                               <div className="flex flex-col gap-2 sm:flex-row">
-                                <button type="button" disabled={saving || !canApprove} onClick={() => updateRefund(refund, 'APPROVED')} className="min-h-11 flex-1 rounded-full bg-plum px-4 py-2 text-sm font-semibold text-cream disabled:opacity-50">Approve refund</button>
-                                <button type="button" disabled={saving} onClick={() => updateRefund(refund, 'REJECTED')} className="min-h-11 rounded-full border border-sand px-4 py-2 text-sm font-semibold text-plum disabled:opacity-50">Reject request</button>
+                                <button type="button" disabled={saving || !canApprove} onClick={() => updateRefund(refund, 'APPROVED')} className="min-h-11 flex-1 rounded-lg bg-plum px-4 py-2 text-sm font-semibold text-on-primary disabled:opacity-50">Approve refund</button>
+                                <button type="button" disabled={saving} onClick={() => updateRefund(refund, 'REJECTED')} className="min-h-11 rounded-full border border-sand px-4 py-2 text-sm font-semibold text-brand disabled:opacity-50">Reject request</button>
                               </div>
-                              {!canApprove && <p className="text-xs text-amber-800">Approve this COD refund after the return is marked Return Approved or Returned.</p>}
+                              {!canApprove && <p className="text-xs text-warning">Approve this COD refund after the return is marked Return Approved or Returned.</p>}
                             </>
                           )}
 
                           {['APPROVED', 'PROCESSING'].includes(refund.status) && (
-                            <div className="rounded-2xl border border-sage/30 bg-sage/5 p-3 sm:p-4">
-                              <p className="font-medium text-plum">Send {money(refund.amount)} to {refund.refundUpiId}</p>
+                            <div className="rounded-lg border border-sage/30 bg-sage/5 p-3 sm:p-4">
+                              <p className="font-medium text-brand">Send {money(refund.amount)} to {refund.refundUpiId}</p>
                               <p className="mt-1 text-xs text-muted">Check the recipient UPI ID and amount before approving the transfer in your UPI app.</p>
                               <div className="mt-3 grid gap-3 sm:grid-cols-[auto_1fr] sm:items-center">
                                 <div className="mx-auto rounded-xl bg-white p-2 ring-1 ring-sand">
                                   <QRCodeSVG value={refundUri} size={168} level="M" bgColor="#ffffff" fgColor="#4b3742" role="img" aria-label={`Refund payment QR for ${money(refund.amount)} to ${refund.refundUpiId}`} />
                                 </div>
                                 <div className="space-y-2 text-sm">
-                                  {isMobile && <a href={refundUri} className="inline-flex min-h-11 w-full items-center justify-center rounded-full bg-plum px-4 py-2 font-semibold text-cream">Open UPI app</a>}
-                                  {refund.status === 'APPROVED' && <button type="button" disabled={saving} onClick={() => updateRefund(refund, 'PROCESSING')} className="min-h-11 w-full rounded-full border border-plum px-4 py-2 font-semibold text-plum disabled:opacity-50">Mark transfer started</button>}
-                                  {refund.status === 'APPROVED' && <button type="button" disabled={saving} onClick={() => updateRefund(refund, 'REJECTED')} className="min-h-11 w-full rounded-full px-4 py-2 text-sm font-medium text-bloom underline underline-offset-2 disabled:opacity-50">Reject before transfer</button>}
+                                  {isMobile && <a href={refundUri} className="inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-plum px-4 py-2 font-semibold text-on-primary">Open UPI app</a>}
+                                  {refund.status === 'APPROVED' && <button type="button" disabled={saving} onClick={() => updateRefund(refund, 'PROCESSING')} className="min-h-11 w-full rounded-full border border-plum px-4 py-2 font-semibold text-brand disabled:opacity-50">Mark transfer started</button>}
+                                  {refund.status === 'APPROVED' && <button type="button" disabled={saving} onClick={() => updateRefund(refund, 'REJECTED')} className="min-h-11 w-full rounded-full px-4 py-2 text-sm font-medium text-accent underline underline-offset-2 disabled:opacity-50">Reject before transfer</button>}
                                 </div>
                               </div>
                               {refund.status === 'PROCESSING' && (
                                 <div className="mt-3 space-y-2 border-t border-sage/30 pt-3">
-                                  <label className="block text-xs font-medium text-plum">Refund transfer reference / UTR <span className="text-bloom">Required to complete</span>
-                                    <input value={refundReferenceDraft} onChange={(event) => setRefundReferenceDraft(event.target.value)} maxLength={80} autoComplete="off" placeholder="Enter the refund transaction reference" className="mt-1 min-h-11 w-full rounded-xl border border-sand bg-white px-3 text-sm" />
+                                  <label className="block text-xs font-medium text-brand">Refund transfer reference / UTR <span className="text-accent">Required to complete</span>
+                                    <input value={refundReferenceDraft} onChange={(event) => setRefundReferenceDraft(event.target.value)} maxLength={80} autoComplete="off" placeholder="Enter the refund transaction reference" className="mt-1 min-h-11 w-full rounded-xl border border-sand bg-surface px-3 text-sm" />
                                   </label>
                                   <button type="button" disabled={saving || !refundReferenceDraft.trim()} onClick={() => updateRefund(refund, 'COMPLETED')} className="min-h-11 w-full rounded-full bg-emerald-700 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">Confirm refund sent</button>
                                 </div>
@@ -605,62 +605,62 @@ export default function AdminOrderDetail() {
            ══════════════════════════════════════════════════════════════ */}
         <aside className="min-w-0 space-y-4">
           {/* Price details */}
-          <section className="rounded-2xl bg-cream p-4 shadow-soft ring-1 ring-sand sm:p-5">
-            <h2 className="font-display text-xl text-plum">Price details</h2>
+          <section className="rounded-lg bg-surface p-4 shadow-none ring-1 ring-sand sm:p-5">
+            <h2 className="font-display text-xl text-brand">Price details</h2>
             <dl className="mt-3 space-y-2 text-sm">
               <div className="flex justify-between gap-3">
                 <dt className="text-muted">Subtotal</dt>
-                <dd className="font-medium text-plum">{money(order.subtotal)}</dd>
+                <dd className="font-medium text-brand">{money(order.subtotal)}</dd>
               </div>
               <div className="flex justify-between gap-3">
                 <dt className="text-muted">
                   Discount{order.couponCode ? ` (${order.couponCode})` : ''}
                 </dt>
-                <dd className={order.discount > 0 ? "font-semibold text-emerald-700" : "text-muted"}>
+                <dd className={order.discount > 0 ? "font-semibold text-success" : "text-muted"}>
                   −{money(order.discount)}
                 </dd>
               </div>
               <div className="flex justify-between gap-3">
                 <dt className="text-muted">Shipping</dt>
-                <dd className="font-medium text-plum">{order.shipping > 0 ? money(order.shipping) : 'Free'}</dd>
+                <dd className="font-medium text-brand">{order.shipping > 0 ? money(order.shipping) : 'Free'}</dd>
               </div>
               <div className="flex justify-between gap-3">
                 <dt className="text-muted">Fees and charges</dt>
-                <dd className="font-medium text-plum">{money(order.fee)}</dd>
+                <dd className="font-medium text-brand">{money(order.fee)}</dd>
               </div>
-              <div className="flex justify-between gap-3 border-t border-sand pt-3 font-semibold text-plum">
+              <div className="flex justify-between gap-3 border-t border-sand pt-3 font-semibold text-brand">
                 <dt>Total</dt>
-                <dd className="text-base text-plum font-bold">{money(order.totalAmount)}</dd>
+                <dd className="text-base text-brand font-bold">{money(order.totalAmount)}</dd>
               </div>
             </dl>
             {order.discount > 0 && order.couponCode && (
-              <div className="mt-3 rounded-lg bg-sage/15 p-2 text-xs font-semibold text-emerald-800">
+              <div className="mt-3 rounded-lg bg-sage/15 p-2 text-xs font-semibold text-success">
                 Coupon {order.couponCode} applied: {money(order.discount)} saved
               </div>
             )}
           </section>
 
           {/* ── Payment Activity Section ── */}
-          <section className="rounded-2xl bg-cream p-4 shadow-soft ring-1 ring-sand sm:p-5">
-            <h2 className="font-display text-xl text-plum">Payment activity</h2>
+          <section className="rounded-lg bg-surface p-4 shadow-none ring-1 ring-sand sm:p-5">
+            <h2 className="font-display text-xl text-brand">Payment activity</h2>
             {order.paymentLogs?.length ? (
               <ul className="mt-3 space-y-3">
                 {order.paymentLogs.map((log) => (
                   <li key={log.id} className="border-l-2 border-bloom pl-3 text-sm">
                     <div className="flex items-center justify-between gap-2">
-                      <p className="font-semibold text-plum">{label(log.status)}</p>
-                      <span className="text-xs font-medium text-plum">{money(log.amount)}</span>
+                      <p className="font-semibold text-brand">{label(log.status)}</p>
+                      <span className="text-xs font-medium text-brand">{money(log.amount)}</span>
                     </div>
                     <p className="break-words text-xs text-muted mt-0.5">
                       {log.method || log.provider || 'Payment'} · {new Date(log.createdAt).toLocaleString()}
                     </p>
                     {(log.utr || log.providerReference) && (
-                      <p className="break-all text-xs font-mono text-plum mt-1 bg-white/70 rounded px-1.5 py-0.5 inline-block">
+                      <p className="break-all text-xs font-mono text-brand mt-1 bg-surface/70 rounded px-1.5 py-0.5 inline-block">
                         Ref: {log.utr || log.providerReference}
                       </p>
                     )}
                     {log.verifiedBy && (
-                      <p className="text-xs text-emerald-700 font-medium mt-1">
+                      <p className="text-xs text-success font-medium mt-1">
                         ✓ Verified by {log.verifiedBy}{log.verifiedAt ? ` on ${new Date(log.verifiedAt).toLocaleString()}` : ''}
                       </p>
                     )}

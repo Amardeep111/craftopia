@@ -1,55 +1,39 @@
 import Link from 'next/link'
-import CraftIllustration from '../ui/CraftIllustration'
+import ProductImage from '../ui/ProductImage'
 import ScrollReveal from '../ui/ScrollReveal'
 import SectionHeading from '../ui/SectionHeading'
 import Button from '../ui/Button'
 import { getSiteContent } from '@/lib/site'
 
-export default async function BrandStory() {
+export default async function BrandStory({ products = [] }) {
   const site = await getSiteContent()
 
   return (
-    <section className="container-page mt-20 sm:mt-28">
+    <section className="container-page studio-section">
       <div className="grid items-center gap-10 lg:grid-cols-2 lg:gap-16">
         <ScrollReveal>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="paper-card aspect-[3/4] overflow-hidden">
-              {site.images?.brandStory?.left ? (
-                <img src={site.images.brandStory.left} alt="Making crochet pieces by hand" className="h-full w-full object-cover" />
-              ) : (
-                <CraftIllustration visual="yarn" palette={['#D9CDE8', '#5A3D4A']} className="h-full" />
-              )}
-            </div>
-            <div className="mt-8 space-y-4">
-              <div className="paper-card aspect-square overflow-hidden">
-                {site.images?.brandStory?.topRight ? (
-                  <img src={site.images.brandStory.topRight} alt="Handmade with heart" className="h-full w-full object-cover" />
-                ) : (
-                  <CraftIllustration visual="heart" palette={['#E8B4B8']} className="h-full" />
-                )}
+          <div className="grid grid-cols-2 items-start gap-4">
+            {['left', 'topRight', 'bottomRight'].map((slot, index) => {
+              const product = products[[4, 6, 7][index]] || products[index]
+              const configured = site.images?.brandStory?.[slot]
+              const photo = configured || product?.imageUrl || product?.image || product?.images?.[0]
+              return <div key={slot} className={index === 0 ? 'relative row-span-2 aspect-[3/4] overflow-hidden rounded' : `relative aspect-square overflow-hidden rounded ${index === 1 ? 'mt-8' : ''}`}>
+                <ProductImage src={photo} alt={configured ? 'From the Jamae’s Craftopia studio' : product?.name || 'Handmade crochet details'} visual={product?.visual || 'yarn'} fit="cover" sizes="(max-width: 1023px) 50vw, 260px" className="h-full w-full" />
               </div>
-              <div className="paper-card aspect-[4/3] overflow-hidden">
-                {site.images?.brandStory?.bottomRight ? (
-                  <img src={site.images.brandStory.bottomRight} alt="Detailed crochet craft" className="h-full w-full object-cover" />
-                ) : (
-                  <CraftIllustration visual="teddy" palette={['#F7EFE6', '#E8B4B8', '#4A342C']} className="h-full" />
-                )}
-              </div>
-            </div>
+            })}
           </div>
         </ScrollReveal>
         <ScrollReveal delay={0.1}>
           <SectionHeading
             align="left"
-            eyebrow="Why Jamae's Craftopia"
             title="Made slowly, lovingly, and especially for you."
-            description="This is not a factory floor. It is a home-grown craft practice — two sisters in Siliguri choosing yarn, colour, and tiny details until a piece feels right."
+            description="Two sisters in Siliguri, choosing yarn, colour, and tiny details until a piece feels right. Every order supports our small family studio."
           />
           <ul className="mt-6 space-y-3 text-muted">
-            <li className="rounded-2xl bg-ivory/80 px-4 py-3">Every creation is handmade, start to finish.</li>
-            <li className="rounded-2xl bg-ivory/80 px-4 py-3">Small details — bows, initials, petal colours — get real attention.</li>
-            <li className="rounded-2xl bg-ivory/80 px-4 py-3">Customization is welcome. Tell us the story, we will listen.</li>
-            <li className="rounded-2xl bg-ivory/80 px-4 py-3">When you order, you are supporting a small, home-grown business.</li>
+            <li className="border-b border-sand pb-3">Every creation is handmade, start to finish.</li>
+            <li className="border-b border-sand pb-3">Small details — bows, initials, petal colours — get real attention.</li>
+            <li className="border-b border-sand pb-3">Customization is welcome. Tell us the story, we will listen.</li>
+            <li className="border-b border-sand pb-3">When you order, you are supporting a small, home-grown business.</li>
           </ul>
           <Button as={Link} href="/about" prefetch={true} variant="secondary" className="mt-6">
             Read our story

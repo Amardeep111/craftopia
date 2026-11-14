@@ -25,18 +25,18 @@ import { printInvoice } from '@/components/orders/Invoice'
 
 const STATUS_META = {
   CONFIRMED:   { label: 'Order confirmed',     icon: CheckCircle2, color: 'text-sage',      dot: 'bg-sage',       desc: 'Your order has been placed.' },
-  IN_PROGRESS: { label: 'Being crafted',        icon: Package,      color: 'text-bloom',    dot: 'bg-bloom',      desc: 'Our artisans are preparing it.' },
-  PROCESSING:  { label: 'Being crafted',        icon: Package,      color: 'text-bloom',    dot: 'bg-bloom',      desc: 'Our artisans are preparing it.' },
-  SHIPPED:     { label: 'Shipped',              icon: Truck,        color: 'text-plum',     dot: 'bg-plum',       desc: 'On its way to you.' },
+  IN_PROGRESS: { label: 'Being crafted',        icon: Package,      color: 'text-accent',    dot: 'bg-bloom',      desc: 'Our artisans are preparing it.' },
+  PROCESSING:  { label: 'Being crafted',        icon: Package,      color: 'text-accent',    dot: 'bg-bloom',      desc: 'Our artisans are preparing it.' },
+  SHIPPED:     { label: 'Shipped',              icon: Truck,        color: 'text-brand',     dot: 'bg-plum',       desc: 'On its way to you.' },
   DELIVERED:   { label: 'Delivered',            icon: CheckCircle2, color: 'text-sage',     dot: 'bg-sage',       desc: 'Enjoy your piece!' },
-  CANCELLED:   { label: 'Cancelled',            icon: AlertCircle,  color: 'text-bloom',   dot: 'bg-bloom',      desc: 'This order was cancelled.' },
+  CANCELLED:   { label: 'Cancelled',            icon: AlertCircle,  color: 'text-accent',   dot: 'bg-bloom',      desc: 'This order was cancelled.' },
   PENDING:     { label: 'Pending',              icon: AlertCircle,  color: 'text-muted',    dot: 'bg-muted',      desc: 'Awaiting confirmation.' },
 }
 
 const PAYMENT_STATUS_META = {
   PAID:                 { label: 'Paid',                color: 'text-sage',    dot: 'bg-sage',    desc: 'Payment received.' },
-  COD_PENDING_COLLECTION: { label: 'Pay on Delivery',   color: 'text-bloom',   dot: 'bg-bloom',   desc: 'Payment will be collected at delivery.' },
-  AWAITING_VERIFICATION: { label: 'Payment pending verification', color: 'text-bloom', dot: 'bg-bloom', desc: 'We will confirm your order after checking the UPI transfer.' },
+  COD_PENDING_COLLECTION: { label: 'Pay on Delivery',   color: 'text-accent',   dot: 'bg-bloom',   desc: 'Payment will be collected at delivery.' },
+  AWAITING_VERIFICATION: { label: 'Payment pending verification', color: 'text-accent', dot: 'bg-bloom', desc: 'We will confirm your order after checking the UPI transfer.' },
   COD_COLLECTED:        { label: 'COD collected',       color: 'text-sage',    dot: 'bg-sage',    desc: 'Cash payment received on delivery.' },
   PENDING:              { label: 'Pending',             color: 'text-muted',   dot: 'bg-muted',   desc: 'Awaiting payment.' },
 }
@@ -128,10 +128,10 @@ function ItemsSummary({ items }) {
             </div>
           )}
           <div className="flex-1 min-w-0">
-            <p className="font-semibold text-plum text-sm leading-tight">{item.productName || item.product?.name || 'Ordered item'}</p>
+            <p className="font-semibold text-brand text-sm leading-tight">{item.productName || item.product?.name || 'Ordered item'}</p>
             <p className="text-xs text-muted">Qty: {item.quantity}</p>
           </div>
-          <p className="font-semibold text-plum text-sm shrink-0">
+          <p className="font-semibold text-brand text-sm shrink-0">
             {formatPrice(item.lineTotal ?? item.unitPrice * item.quantity)}
           </p>
         </div>
@@ -146,8 +146,8 @@ function AddressSummary({ address }) {
     try { address = JSON.parse(address) } catch { return <p className="text-sm text-muted">Delivery address details are unavailable.</p> }
   }
   return (
-    <div className="flex gap-2 text-sm text-plum">
-      <MapPin className="h-4 w-4 text-bloom shrink-0 mt-0.5" aria-hidden="true" />
+    <div className="flex gap-2 text-sm text-brand">
+      <MapPin className="h-4 w-4 text-accent shrink-0 mt-0.5" aria-hidden="true" />
       <div>
         <p className="font-semibold">{address.fullName} · +91 {address.mobileNumber}</p>
         <p className="text-muted text-xs leading-relaxed">
@@ -170,28 +170,28 @@ function PaymentSummary({ totalAmount, paymentMethod, paymentStatus, paymentRefe
       {paymentMethod && (
         <div className="flex justify-between gap-3">
           <span className="text-muted">Payment</span>
-          <span className="font-semibold text-plum">{paymentMethod}</span>
+          <span className="font-semibold text-brand">{paymentMethod}</span>
         </div>
       )}
       <div className="flex justify-between gap-3">
         <span className="text-muted">Status</span>
-        <span className={`font-semibold ${paymentStatus === 'PAID' ? 'text-sage' : isAwaiting ? 'text-amber-700' : isCod ? 'text-bloom' : 'text-plum'}`}>
+        <span className={`font-semibold ${paymentStatus === 'PAID' ? 'text-sage' : isAwaiting ? 'text-warning' : isCod ? 'text-accent' : 'text-brand'}`}>
           {isCod ? 'Pay on Delivery' : isAwaiting ? 'Awaiting verification' : paymentStatus || 'Pending'}
         </span>
       </div>
       <div className="flex justify-between gap-3">
         <span className="text-muted">Total</span>
-        <span className="font-display text-lg text-plum">{formatPrice(totalAmount)}</span>
+        <span className="font-display text-lg text-brand">{formatPrice(totalAmount)}</span>
       </div>
       {isCod && (
-        <div className="rounded-xl bg-sage/10 border border-sage/30 p-2.5 text-xs text-plum">
+        <div className="rounded-xl bg-sage/10 border border-sage/30 p-2.5 text-xs text-brand">
           <span className="font-semibold">Amount due on delivery:</span> {formatPrice(totalAmount)} — please keep ready in cash.
         </div>
       )}
       {paymentReference && (
         <div className="flex justify-between gap-3">
           <span className="text-muted">Reference (UTR)</span>
-          <span className="font-mono text-xs text-plum break-all font-semibold">{paymentReference}</span>
+          <span className="font-mono text-xs text-brand break-all font-semibold">{paymentReference}</span>
         </div>
       )}
     </div>
@@ -272,12 +272,12 @@ function SuccessContent() {
     return (
       <div className="container-page pb-20 pt-10 text-center">
         <div className="mx-auto max-w-md rounded-3xl bg-ivory/60 p-10">
-          <AlertCircle className="mx-auto h-12 w-12 text-bloom" aria-hidden="true" />
-          <h1 className="mt-4 font-display text-2xl text-plum">Something went wrong</h1>
+          <AlertCircle className="mx-auto h-12 w-12 text-accent" aria-hidden="true" />
+          <h1 className="mt-4 font-display text-2xl text-brand">Something went wrong</h1>
           <p className="mt-2 text-sm text-muted">{error}</p>
           <Link
             href="/orders/me"
-            className="mt-5 inline-flex items-center gap-1 text-sm font-semibold text-bloom hover:text-plum"
+            className="mt-5 inline-flex items-center gap-1 text-sm font-semibold text-accent hover:text-brand"
           >
             View my orders
           </Link>
@@ -295,7 +295,7 @@ function SuccessContent() {
     <div className="container-page pb-24 pt-8 md:pt-12">
       {/* Back nav */}
       <div className="flex items-center gap-3">
-        <Link href="/shop" className="inline-flex items-center gap-1 text-sm font-semibold text-muted transition hover:text-plum">
+        <Link href="/shop" className="inline-flex items-center gap-1 text-sm font-semibold text-muted transition hover:text-brand">
           <ArrowLeft className="h-4 w-4" />
           Back to shop
         </Link>
@@ -308,7 +308,7 @@ function SuccessContent() {
             <CheckCircle2 className="h-8 w-8 text-sage" aria-hidden="true" />
           </div>
           <div className="flex-1 min-w-0">
-            <h1 className="font-display text-2xl sm:text-3xl text-plum">
+            <h1 className="font-display text-2xl sm:text-3xl text-brand">
               {isCod(order)
                 ? 'Order Placed!'
                 : isAwaitingUpi
@@ -327,7 +327,7 @@ function SuccessContent() {
               <span className="text-sm text-muted">Order</span>
               <button
                 onClick={copyOrderNumber}
-                className="inline-flex items-center gap-1 rounded-full bg-plum px-3 py-1 text-sm font-mono font-semibold text-cream hover:bg-ink transition"
+                className="inline-flex items-center gap-1 rounded-full bg-plum px-3 py-1 text-sm font-mono font-semibold text-on-primary hover:bg-overlay-ink transition"
                 title="Copy order number"
               >
                 {order.orderNumber}
@@ -336,7 +336,7 @@ function SuccessContent() {
               {copied && <span className="text-xs text-sage font-semibold animate-fade-in">Copied!</span>}
               <Link
                 href="/orders/me"
-                className="ml-auto inline-flex items-center gap-1 rounded-full bg-plum/10 hover:bg-plum/20 px-3.5 py-1 text-xs font-semibold text-plum transition"
+                className="ml-auto inline-flex items-center gap-1 rounded-full bg-plum/10 hover:bg-plum/20 px-3.5 py-1 text-xs font-semibold text-brand transition"
               >
                 Go to My Orders →
               </Link>
@@ -346,11 +346,11 @@ function SuccessContent() {
 
         {/* UPI Verification Info & WhatsApp Proof Action */}
         {isAwaitingUpi && (
-          <div className="rounded-2xl bg-amber-50 border border-amber-200/80 p-4 text-sm text-amber-950 mt-1">
+          <div className="rounded-2xl bg-warning-surface border border-amber-200/80 p-4 text-sm text-amber-950 mt-1">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <div>
                 <p className="font-semibold">UPI Payment Verification Pending</p>
-                <p className="mt-0.5 text-xs text-amber-800">
+                <p className="mt-0.5 text-xs text-warning">
                   {order.paymentReference ? (
                     <>Saved Reference / UTR: <strong className="font-mono">{order.paymentReference}</strong>. </>
                   ) : null}
@@ -379,14 +379,14 @@ function SuccessContent() {
         <div className="space-y-5">
           {/* Tracking timeline */}
           <div className="paper-card p-6">
-            <h2 className="font-display text-xl text-plum mb-5">Tracking</h2>
+            <h2 className="font-display text-xl text-brand mb-5">Tracking</h2>
             <StatusTimeline status={order.status} />
           </div>
 
           {/* Items */}
           <div className="paper-card p-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="font-display text-xl text-plum">Items</h2>
+              <h2 className="font-display text-xl text-brand">Items</h2>
               <span className="text-xs text-muted">
                 {order.items?.length || 0} {order.items?.length === 1 ? 'item' : 'items'}
               </span>
@@ -396,30 +396,30 @@ function SuccessContent() {
 
           {/* Delivery address */}
           <div className="paper-card p-6">
-            <h2 className="font-display text-xl text-plum mb-3">Delivery address</h2>
+            <h2 className="font-display text-xl text-brand mb-3">Delivery address</h2>
             <AddressSummary address={order.shippingAddress} />
           </div>
 
           {/* Tracking info (if shipped) */}
           {(order.status === 'SHIPPED' || order.status === 'DELIVERED') && (
             <div className="paper-card p-6">
-              <h2 className="font-display text-xl text-plum mb-3">Shipping details</h2>
+              <h2 className="font-display text-xl text-brand mb-3">Shipping details</h2>
               {order.trackingNumber ? (
                 <div className="space-y-1.5 text-sm">
                   <div className="flex justify-between gap-3">
                     <span className="text-muted">Tracking number</span>
-                    <span className="font-semibold text-plum font-mono">{order.trackingNumber}</span>
+                    <span className="font-semibold text-brand font-mono">{order.trackingNumber}</span>
                   </div>
                   {order.shippingPartner && (
                     <div className="flex justify-between gap-3">
                       <span className="text-muted">Partner</span>
-                      <span className="font-semibold text-plum">{order.shippingPartner}</span>
+                      <span className="font-semibold text-brand">{order.shippingPartner}</span>
                     </div>
                   )}
                   {order.estimatedDelivery && (
                     <div className="flex justify-between gap-3">
                       <span className="text-muted">Est. delivery</span>
-                      <span className="font-semibold text-plum">{order.estimatedDelivery}</span>
+                      <span className="font-semibold text-brand">{order.estimatedDelivery}</span>
                     </div>
                   )}
                 </div>
@@ -433,7 +433,7 @@ function SuccessContent() {
         {/* RIGHT column — sticky summary */}
         <aside>
           <div className="paper-card p-6 lg:sticky lg:top-6 space-y-4">
-            <h2 className="font-display text-xl text-plum">Order summary</h2>
+            <h2 className="font-display text-xl text-brand">Order summary</h2>
 
             {/* Date */}
             <div className="flex items-center gap-2 text-sm text-muted">
@@ -450,7 +450,7 @@ function SuccessContent() {
               {order.subtotal != null && (
                 <div className="flex justify-between gap-3">
                   <span className="text-muted">Subtotal</span>
-                  <span className="font-semibold text-plum">{formatPrice(order.subtotal)}</span>
+                  <span className="font-semibold text-brand">{formatPrice(order.subtotal)}</span>
                 </div>
               )}
               {order.discount > 0 && (
@@ -462,19 +462,19 @@ function SuccessContent() {
               {order.fee > 0 && (
                 <div className="flex justify-between gap-3">
                   <span className="text-muted">COD fee</span>
-                  <span className="font-semibold text-plum">{formatPrice(order.fee)}</span>
+                  <span className="font-semibold text-brand">{formatPrice(order.fee)}</span>
                 </div>
               )}
               {order.shipping > 0 && (
                 <div className="flex justify-between gap-3">
                   <span className="text-muted">Shipping</span>
-                  <span className="font-semibold text-plum">{formatPrice(order.shipping)}</span>
+                  <span className="font-semibold text-brand">{formatPrice(order.shipping)}</span>
                 </div>
               )}
               <hr className="border-sand" />
               <div className="flex justify-between gap-3">
-                <span className="font-medium text-plum">Total paid</span>
-                <span className="font-display text-xl text-plum">{formatPrice(order.totalAmount)}</span>
+                <span className="font-medium text-brand">Total paid</span>
+                <span className="font-display text-xl text-brand">{formatPrice(order.totalAmount)}</span>
               </div>
             </div>
 
@@ -493,16 +493,16 @@ function SuccessContent() {
               <button
                 type="button"
                 onClick={() => printInvoice(order)}
-                className="w-full inline-flex items-center justify-center gap-1.5 rounded-full border border-plum/30 bg-ivory/60 px-4 py-2.5 text-sm font-semibold text-plum hover:bg-ivory hover:-translate-y-0.5 hover:shadow-soft active:translate-y-0 transition"
+                className="w-full inline-flex items-center justify-center gap-1.5 rounded-full border border-plum/30 bg-ivory/60 px-4 py-2.5 text-sm font-semibold text-brand hover:bg-ivory hover:-translate-y-0.5 hover:shadow-soft active:translate-y-0 transition"
               >
                 <Download className="h-4 w-4" aria-hidden="true" />
                 Download Invoice
               </button>
-              <Link href="/orders/me" className="w-full inline-flex items-center justify-center gap-1.5 rounded-full bg-plum px-4 py-2.5 text-sm font-semibold text-cream hover:bg-ink hover:-translate-y-0.5 hover:shadow-lift active:translate-y-0 transition">
+              <Link href="/orders/me" className="w-full inline-flex items-center justify-center gap-1.5 rounded-full bg-plum px-4 py-2.5 text-sm font-semibold text-on-primary hover:bg-overlay-ink hover:-translate-y-0.5 hover:shadow-lift active:translate-y-0 transition">
                 View my orders
                 <ChevronRight className="h-4 w-4" aria-hidden="true" />
               </Link>
-              <Link href="/shop" className="w-full inline-flex items-center justify-center gap-1.5 rounded-full border border-plum/40 bg-transparent px-4 py-2.5 text-sm font-semibold text-plum hover:bg-plum/5 transition">
+              <Link href="/shop" className="w-full inline-flex items-center justify-center gap-1.5 rounded-full border border-plum/40 bg-transparent px-4 py-2.5 text-sm font-semibold text-brand hover:bg-plum/5 transition">
                 <ShoppingBag className="h-4 w-4" aria-hidden="true" />
                 Continue shopping
               </Link>
@@ -511,7 +511,7 @@ function SuccessContent() {
             {/* Help */}
             <p className="text-center text-xs text-muted">
               Questions?{' '}
-              <Link href="/contact" className="font-semibold text-bloom hover:text-plum underline underline-offset-2">
+              <Link href="/contact" className="font-semibold text-accent hover:text-brand underline underline-offset-2">
                 Contact us
               </Link>
             </p>

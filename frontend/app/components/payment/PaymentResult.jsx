@@ -27,8 +27,8 @@ export default function PaymentResult({
 function Processing() {
   return (
     <div className="paper-card p-8 sm:p-12 text-center" role="status" aria-live="polite">
-      <Loader2 className="mx-auto h-12 w-12 text-bloom animate-spin" aria-hidden="true" />
-      <h2 className="mt-5 font-display text-2xl text-plum">Processing payment…</h2>
+      <Loader2 className="mx-auto h-12 w-12 text-accent animate-spin" aria-hidden="true" />
+      <h2 className="mt-5 font-display text-2xl text-brand">Processing payment…</h2>
       <p className="mt-2 text-sm text-muted">Please don't close or refresh this page.</p>
     </div>
   )
@@ -48,17 +48,17 @@ function Success({ result, onContinueShopping, onViewOrder }) {
       <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-sage/30 text-sage">
         <CheckCircle2 className="h-9 w-9" aria-hidden="true" />
       </div>
-      <h2 className="mt-5 font-display text-3xl text-plum">{isAwaitingUpi ? 'Order placed — payment pending' : isCod ? 'Order Placed!' : 'Payment Successful'}</h2>
+      <h2 className="mt-5 font-display text-3xl text-brand">{isAwaitingUpi ? 'Order placed — payment pending' : isCod ? 'Order Placed!' : 'Payment Successful'}</h2>
       <p className="mt-1 text-sm text-muted">{isAwaitingUpi ? 'We will confirm your order after verifying the UPI transfer.' : isCod ? 'Thank you for choosing Cash on Delivery.' : 'Your order has been confirmed.'}</p>
 
       {testMode && !isCod && (
-        <div className="mt-4 mx-auto max-w-md rounded-xl bg-peach/30 border border-peach/50 p-3 text-sm text-plum">
+        <div className="mt-4 mx-auto max-w-md rounded-xl bg-peach/30 border border-peach/50 p-3 text-sm text-brand">
           <strong>Test mode.</strong> No real payment was processed.
         </div>
       )}
 
       {isCod && (
-        <div className="mt-4 mx-auto max-w-md rounded-xl bg-sage/10 border border-sage/40 p-4 text-sm text-plum text-left">
+        <div className="mt-4 mx-auto max-w-md rounded-xl bg-sage/10 border border-sage/40 p-4 text-sm text-brand text-left">
           <p className="font-semibold text-sage">✓ Order confirmed — pay on delivery</p>
           <p className="mt-1 text-muted">A delivery partner will bring your order. Please keep <strong>₹{formatPrice(amount)}</strong> ready in cash.</p>
         </div>
@@ -67,24 +67,24 @@ function Success({ result, onContinueShopping, onViewOrder }) {
       <dl className="mt-6 mx-auto max-w-md grid grid-cols-1 gap-2 text-sm text-left rounded-2xl bg-ivory/70 p-5">
         <div className="flex justify-between gap-3">
           <dt className="text-muted">Order ID</dt>
-          <dd className="font-semibold text-plum break-all">{orderNumber || '—'}</dd>
+          <dd className="font-semibold text-brand break-all">{orderNumber || '—'}</dd>
         </div>
         <div className="flex justify-between gap-3">
           <dt className="text-muted">{isCod ? 'Amount due on delivery' : isAwaitingUpi ? 'Amount to verify' : 'Amount paid'}</dt>
-          <dd className="font-semibold text-plum">{amount != null ? formatPrice(amount) : '—'}</dd>
+          <dd className="font-semibold text-brand">{amount != null ? formatPrice(amount) : '—'}</dd>
         </div>
         <div className="flex justify-between gap-3">
           <dt className="text-muted">Payment method</dt>
-          <dd className="font-semibold text-plum">{method || '—'}</dd>
+          <dd className="font-semibold text-brand">{method || '—'}</dd>
         </div>
         <div className="flex justify-between gap-3">
           <dt className="text-muted">Payment status</dt>
-          <dd className="font-semibold text-plum">{isCod ? 'Pay on Delivery' : isAwaitingUpi ? 'Awaiting verification' : (paymentStatus || (testMode ? 'Test mode' : 'Paid'))}</dd>
+          <dd className="font-semibold text-brand">{isCod ? 'Pay on Delivery' : isAwaitingUpi ? 'Awaiting verification' : (paymentStatus || (testMode ? 'Test mode' : 'Paid'))}</dd>
         </div>
         {address && (
           <div className="flex justify-between gap-3">
             <dt className="text-muted">Deliver to</dt>
-            <dd className="font-semibold text-plum text-right max-w-[60%]">
+            <dd className="font-semibold text-brand text-right max-w-[60%]">
               {address.fullName}
               <br />
               <span className="text-muted font-normal text-xs">{address.city}, {address.state}</span>
@@ -93,7 +93,7 @@ function Success({ result, onContinueShopping, onViewOrder }) {
         )}
         <div className="flex justify-between gap-3">
           <dt className="text-muted">Estimated delivery</dt>
-          <dd className="font-semibold text-plum">{est}</dd>
+          <dd className="font-semibold text-brand">{est}</dd>
         </div>
       </dl>
 
@@ -105,7 +105,7 @@ function Success({ result, onContinueShopping, onViewOrder }) {
         </Button>
         <Link
           href="/orders/me"
-          className="inline-flex items-center justify-center gap-1.5 rounded-full border border-sand bg-white px-5 py-2.5 text-sm font-semibold text-plum hover:bg-cream transition"
+          className="inline-flex items-center justify-center gap-1.5 rounded-full border border-sand bg-surface px-5 py-2.5 text-sm font-semibold text-brand hover:bg-cream transition"
         >
           My orders
         </Link>
@@ -121,10 +121,10 @@ function Success({ result, onContinueShopping, onViewOrder }) {
 function Failure({ message, onRetry, onContinueShopping }) {
   return (
     <div className="paper-card p-8 sm:p-12 text-center" role="status" aria-live="polite">
-      <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-bloom/10 text-bloom">
+      <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-bloom/10 text-accent">
         <XCircle className="h-9 w-9" aria-hidden="true" />
       </div>
-      <h2 className="mt-5 font-display text-2xl text-plum">Payment could not be completed</h2>
+      <h2 className="mt-5 font-display text-2xl text-brand">Payment could not be completed</h2>
       <p className="mt-2 text-sm text-muted max-w-sm mx-auto">
         {message || 'Please try again, or choose another payment method. Your cart, address and coupon are preserved.'}
       </p>

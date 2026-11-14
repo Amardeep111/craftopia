@@ -86,7 +86,7 @@ export default function AdminDashboard() {
       {/* Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="font-display text-3xl text-plum">Dashboard</h1>
+          <h1 className="font-display text-3xl font-semibold text-ink">Dashboard</h1>
           <p className="mt-1 text-sm text-muted">
             Overview of store performance, customers, and active orders.
           </p>
@@ -102,7 +102,7 @@ export default function AdminDashboard() {
             type="button"
             onClick={() => loadStats(true)}
             disabled={refreshing || loading}
-            className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-sand bg-cream px-3 py-1.5 text-sm font-medium text-plum shadow-soft hover:bg-sand/30 disabled:opacity-50"
+            className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-sand bg-surface px-3 py-1.5 text-sm font-medium text-brand shadow-none hover:bg-sand/30 disabled:opacity-50"
             title="Refresh dashboard metrics"
           >
             <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
@@ -113,7 +113,7 @@ export default function AdminDashboard() {
 
       {/* Error alert if any */}
       {error && (
-        <div role="alert" className="flex items-center gap-2 rounded-xl bg-bloom/10 p-4 text-sm text-bloom ring-1 ring-bloom/20">
+        <div role="alert" className="flex items-center gap-2 rounded-xl bg-bloom/10 p-4 text-sm text-accent ring-1 ring-bloom/20">
           <AlertCircle className="h-5 w-5 shrink-0" />
           <span>{error}</span>
         </div>
@@ -121,14 +121,14 @@ export default function AdminDashboard() {
 
       {/* Pending Orders Notice Banner */}
       {!loading && stats.pending > 0 && (
-        <div className="flex flex-col gap-2 rounded-2xl border border-amber-300 bg-amber-50 p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-2 rounded-lg border border-sand bg-warning-surface p-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
-            <Clock className="h-5 w-5 text-amber-700 shrink-0" />
+            <Clock className="h-5 w-5 text-warning shrink-0" />
             <div>
-              <p className="font-medium text-amber-950">
+              <p className="font-semibold text-ink">
                 {stats.pending} {stats.pending === 1 ? 'order requires' : 'orders require'} attention
               </p>
-              <p className="text-xs text-amber-800">
+              <p className="text-xs text-warning">
                 Awaiting payment verification or order confirmation.
               </p>
             </div>
@@ -136,7 +136,7 @@ export default function AdminDashboard() {
           {can('orders.view') && (
             <Link
               href="/admin/orders?status=PENDING"
-              className="inline-flex min-h-9 items-center justify-center rounded-xl bg-amber-700 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-amber-800"
+              className="inline-flex min-h-9 items-center justify-center rounded-lg bg-plum px-4 py-2 text-sm font-semibold text-on-primary hover:bg-[var(--action-hover)]"
             >
               Review pending orders →
             </Link>
@@ -147,21 +147,21 @@ export default function AdminDashboard() {
       {/* Metric Cards Grid */}
       <div className="grid gap-4 sm:grid-cols-3">
         <StatCard
-          icon={<Package className="h-5 w-5 text-plum" />}
+          icon={<Package className="h-5 w-5 text-brand" />}
           label="Confirmed Orders"
           value={loading ? '…' : stats.orders.toLocaleString('en-IN')}
           href={can('orders.view') ? '/admin/orders' : undefined}
           subtext="Total active & confirmed orders"
         />
         <StatCard
-          icon={<Users className="h-5 w-5 text-plum" />}
+          icon={<Users className="h-5 w-5 text-brand" />}
           label="Users"
           value={loading ? '…' : stats.users.toLocaleString('en-IN')}
           href={can('users.view') ? '/admin/users' : undefined}
           subtext="Registered customer accounts"
         />
         <StatCard
-          icon={<TrendingUp className="h-5 w-5 text-plum" />}
+          icon={<TrendingUp className="h-5 w-5 text-brand" />}
           label="Active Products"
           value={loading ? '…' : stats.products.toLocaleString('en-IN')}
           href={can('products.view') ? '/admin/products' : undefined}
@@ -170,110 +170,110 @@ export default function AdminDashboard() {
       </div>
 
       {/* Quick Navigation & Shortcuts */}
-      <section className="rounded-2xl bg-cream ring-1 ring-sand p-6 shadow-soft">
-        <h2 className="font-display text-xl text-plum mb-4">Quick Management</h2>
+      <section className="rounded-lg bg-surface ring-1 ring-sand p-6 shadow-none">
+        <h2 className="font-display text-xl text-brand mb-4">Quick Management</h2>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {can('orders.view') && (
             <Link
               href="/admin/orders"
-              className="group flex items-center justify-between rounded-xl border border-sand bg-white p-3.5 transition hover:border-plum hover:shadow-soft"
+              className="group flex items-center justify-between rounded-xl border border-sand bg-surface p-3.5 transition hover:border-plum hover:shadow-none"
             >
               <div className="flex items-center gap-3 min-w-0">
-                <ShoppingBag className="h-5 w-5 text-plum shrink-0" />
+                <ShoppingBag className="h-5 w-5 text-brand shrink-0" />
                 <div className="min-w-0">
-                  <p className="text-sm font-semibold text-plum group-hover:underline">Orders</p>
+                  <p className="text-sm font-semibold text-brand group-hover:underline">Orders</p>
                   <p className="text-xs text-muted truncate">Fulfillment & payments</p>
                 </div>
               </div>
-              <ArrowRight className="h-4 w-4 text-muted group-hover:text-plum group-hover:translate-x-0.5 transition" />
+              <ArrowRight className="h-4 w-4 text-muted group-hover:text-brand group-hover:translate-x-0.5 transition" />
             </Link>
           )}
 
           {can('products.view') && (
             <Link
               href="/admin/products"
-              className="group flex items-center justify-between rounded-xl border border-sand bg-white p-3.5 transition hover:border-plum hover:shadow-soft"
+              className="group flex items-center justify-between rounded-xl border border-sand bg-surface p-3.5 transition hover:border-plum hover:shadow-none"
             >
               <div className="flex items-center gap-3 min-w-0">
-                <TrendingUp className="h-5 w-5 text-plum shrink-0" />
+                <TrendingUp className="h-5 w-5 text-brand shrink-0" />
                 <div className="min-w-0">
-                  <p className="text-sm font-semibold text-plum group-hover:underline">Products</p>
+                  <p className="text-sm font-semibold text-brand group-hover:underline">Products</p>
                   <p className="text-xs text-muted truncate">Stock & catalog items</p>
                 </div>
               </div>
-              <ArrowRight className="h-4 w-4 text-muted group-hover:text-plum group-hover:translate-x-0.5 transition" />
+              <ArrowRight className="h-4 w-4 text-muted group-hover:text-brand group-hover:translate-x-0.5 transition" />
             </Link>
           )}
 
           {can('users.view') && (
             <Link
               href="/admin/users"
-              className="group flex items-center justify-between rounded-xl border border-sand bg-white p-3.5 transition hover:border-plum hover:shadow-soft"
+              className="group flex items-center justify-between rounded-xl border border-sand bg-surface p-3.5 transition hover:border-plum hover:shadow-none"
             >
               <div className="flex items-center gap-3 min-w-0">
-                <Users className="h-5 w-5 text-plum shrink-0" />
+                <Users className="h-5 w-5 text-brand shrink-0" />
                 <div className="min-w-0">
-                  <p className="text-sm font-semibold text-plum group-hover:underline">Customers</p>
+                  <p className="text-sm font-semibold text-brand group-hover:underline">Customers</p>
                   <p className="text-xs text-muted truncate">Registered accounts</p>
                 </div>
               </div>
-              <ArrowRight className="h-4 w-4 text-muted group-hover:text-plum group-hover:translate-x-0.5 transition" />
+              <ArrowRight className="h-4 w-4 text-muted group-hover:text-brand group-hover:translate-x-0.5 transition" />
             </Link>
           )}
 
           {can('settings.view') && (
             <Link
               href="/admin/settings"
-              className="group flex items-center justify-between rounded-xl border border-sand bg-white p-3.5 transition hover:border-plum hover:shadow-soft"
+              className="group flex items-center justify-between rounded-xl border border-sand bg-surface p-3.5 transition hover:border-plum hover:shadow-none"
             >
               <div className="flex items-center gap-3 min-w-0">
-                <Settings className="h-5 w-5 text-plum shrink-0" />
+                <Settings className="h-5 w-5 text-brand shrink-0" />
                 <div className="min-w-0">
-                  <p className="text-sm font-semibold text-plum group-hover:underline">Store Settings</p>
+                  <p className="text-sm font-semibold text-brand group-hover:underline">Store Settings</p>
                   <p className="text-xs text-muted truncate">UPI & business info</p>
                 </div>
               </div>
-              <ArrowRight className="h-4 w-4 text-muted group-hover:text-plum group-hover:translate-x-0.5 transition" />
+              <ArrowRight className="h-4 w-4 text-muted group-hover:text-brand group-hover:translate-x-0.5 transition" />
             </Link>
           )}
 
           {can('customRequests.view') && (
             <Link
               href="/admin/custom-requests"
-              className="group flex items-center justify-between rounded-xl border border-sand bg-white p-3.5 transition hover:border-plum hover:shadow-soft"
+              className="group flex items-center justify-between rounded-xl border border-sand bg-surface p-3.5 transition hover:border-plum hover:shadow-none"
             >
               <div className="flex items-center gap-3 min-w-0">
-                <ClipboardList className="h-5 w-5 text-plum shrink-0" />
+                <ClipboardList className="h-5 w-5 text-brand shrink-0" />
                 <div className="min-w-0">
-                  <p className="text-sm font-semibold text-plum group-hover:underline">Custom Orders</p>
+                  <p className="text-sm font-semibold text-brand group-hover:underline">Custom Orders</p>
                   <p className="text-xs text-muted truncate">Customer requests</p>
                 </div>
               </div>
-              <ArrowRight className="h-4 w-4 text-muted group-hover:text-plum group-hover:translate-x-0.5 transition" />
+              <ArrowRight className="h-4 w-4 text-muted group-hover:text-brand group-hover:translate-x-0.5 transition" />
             </Link>
           )}
 
           {can('coupons.view') && (
             <Link
               href="/admin/coupons"
-              className="group flex items-center justify-between rounded-xl border border-sand bg-white p-3.5 transition hover:border-plum hover:shadow-soft"
+              className="group flex items-center justify-between rounded-xl border border-sand bg-surface p-3.5 transition hover:border-plum hover:shadow-none"
             >
               <div className="flex items-center gap-3 min-w-0">
-                <Tag className="h-5 w-5 text-plum shrink-0" />
+                <Tag className="h-5 w-5 text-brand shrink-0" />
                 <div className="min-w-0">
-                  <p className="text-sm font-semibold text-plum group-hover:underline">Coupons</p>
+                  <p className="text-sm font-semibold text-brand group-hover:underline">Coupons</p>
                   <p className="text-xs text-muted truncate">Promo codes & offers</p>
                 </div>
               </div>
-              <ArrowRight className="h-4 w-4 text-muted group-hover:text-plum group-hover:translate-x-0.5 transition" />
+              <ArrowRight className="h-4 w-4 text-muted group-hover:text-brand group-hover:translate-x-0.5 transition" />
             </Link>
           )}
         </div>
       </section>
 
       {/* Database & sync note */}
-      <div className="rounded-2xl bg-cream ring-1 ring-sand p-5 text-xs text-muted">
-        <p className="font-semibold text-plum mb-1">Database & Live Metrics</p>
+      <div className="rounded-lg bg-surface ring-1 ring-sand p-5 text-xs text-muted">
+        <p className="font-semibold text-brand mb-1">Database & Live Metrics</p>
         <p>
           All counts are synchronized live from PostgreSQL via the backend API. User counts reflect all active registered customer profiles.
         </p>
@@ -284,16 +284,16 @@ export default function AdminDashboard() {
 
 function StatCard({ icon, label, value, href, subtext }) {
   const CardContent = (
-    <div className="rounded-2xl bg-cream ring-1 ring-sand p-6 shadow-soft transition hover:ring-plum/40 hover:shadow-md flex flex-col justify-between h-full">
+    <div className="rounded-lg bg-surface ring-1 ring-sand p-6 shadow-none transition hover:ring-plum/40 hover:shadow-md flex flex-col justify-between h-full">
       <div>
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2.5">
-            <span className="p-2 rounded-xl bg-sand/30">{icon}</span>
+            <span className="text-brand">{icon}</span>
             <span className="text-sm font-medium text-muted">{label}</span>
           </div>
-          {href && <ArrowRight className="h-4 w-4 text-muted group-hover:text-plum group-hover:translate-x-0.5 transition" />}
+          {href && <ArrowRight className="h-4 w-4 text-muted group-hover:text-brand group-hover:translate-x-0.5 transition" />}
         </div>
-        <div className="text-3xl font-display font-bold text-plum">{value}</div>
+        <div className="text-3xl font-display font-bold text-brand">{value}</div>
       </div>
       {subtext && <p className="mt-3 text-xs text-muted border-t border-sand/40 pt-2">{subtext}</p>}
     </div>
@@ -301,7 +301,7 @@ function StatCard({ icon, label, value, href, subtext }) {
 
   if (href) {
     return (
-      <Link href={href} className="group block focus:outline-none focus:ring-2 focus:ring-plum rounded-2xl">
+      <Link href={href} className="group block focus:outline-none focus:ring-2 focus:ring-plum rounded-lg">
         {CardContent}
       </Link>
     )

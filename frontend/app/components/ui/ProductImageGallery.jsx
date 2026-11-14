@@ -4,18 +4,19 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { ChevronLeft, ChevronRight, X } from 'lucide-react'
 import { getOptimizedImageUrl } from '@/lib/images'
 import ProductImage from './ProductImage'
+import StorefrontImage from './StorefrontImage'
 
 function BrandMotif() {
   return (
     <svg viewBox="0 0 120 120" aria-hidden="true" className="h-20 w-20 opacity-60">
       <circle cx="60" cy="60" r="44" fill="none" stroke="currentColor" className="text-blush/60" strokeWidth="3" />
-      <circle cx="60" cy="60" r="30" fill="none" stroke="currentColor" className="text-bloom/50" strokeWidth="3" />
-      <circle cx="60" cy="60" r="16" fill="none" stroke="currentColor" className="text-plum/40" strokeWidth="3" />
+      <circle cx="60" cy="60" r="30" fill="none" stroke="currentColor" className="text-accent/50" strokeWidth="3" />
+      <circle cx="60" cy="60" r="16" fill="none" stroke="currentColor" className="text-brand/40" strokeWidth="3" />
       <path
         d="M20 78c22 14 44 14 66 0M26 92c20 10 40 10 60 0"
         fill="none"
         stroke="currentColor"
-        className="text-plum/30"
+        className="text-brand/30"
         strokeWidth="2.5"
         strokeLinecap="round"
       />
@@ -108,7 +109,7 @@ export default function ProductImageGallery({ product, loading = false }) {
   if (loading || (!product && photos.length === 0)) {
     return (
       <div className="space-y-3" aria-label="Loading product images">
-        <div className="relative aspect-[4/5] w-full overflow-hidden rounded-3xl bg-gradient-to-br from-sand/40 to-blush/30 animate-pulse sm:aspect-square lg:aspect-[4/5] flex items-center justify-center">
+        <div className="relative aspect-[4/5] w-full overflow-hidden rounded-3xl bg-ivory animate-pulse sm:aspect-square lg:aspect-[4/5] flex items-center justify-center">
           <BrandMotif />
         </div>
         <div className="flex gap-2 overflow-x-auto pb-1">
@@ -126,7 +127,7 @@ export default function ProductImageGallery({ product, loading = false }) {
         {/* Main image container with skeleton placeholder while downloading */}
         <div className="group relative aspect-[4/5] w-full overflow-hidden rounded-3xl bg-sand/20 sm:aspect-square lg:aspect-[4/5]">
           {!isCurrentLoaded && photos.length > 0 && (
-            <div className="absolute inset-0 z-0 flex items-center justify-center bg-gradient-to-br from-sand/40 to-blush/30 animate-pulse">
+            <div className="absolute inset-0 z-0 flex items-center justify-center bg-ivory animate-pulse">
               <BrandMotif />
             </div>
           )}
@@ -147,17 +148,18 @@ export default function ProductImageGallery({ product, loading = false }) {
                   className="h-full w-full"
                 />
               ) : (
-                <img
+                <StorefrontImage
                   ref={mainImageRef}
                   src={currentPhotoSrc}
                   alt={`${name}, photo ${selected + 1} of ${photos.length}`}
-                  loading={selected === 0 ? 'eager' : 'lazy'}
+                  fill
+                  sizes="(max-width: 639px) calc(100vw - 32px), (max-width: 1023px) 50vw, 560px"
+                  priority={selected === 0}
                   fetchPriority={selected === 0 ? 'high' : 'auto'}
+                  quality={72}
                   onLoad={() => setLoadedPhotos((previous) => ({ ...previous, [currentPhotoSrc]: true }))}
                   onError={() => setFailedPhotos((previous) => ({ ...previous, [currentPhotoSrc]: true }))}
-                  className={`h-full w-full object-cover transition-opacity duration-300 ${
-                    isCurrentLoaded ? 'opacity-100' : 'opacity-0'
-                  }`}
+                  className="object-cover"
                 />
               )}
             </button>
@@ -184,7 +186,7 @@ export default function ProductImageGallery({ product, loading = false }) {
                 type="button"
                 aria-label="Previous product image"
                 onClick={() => changeImage(-1)}
-                className="absolute left-3 top-1/2 z-20 -translate-y-1/2 rounded-full bg-white/90 p-2.5 text-plum shadow-md transition hover:bg-white"
+                className="absolute left-3 top-1/2 z-20 -translate-y-1/2 rounded-full bg-surface/90 p-2.5 text-brand shadow-md transition hover:bg-surface"
               >
                 <ChevronLeft className="h-5 w-5" />
               </button>
@@ -192,7 +194,7 @@ export default function ProductImageGallery({ product, loading = false }) {
                 type="button"
                 aria-label="Next product image"
                 onClick={() => changeImage(1)}
-                className="absolute right-3 top-1/2 z-20 -translate-y-1/2 rounded-full bg-white/90 p-2.5 text-plum shadow-md transition hover:bg-white"
+                className="absolute right-3 top-1/2 z-20 -translate-y-1/2 rounded-full bg-surface/90 p-2.5 text-brand shadow-md transition hover:bg-surface"
               >
                 <ChevronRight className="h-5 w-5" />
               </button>
@@ -260,7 +262,7 @@ export default function ProductImageGallery({ product, loading = false }) {
               type="button"
               aria-label="Close image viewer"
               onClick={() => setViewerOpen(false)}
-              className="rounded-full bg-white/15 p-2 hover:bg-white/25"
+              className="rounded-full bg-surface/15 p-2 hover:bg-surface/25"
             >
               <X className="h-5 w-5" />
             </button>
@@ -283,7 +285,7 @@ export default function ProductImageGallery({ product, loading = false }) {
                 event.stopPropagation()
                 changeImage(-1)
               }}
-              className="absolute left-2 z-10 rounded-full bg-white/15 p-3 hover:bg-white/25 sm:left-5"
+              className="absolute left-2 z-10 rounded-full bg-surface/15 p-3 hover:bg-surface/25 sm:left-5"
             >
               <ChevronLeft className="h-6 w-6" />
             </button>
@@ -315,7 +317,7 @@ export default function ProductImageGallery({ product, loading = false }) {
                 event.stopPropagation()
                 changeImage(1)
               }}
-              className="absolute right-2 z-10 rounded-full bg-white/15 p-3 hover:bg-white/25 sm:right-5"
+              className="absolute right-2 z-10 rounded-full bg-surface/15 p-3 hover:bg-surface/25 sm:right-5"
             >
               <ChevronRight className="h-6 w-6" />
             </button>

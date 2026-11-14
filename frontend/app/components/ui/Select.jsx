@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useEffect, useCallback, useId } from 'react'
 import { ChevronDown, Check } from 'lucide-react'
 
 export default function Select({
@@ -11,12 +11,16 @@ export default function Select({
   className = '',
   disabled = false,
   error = false,
+  ariaLabel,
+  id,
 }) {
   const [open, setOpen] = useState(false)
   const [focusedIndex, setFocusedIndex] = useState(-1)
   const [pos, setPos] = useState({ side: 'bottom', align: 'left' })
   const ref = useRef(null)
   const triggerRef = useRef(null)
+  const selectId = useId()
+  const listId = `${selectId}-list`
 
   const selectedOption =
     options.find((o) => o.value === value) ||
@@ -68,14 +72,17 @@ export default function Select({
 
   const handleKeyDown = (e) => {
     if (disabled) return
-    if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowDown') {
+    if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault()
       if (!open) {
         setOpen(true)
-      } else {
-        const next = Math.min(focusedIndex + 1, options.length - 1)
-        setFocusedIndex(next)
+      } else if (options[focusedIndex]) {
+        handleSelect(options[focusedIndex].value)
       }
+    } else if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      if (!open) setOpen(true)
+      else setFocusedIndex((index) => Math.min(index + 1, options.length - 1))
     } else if (e.key === 'ArrowUp') {
       e.preventDefault()
       if (open) {
@@ -96,22 +103,23 @@ export default function Select({
     <div
       ref={ref}
       className={`relative ${className}`}
-      role="combobox"
-      aria-expanded={open}
-      aria-haspopup="listbox"
-      aria-controls="custom-select-list"
-      aria-activedescendant={open && focusedIndex >= 0 ? `option-${focusedIndex}` : undefined}
     >
       <button
         ref={triggerRef}
+        id={id}
         type="button"
         onClick={() => !disabled && setOpen((v) => !v)}
         onKeyDown={handleKeyDown}
         disabled={disabled}
-        aria-label={selectedLabel}
+        role="combobox"
+        aria-label={ariaLabel ? `${ariaLabel}: ${selectedLabel}` : selectedLabel}
+        aria-expanded={open}
+        aria-haspopup="listbox"
+        aria-controls={open ? listId : undefined}
+        aria-activedescendant={open && focusedIndex >= 0 ? `${selectId}-option-${focusedIndex}` : undefined}
         className={`
           flex w-full items-center justify-between gap-3
-          rounded-2xl border bg-ivory px-4 py-2.5 text-sm text-ink
+          rounded-lg border bg-surface px-4 py-2.5 text-sm text-ink
           transition duration-200 ease-out outline-none
           hover:border-blush focus:border-bloom focus:ring-2 focus:ring-bloom/20
           ${error ? 'border-bloom' : 'border-sand/80'}
@@ -127,7 +135,7 @@ export default function Select({
 
       {open && (
         <div
-          id="custom-select-list"
+          id={listId}
           role="listbox"
           aria-label="Options"
           className={`
@@ -141,16 +149,17 @@ export default function Select({
           {options.map((opt, i) => (
             <button
               key={opt.value}
-              id={`option-${i}`}
+              id={`${selectId}-option-${i}`}
               role="option"
               aria-selected={value === opt.value}
               type="button"
+              tabIndex={-1}
               onClick={() => handleSelect(opt.value)}
               onMouseEnter={() => setFocusedIndex(i)}
               className={`
                 flex w-full items-center justify-between gap-2 px-4 py-2.5 text-sm transition duration-150
                 text-ink hover:bg-blush/40
-                ${value === opt.value ? 'bg-blush/30 font-semibold text-plum' : ''}
+                ${value === opt.value ? 'bg-blush/30 font-semibold text-brand' : ''}
                 ${focusedIndex === i && value !== opt.value ? 'bg-blush/20' : ''}
                 ${focusedIndex === i ? 'outline-none' : ''}
                 ${i === 0 ? 'rounded-t-xl' : ''}
@@ -159,7 +168,7 @@ export default function Select({
             >
               <span className="truncate">{opt.label}</span>
               {value === opt.value && (
-                <Check className="h-3.5 w-3.5 shrink-0 text-bloom" aria-hidden="true" />
+                <Check className="h-3.5 w-3.5 shrink-0 text-accent" aria-hidden="true" />
               )}
             </button>
           ))}

@@ -4,7 +4,11 @@ import Categories from './components/home/Categories'
 import CustomOrderCTA from './components/home/CustomOrderCTA'
 import FeaturedProducts from './components/home/FeaturedProducts'
 import FinalCTA from './components/home/FinalCTA'
-import Hero from './components/home/Hero'
+import Hero, { HeroContent } from './components/home/Hero'
+import { Suspense } from 'react'
+import defaultSite from './data/site-content.json'
+import CompletedHomeView from './components/home/CompletedHomeView'
+import { getSiteContent } from './lib/site'
 import HowItWorks from './components/home/HowItWorks'
 import SocialGallery from './components/home/SocialGallery'
 import Testimonials from './components/home/Testimonials'
@@ -37,24 +41,40 @@ async function getCategories() {
   }
 }
 
-export default async function Home() {
-  const [featuredProducts, categories] = await Promise.all([
-    getFeaturedProducts(),
-    getCategories(),
-  ])
+async function FreshHomeContent({ productsPromise, categoriesPromise }) {
+  const [products, categories] = await Promise.all([productsPromise, categoriesPromise, getSiteContent()])
+  return <>
+    <Hero products={products} />
+    <BrandHighlights />
+    <FeaturedProducts initialProducts={products} />
+    <Categories initialCategories={categories} />
+    <BrandStory products={products} />
+    <CustomOrderCTA products={products} />
+    <HowItWorks />
+    <SocialGallery products={products} />
+    <Testimonials />
+    <FinalCTA />
+  </>
+}
 
-  return (
-    <>
-      <Hero />
-      <BrandHighlights />
-      <Categories initialCategories={categories} />
-      <FeaturedProducts initialProducts={featuredProducts} />
-      <BrandStory />
-      <CustomOrderCTA />
-      <HowItWorks />
-      <SocialGallery />
-      <Testimonials />
-      <FinalCTA />
-    </>
-  )
+export default function Home() {
+  // The client view can reuse the completed public page while these original
+  // no-store reads prepare its replacement. No authenticated view is retained.
+  const productsPromise = getFeaturedProducts()
+  const categoriesPromise = getCategories()
+  return <CompletedHomeView>
+    <Suspense fallback={<HomeOpeningView />}>
+      <FreshHomeContent productsPromise={productsPromise} categoriesPromise={categoriesPromise} />
+    </Suspense>
+  </CompletedHomeView>
+}
+
+function HomeOpeningView() {
+  return <>
+    <HeroContent site={defaultSite} />
+    <BrandHighlights />
+    <section className="container-page studio-section" role="status" aria-live="polite">
+      <p className="text-sm text-muted">Loading the latest creations…</p>
+    </section>
+  </>
 }

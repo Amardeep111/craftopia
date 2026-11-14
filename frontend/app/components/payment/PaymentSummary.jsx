@@ -20,7 +20,7 @@ export default function PaymentSummary({ method }) {
 
   return (
     <aside className="paper-card p-5 sm:p-6 sticky top-6">
-      <h3 className="font-display text-xl text-plum mb-1">Price Details</h3>
+      <h3 className="font-display text-xl text-brand mb-1">Price Details</h3>
 
       <div className="mt-5 space-y-2 text-sm">
         {/* Item lines */}
@@ -29,36 +29,36 @@ export default function PaymentSummary({ method }) {
             <ShoppingBag className="h-3.5 w-3.5" />
             Items
           </span>
-          <span className="font-semibold text-plum">{totalItems}</span>
+          <span className="font-semibold text-brand">{totalItems}</span>
         </div>
 
         <div className="flex justify-between">
           <span className="text-muted">Subtotal</span>
-          <span className="font-semibold text-plum">{formatPrice(subtotal)}</span>
+          <span className="font-semibold text-brand">{formatPrice(subtotal)}</span>
         </div>
 
         {discount > 0 && (
           <div className="flex justify-between">
-            <span className="flex items-center gap-1.5 text-bloom">
+            <span className="flex items-center gap-1.5 text-accent">
               <Tag className="h-3.5 w-3.5" />
               Coupon ({coupon?.code})
             </span>
-            <span className="font-semibold text-bloom">−{formatPrice(discount)}</span>
+            <span className="font-semibold text-accent">−{formatPrice(discount)}</span>
           </div>
         )}
 
-        {gstTotal > 0 && <div className="flex justify-between"><span className="text-muted">GST</span><span className="font-semibold text-plum">+{formatPrice(gstTotal)}</span></div>}
-        {otherChargeTotal > 0 && <div className="flex justify-between"><span className="text-muted">Other product charges</span><span className="font-semibold text-plum">+{formatPrice(otherChargeTotal)}</span></div>}
+        {gstTotal > 0 && <div className="flex justify-between"><span className="text-muted">GST</span><span className="font-semibold text-brand">+{formatPrice(gstTotal)}</span></div>}
+        {otherChargeTotal > 0 && <div className="flex justify-between"><span className="text-muted">Other product charges</span><span className="font-semibold text-brand">+{formatPrice(otherChargeTotal)}</span></div>}
 
         <div className="flex justify-between">
           <span className="text-muted">Shipping</span>
-          <span className="font-semibold text-plum">{shipping ? `+${formatPrice(shipping)}` : 'Free'}</span>
+          <span className="font-semibold text-brand">{shipping ? `+${formatPrice(shipping)}` : 'Free'}</span>
         </div>
 
         {method === 'cod' && codFee > 0 && (
           <div className="flex justify-between">
             <span className="text-muted">COD handling fee</span>
-            <span className="font-semibold text-bloom">+{formatPrice(codFee)}</span>
+            <span className="font-semibold text-accent">+{formatPrice(codFee)}</span>
           </div>
         )}
 
@@ -73,14 +73,14 @@ export default function PaymentSummary({ method }) {
 
         {/* Final total */}
         <div className="flex justify-between">
-          <span className="font-medium text-plum">Total Payable</span>
-          <span className="font-display text-xl text-plum">{formatPrice(total)}</span>
+          <span className="font-medium text-brand">Total Payable</span>
+          <span className="font-display text-xl text-brand">{formatPrice(total)}</span>
         </div>
       </div>
 
       {/* Delivery info */}
       <div className="mt-5 flex items-start gap-2 rounded-xl bg-ivory/60 p-3 text-xs text-muted">
-        <Truck className="h-4 w-4 text-bloom shrink-0 mt-0.5" aria-hidden="true" />
+        <Truck className="h-4 w-4 text-accent shrink-0 mt-0.5" aria-hidden="true" />
         <p>Handmade pieces — ships within 3–5 days of order confirmation.</p>
       </div>
 

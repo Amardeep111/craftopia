@@ -72,9 +72,9 @@ export default function Select({
   return (
     <div ref={containerRef} className="relative">
       {label && (
-        <label className="block text-sm font-semibold text-plum mb-1.5">
+        <label className="block text-sm font-semibold text-brand mb-1.5">
           {label}
-          {required && <span className="text-bloom ml-0.5">*</span>}
+          {required && <span className="text-accent ml-0.5">*</span>}
         </label>
       )}
 
@@ -86,7 +86,7 @@ export default function Select({
         className={[
           'w-full flex items-center justify-between px-4 py-2.5 rounded-full',
           'text-left font-medium transition-all duration-150',
-          'border-2 bg-white',
+          'border-2 bg-surface',
           error
             ? 'border-bloom/60 focus:border-bloom'
             : 'border-sand focus:border-plum',
@@ -99,7 +99,7 @@ export default function Select({
         aria-expanded={isOpen}
         aria-labelledby={label}
       >
-        <span className={selectedOption ? 'text-plum' : 'text-muted'}>
+        <span className={selectedOption ? 'text-brand' : 'text-muted'}>
           {selectedOption ? selectedOption.label : placeholder}
         </span>
         <ChevronDown
@@ -113,7 +113,7 @@ export default function Select({
       {isOpen && (
         <div
           className={[
-            'absolute z-50 w-full mt-2 py-2 bg-white rounded-2xl border-2 border-sand',
+            'absolute z-50 w-full mt-2 py-2 bg-surface rounded-2xl border-2 border-sand',
             'shadow-lg max-h-64 overflow-hidden',
           ].join(' ')}
           role="listbox"
@@ -146,15 +146,15 @@ export default function Select({
                     'w-full flex items-center justify-between px-4 py-2.5 text-left',
                     'text-sm transition-colors',
                     option.value === value
-                      ? 'bg-plum/10 text-plum'
-                      : 'text-plum hover:bg-ivory',
+                      ? 'bg-plum/10 text-brand'
+                      : 'text-brand hover:bg-ivory',
                   ].join(' ')}
                   role="option"
                   aria-selected={option.value === value}
                 >
                   <span>{option.label}</span>
                   {option.value === value && (
-                    <Check className="h-4 w-4 text-plum" />
+                    <Check className="h-4 w-4 text-brand" />
                   )}
                 </button>
               ))
@@ -164,7 +164,7 @@ export default function Select({
       )}
 
       {error && (
-        <p className="mt-1.5 text-xs text-bloom font-medium">{error}</p>
+        <p className="mt-1.5 text-xs text-accent font-medium">{error}</p>
       )}
     </div>
   )

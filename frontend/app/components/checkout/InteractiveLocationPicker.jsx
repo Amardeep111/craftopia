@@ -534,11 +534,11 @@ export default function InteractiveLocationPicker({
   // ── Hard error state (token missing etc.) ──────────────────────────────
   if (mapError) {
     return (
-      <div className="rounded-3xl bg-ivory/60 p-6" role="region" aria-label="Location picker error">
+      <div className="rounded-lg border border-sand bg-surface p-4" role="region" aria-label="Location picker error">
         <div className="flex items-start gap-3">
-          <AlertCircle className="h-5 w-5 text-bloom shrink-0 mt-0.5" aria-hidden="true" />
+          <AlertCircle className="h-5 w-5 text-accent shrink-0 mt-0.5" aria-hidden="true" />
           <div>
-            <p className="text-sm font-semibold text-plum">{mapError}</p>
+            <p className="text-sm font-semibold text-brand">{mapError}</p>
             <p className="text-xs text-muted mt-1">You can still enter your address manually below.</p>
           </div>
         </div>
@@ -546,14 +546,14 @@ export default function InteractiveLocationPicker({
           <button
             type="button"
             onClick={handleRetry}
-            className="inline-flex items-center gap-2 rounded-full bg-plum px-4 py-2 text-sm font-semibold text-cream hover:bg-ink transition"
+            className="inline-flex items-center gap-2 rounded-lg bg-plum px-4 py-2 text-sm font-semibold text-on-primary hover:bg-overlay-ink transition"
           >
             <RefreshCcw className="h-4 w-4" aria-hidden="true" /> Try again
           </button>
           <button
             type="button"
             onClick={onBack || onCancel}
-            className="rounded-full px-4 py-2 text-sm font-semibold text-muted ring-1 ring-sand hover:ring-bloom/40 transition"
+            className="rounded-lg px-4 py-2 text-sm font-semibold text-muted ring-1 ring-sand hover:ring-bloom/40 transition"
           >
             Enter address manually
           </button>
@@ -566,19 +566,19 @@ export default function InteractiveLocationPicker({
 
   // ── Map UI (conditional based on token availability) ──
   return (
-    <div className="rounded-3xl overflow-hidden bg-cream shadow-soft ring-1 ring-sand" role="region" aria-label="Interactive location picker">
+    <div className="rounded-lg overflow-hidden border border-sand bg-surface" role="region" aria-label="Interactive location picker">
       {/* Map container or fallback UI */}
       <div className="relative">
         {/* Free geolocation fallback UI (no mapbox token) */}
         {!isMapboxAvailable && (
-          <div className="relative w-full h-72 sm:h-80 md:h-72 bg-gradient-to-br from-sand/30 to-blush/20 flex flex-col items-center justify-center p-6" style={{ minHeight: 260 }}>
+          <div className="relative w-full h-72 sm:h-80 md:h-72 bg-ivory flex flex-col items-center justify-center p-6" style={{ minHeight: 260 }}>
             {locating ? (
               <div className="text-center space-y-4">
-                <div className="mx-auto h-16 w-16 rounded-full bg-bloom/10 flex items-center justify-center">
-                  <Loader2 className="h-8 w-8 text-bloom animate-spin" aria-hidden="true" />
+                <div className="mx-auto text-accent">
+                  <Loader2 className="h-8 w-8 text-accent animate-spin" aria-hidden="true" />
                 </div>
                 <div>
-                  <h3 className="font-display text-lg text-plum">Detecting your location…</h3>
+                  <h3 className="font-display text-lg text-brand">Detecting your location…</h3>
                   <p className="text-sm text-muted mt-1 max-w-xs mx-auto">
                     Please allow location permission in your browser if prompted.
                   </p>
@@ -586,18 +586,18 @@ export default function InteractiveLocationPicker({
               </div>
             ) : (
               <div className="text-center space-y-4">
-                <div className="mx-auto h-16 w-16 rounded-full bg-plum/10 flex items-center justify-center">
-                  <LocateFixed className="h-8 w-8 text-plum" aria-hidden="true" />
+                <div className="mx-auto text-brand">
+                  <LocateFixed className="h-8 w-8 text-brand" aria-hidden="true" />
                 </div>
                 <div>
-                  <h3 className="font-display text-lg text-plum">Detect your location</h3>
+                  <h3 className="font-display text-lg text-brand">Detect your location</h3>
                   <p className="text-sm text-muted mt-1">We'll use your browser's location to find your address</p>
                 </div>
                 <button
                   type="button"
                   onClick={requestLocation}
                   disabled={locating || reverseGeocoding}
-                  className="inline-flex items-center gap-2 rounded-full bg-plum px-5 py-2.5 text-sm font-semibold text-cream shadow-soft hover:bg-ink transition disabled:opacity-50"
+                  className="inline-flex items-center gap-2 rounded-lg bg-plum px-5 py-2.5 text-sm font-semibold text-on-primary shadow-none hover:bg-overlay-ink transition disabled:opacity-50"
                 >
                   <MapPin className="h-4 w-4" />
                   Use my current location
@@ -614,9 +614,9 @@ export default function InteractiveLocationPicker({
 
             {/* Loading overlay only during initialization / loading (never after ready or error) */}
             {(mapStatus === 'initializing' || mapStatus === 'loading' || locating) && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center bg-sand/70 backdrop-blur-sm z-20">
-                <Loader2 className="h-8 w-8 animate-spin text-bloom" aria-hidden="true" />
-                <p className="mt-3 text-sm font-medium text-plum">
+              <div className="absolute inset-0 flex flex-col items-center justify-center bg-ivory/95 z-20">
+                <Loader2 className="h-8 w-8 animate-spin text-accent" aria-hidden="true" />
+                <p className="mt-3 text-sm font-medium text-brand">
                   {locating ? 'Finding your location…' : (mapStatus === 'initializing' ? 'Initializing map…' : 'Loading map…')}
                 </p>
               </div>
@@ -627,7 +627,7 @@ export default function InteractiveLocationPicker({
                 type="button"
                 onClick={requestLocation}
                 disabled={locating || reverseGeocoding}
-                className="inline-flex items-center gap-2 rounded-full bg-cream/95 px-3 py-2 text-xs font-bold text-plum shadow-md ring-1 ring-sand backdrop-blur-sm transition hover:bg-ivory disabled:opacity-50"
+                className="inline-flex items-center gap-2 rounded-lg bg-surface px-3 py-2 text-xs font-bold text-brand shadow-md ring-1 ring-sand  transition hover:bg-ivory disabled:opacity-50"
                 aria-label="Use my current location"
               >
                 <Crosshair className={`h-3.5 w-3.5 ${locating ? 'animate-pulse' : ''}`} aria-hidden="true" />
@@ -636,7 +636,7 @@ export default function InteractiveLocationPicker({
             </div>
 
             <div className="absolute bottom-3 right-3 z-10">
-              <span className="inline-block rounded-full bg-ink/70 px-2.5 py-1 text-[10px] font-semibold text-cream backdrop-blur-sm">
+              <span className="inline-block rounded-full bg-overlay-ink/70 px-2.5 py-1 text-[10px] font-semibold text-on-primary ">
                 Drag pin to adjust
               </span>
             </div>
@@ -648,22 +648,22 @@ export default function InteractiveLocationPicker({
       <div className="p-5 space-y-4">
         <div className="space-y-2">
           {reverseGeocoding && (
-            <p className="text-sm text-bloom font-medium flex items-center gap-2">
+            <p className="text-sm text-accent font-medium flex items-center gap-2">
               <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> Finding your address…
             </p>
           )}
           {permissionDenied && (
-            <p className="text-sm text-bloom font-medium flex items-center gap-2">
+            <p className="text-sm text-accent font-medium flex items-center gap-2">
               <AlertCircle className="h-4 w-4" aria-hidden="true" /> Location access was not allowed.
             </p>
           )}
           {networkError && (
-            <p className="text-sm text-bloom font-medium flex items-center gap-2">
+            <p className="text-sm text-accent font-medium flex items-center gap-2">
               <AlertCircle className="h-4 w-4" aria-hidden="true" /> {networkError}
             </p>
           )}
           {locationData?.error && !networkError && (
-            <p className="text-sm text-bloom font-medium flex items-center gap-2">
+            <p className="text-sm text-accent font-medium flex items-center gap-2">
               <AlertCircle className="h-4 w-4" aria-hidden="true" /> {locationData.error}
             </p>
           )}
@@ -671,16 +671,16 @@ export default function InteractiveLocationPicker({
 
         {/* Let customers correct reverse-geocoded details before using them. */}
         {locationData && !locationData.error && (
-          <div className="rounded-2xl bg-ivory/60 p-4 ring-1 ring-sand/60 space-y-4" role="region" aria-label="Detected address">
-            <h3 className="font-display text-lg text-plum flex items-center gap-2">
-              <MapPin className="h-5 w-5 text-bloom" aria-hidden="true" />
+          <div className="rounded-lg bg-ivory/60 p-4 ring-1 ring-sand/60 space-y-4" role="region" aria-label="Detected address">
+            <h3 className="font-display text-lg text-brand flex items-center gap-2">
+              <MapPin className="h-5 w-5 text-accent" aria-hidden="true" />
               Location detected
               {locationSource === 'gps' ? (
-                <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-sage/20 px-2 py-0.5 text-[10px] font-bold uppercase text-sage">
+                <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-sage/20 px-2 py-0.5 text-[10px] font-bold uppercase text-moss">
                   <Navigation className="h-3 w-3" aria-hidden="true" /> GPS
                 </span>
               ) : (
-                <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-sand/60 px-2 py-0.5 text-[10px] font-bold uppercase text-plum">
+                <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-sand/60 px-2 py-0.5 text-[10px] font-bold uppercase text-brand">
                   <MapPin className="h-3 w-3" aria-hidden="true" /> Network IP
                 </span>
               )}
@@ -690,14 +690,14 @@ export default function InteractiveLocationPicker({
               <DetectedField label="Area / Street" value={locationData.areaStreet || locationData.street || locationData.area || ''} onChange={(value) => updateDetectedAddress('areaStreet', value)} />
               <DetectedField label="City" value={locationData.city || ''} onChange={(value) => updateDetectedAddress('city', value)} />
               <div>
-                <label htmlFor="detected-state-select" className="block text-sm font-medium text-plum mb-1">State</label>
+                <label htmlFor="detected-state-select" className="block text-sm font-medium text-brand mb-1">State</label>
                 <Select
                   id="detected-state-select"
                   value={normalizeStateName(locationData.state, locationData.pinCode) || ''}
                   onChange={(value) => updateDetectedAddress('state', value)}
                   options={STATE_OPTIONS}
                   placeholder="Select state"
-                  className="!w-full !bg-cream !rounded-xl"
+                  className="!w-full"
                 />
               </div>
               <DetectedField label="PIN Code" value={locationData.pinCode || ''} onChange={handleDetectedPinChange} inputMode="numeric" maxLength={6} />
@@ -706,8 +706,8 @@ export default function InteractiveLocationPicker({
 
             <div className="grid gap-3 pt-2">
               <div>
-                <label htmlFor="house-flat" className="block text-sm font-medium text-plum mb-1">
-                  House / Flat / Building Number <span className="text-bloom">*</span>
+                <label htmlFor="house-flat" className="block text-sm font-medium text-brand mb-1">
+                  House / Flat / Building Number <span className="text-accent">*</span>
                 </label>
                 <input
                   id="house-flat"
@@ -715,12 +715,12 @@ export default function InteractiveLocationPicker({
                   value={houseFlat}
                   onChange={(e) => setHouseFlat(e.target.value)}
                   placeholder="Flat 4B, Shalom Apartments"
-                  className="w-full rounded-2xl border border-sand bg-cream px-4 py-3 text-sm text-plum placeholder:text-muted/60 outline-none transition focus:border-bloom focus:ring-2 focus:ring-bloom/20"
+                  className="w-full rounded-lg border border-sand bg-surface px-4 py-3 text-sm text-brand placeholder:text-muted/60 outline-none transition focus:border-bloom focus:ring-2 focus:ring-bloom/20"
                   autoComplete="address-line1"
                 />
               </div>
               <div>
-                <label htmlFor="landmark-input" className="block text-sm font-medium text-plum mb-1">
+                <label htmlFor="landmark-input" className="block text-sm font-medium text-brand mb-1">
                   Landmark <span className="text-muted font-normal">(Optional)</span>
                 </label>
                 <input
@@ -729,7 +729,7 @@ export default function InteractiveLocationPicker({
                   value={landmark}
                   onChange={(e) => setLandmark(e.target.value)}
                   placeholder="Near City Centre, opposite ICICI Bank"
-                  className="w-full rounded-2xl border border-sand bg-cream px-4 py-3 text-sm text-plum placeholder:text-muted/60 outline-none transition focus:border-bloom focus:ring-2 focus:ring-bloom/20"
+                  className="w-full rounded-lg border border-sand bg-surface px-4 py-3 text-sm text-brand placeholder:text-muted/60 outline-none transition focus:border-bloom focus:ring-2 focus:ring-bloom/20"
                   autoComplete="address-line3"
                 />
               </div>
@@ -742,7 +742,7 @@ export default function InteractiveLocationPicker({
             type="button"
             onClick={requestLocation}
             disabled={!mapReady}
-            className="rounded-full px-4 py-2.5 text-sm font-semibold text-plum ring-1 ring-sand hover:ring-bloom/40 transition bg-cream disabled:opacity-50"
+            className="rounded-lg px-4 py-2.5 text-sm font-semibold text-brand ring-1 ring-sand hover:ring-bloom/40 transition bg-cream disabled:opacity-50"
             aria-label="Retry location detection"
           >
             <RefreshCcw className="h-3.5 w-3.5 inline mr-1" aria-hidden="true" /> Retry
@@ -751,14 +751,14 @@ export default function InteractiveLocationPicker({
             type="button"
             onClick={handleConfirm}
             disabled={!locationData || !!locationData.error || !houseFlat.trim()}
-            className="rounded-full px-5 py-2.5 text-sm font-semibold text-cream shadow-soft bg-plum hover:bg-ink transition disabled:opacity-40 disabled:cursor-not-allowed"
+            className="rounded-lg px-5 py-2.5 text-sm font-semibold text-on-primary shadow-none bg-plum hover:bg-overlay-ink transition disabled:opacity-40 disabled:cursor-not-allowed"
           >
             Confirm location
           </button>
           <button
             type="button"
             onClick={onBack || onCancel}
-            className="rounded-full px-4 py-2.5 text-sm font-semibold text-muted hover:text-plum transition"
+            className="rounded-lg px-4 py-2.5 text-sm font-semibold text-muted hover:text-brand transition"
           >
             Choose a different address method
           </button>
@@ -770,7 +770,7 @@ export default function InteractiveLocationPicker({
 
 function DetectedField({ label, value, onChange, inputMode, maxLength }) {
   return (
-    <label className="block text-sm font-medium text-plum">
+    <label className="block text-sm font-medium text-brand">
       {label}
       <input
         type="text"
@@ -778,7 +778,7 @@ function DetectedField({ label, value, onChange, inputMode, maxLength }) {
         maxLength={maxLength}
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="mt-1 w-full rounded-xl border border-sand bg-cream px-3 py-2.5 text-sm font-normal outline-none transition focus:border-bloom focus:ring-2 focus:ring-bloom/20"
+        className="mt-1 w-full rounded-xl border border-sand bg-surface px-3 py-2.5 text-sm font-normal outline-none transition focus:border-bloom focus:ring-2 focus:ring-bloom/20"
       />
     </label>
   )

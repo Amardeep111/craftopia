@@ -395,19 +395,6 @@ const visuals = {
   yarn: memo(Yarn),
 }
 
-const bgMap = {
-  teddy: 'from-peach/70 to-blush/80',
-  bunny: 'from-ivory to-lavender/70',
-  flower: 'from-lavender/80 to-blush/70',
-  bouquet: 'from-peach/80 to-ivory',
-  keychain: 'from-sage/60 to-blush/70',
-  bandana: 'from-sage/50 to-ivory',
-  gift: 'from-lavender/70 to-peach/60',
-  heart: 'from-petal/80 to-blush',
-  pins: 'from-peach/70 to-lavender/60',
-  yarn: 'from-lavender/70 to-sage/50',
-}
-
 export default function CraftIllustration({ visual = 'yarn', palette, view = 1, className = '' }) {
   const Graphic = visuals[visual] || Yarn
   const colors = Array.isArray(palette) && palette.length > 0
@@ -416,14 +403,14 @@ export default function CraftIllustration({ visual = 'yarn', palette, view = 1, 
         ? (() => {
             try {
               const p = JSON.parse(palette)
-              return Array.isArray(p) && p.length > 0 ? p : ['#E8B4B8', '#D9CDE8', '#5A3D4A']
+              return Array.isArray(p) && p.length > 0 ? p : ['var(--art-primary)', 'var(--art-secondary)', 'var(--art-ink)']
             } catch {
-              return ['#E8B4B8', '#D9CDE8', '#5A3D4A']
+              return ['var(--art-primary)', 'var(--art-secondary)', 'var(--art-ink)']
             }
           })()
-        : ['#E8B4B8', '#D9CDE8', '#5A3D4A'])
+        : ['var(--art-primary)', 'var(--art-secondary)', 'var(--art-ink)'])
   return (
-    <div className={`flex items-center justify-center bg-gradient-to-br ${bgMap[visual] || bgMap.yarn} ${className}`}>
+    <div className={`flex items-center justify-center bg-ivory ${className}`}>
       <div className="h-[78%] w-[78%]">
         <Graphic colors={colors} view={view} />
       </div>

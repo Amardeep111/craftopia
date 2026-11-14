@@ -45,8 +45,8 @@ export default function NetBankingForm({ total, testMode, onSubmit, loading, err
     <div>
       {testMode && (
         <div className="mb-4 flex items-start gap-2 rounded-xl bg-peach/30 border border-peach/50 p-3 text-sm">
-          <AlertCircle className="h-4 w-4 text-bloom shrink-0 mt-0.5" aria-hidden="true" />
-          <p className="text-plum">
+          <AlertCircle className="h-4 w-4 text-accent shrink-0 mt-0.5" aria-hidden="true" />
+          <p className="text-brand">
             <strong>Test mode.</strong> Select any bank below; no real bank redirect will occur until a gateway is wired.
           </p>
         </div>
@@ -63,7 +63,7 @@ export default function NetBankingForm({ total, testMode, onSubmit, loading, err
           aria-describedby={bankError ? 'bank-error' : undefined}
         />
         {bankError && (
-          <p id="bank-error" className="mt-1.5 text-sm text-bloom">{bankError}</p>
+          <p id="bank-error" className="mt-1.5 text-sm text-accent">{bankError}</p>
         )}
 
         <div className="mt-5 flex items-center gap-2 text-xs text-muted">
@@ -72,7 +72,7 @@ export default function NetBankingForm({ total, testMode, onSubmit, loading, err
         </div>
 
         {error && (
-          <p className="mt-3 text-sm text-bloom" role="alert">{error}</p>
+          <p className="mt-3 text-sm text-accent" role="alert">{error}</p>
         )}
 
         <div className="mt-5">

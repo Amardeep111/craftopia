@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Search } from 'lucide-react'
-import PageHeader from '@/components/layout/PageHeader'
 import EmptyState from '@/components/ui/EmptyState'
 import ProductCard from '@/components/ui/ProductCard'
 import Select from '@/components/ui/Select'
@@ -14,6 +13,10 @@ import { cn } from '@/lib/cn'
 
 const PAGE_SIZE = 12
 
+// Public catalog only, retained in this tab while a fresh route response loads.
+const completedCatalogs = new Map()
+export function getCompletedCatalog(category) { return completedCatalogs.get(category) }
+
 const sortOptions = [
   { value: 'featured', label: 'Featured' },
   { value: 'name', label: 'Name' },
@@ -21,7 +24,7 @@ const sortOptions = [
   { value: 'price-desc', label: 'Price: high to low' },
 ]
 
-export default function ShopClient({ initialProducts = [], initialCategories = [], initialCategory = 'all' }) {
+export default function ShopClient({ initialProducts = [], initialCategories = [], categoriesPromise, initialCategory = 'all' }) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const categoryParam = searchParams.get('category') || initialCategory || 'all'
@@ -42,6 +45,22 @@ export default function ShopClient({ initialProducts = [], initialCategories = [
   const [sentinelRef, sentinelInView] = useInView({ rootMargin: '450px', once: false })
   const fetchingRef = useRef(false)
   const firstRenderRef = useRef(true)
+
+  useEffect(() => {
+    if (loadingInitial || error || !catalog.length) return
+    completedCatalogs.delete(selectedCategory)
+    completedCatalogs.set(selectedCategory, { products: catalog, categories })
+    if (completedCatalogs.size > 8) completedCatalogs.delete(completedCatalogs.keys().next().value)
+  }, [catalog, categories, selectedCategory, loadingInitial, error])
+
+  useEffect(() => {
+    if (!categoriesPromise) return
+    let active = true
+    Promise.resolve(categoriesPromise).then((next) => {
+      if (active && Array.isArray(next) && next.length) setCategories(next)
+    }).catch(() => {})
+    return () => { active = false }
+  }, [categoriesPromise])
 
   // Keep selectedCategory in sync if searchParams changes from browser back/forward
   useEffect(() => {
@@ -164,12 +183,7 @@ export default function ShopClient({ initialProducts = [], initialCategories = [
 
   return (
     <>
-      <PageHeader
-        eyebrow="The collection"
-        title="Shop handmade pieces"
-        description="Browse toys, flowers, accessories, and custom-ready keepsakes. Filter by what you are in the mood for."
-      />
-      <div className="container-page pb-16">
+      <div className="container-page pb-16 studio-shop">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <label className="relative block w-full max-w-md">
             <span className="sr-only">Search creations</span>
@@ -177,13 +191,14 @@ export default function ShopClient({ initialProducts = [], initialCategories = [
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search bears, roses, initials…"
-              className="w-full rounded-full border border-sand bg-ivory py-3 pl-11 pr-4 text-sm text-ink outline-none ring-bloom/30 transition focus:ring-2"
+              placeholder="Search the collection…"
+              className="w-full rounded-lg border border-sand bg-surface py-3 pl-11 pr-4 text-sm text-ink outline-none ring-bloom/30 transition focus:ring-2"
             />
           </label>
           <label className="flex items-center gap-3 text-sm text-muted">
             Sort
             <Select
+              ariaLabel="Sort products"
               value={sort}
               onChange={setSort}
               options={sortOptions}
@@ -192,15 +207,15 @@ export default function ShopClient({ initialProducts = [], initialCategories = [
           </label>
         </div>
 
-        <div className="relative z-10 mt-2 pt-4 flex gap-2 overflow-x-auto pb-2" role="tablist" aria-label="Categories">
+        <div className="studio-category-tabs relative z-10 mt-2 pt-4 flex gap-2 overflow-x-auto pb-2" role="tablist" aria-label="Categories">
           <button
             type="button"
             role="tab"
             aria-selected={selectedCategory === 'all'}
             onClick={() => setCategory('all')}
             className={cn(
-              'relative z-10 shrink-0 rounded-full px-4 py-2 text-sm font-semibold transition',
-              selectedCategory === 'all' ? 'bg-plum text-cream' : 'bg-ivory text-plum ring-1 ring-sand hover:bg-blush/50',
+              'relative z-10 min-h-11 shrink-0 rounded-md px-4 py-2 text-sm font-semibold transition-colors',
+              selectedCategory === 'all' ? 'bg-plum text-on-primary' : 'bg-ivory text-brand ring-1 ring-sand hover:bg-blush/50',
             )}
           >
             All
@@ -213,8 +228,8 @@ export default function ShopClient({ initialProducts = [], initialCategories = [
               aria-selected={selectedCategory === cat.slug}
               onClick={() => setCategory(cat.slug)}
               className={cn(
-                'relative z-10 shrink-0 rounded-full px-4 py-2 text-sm font-semibold transition',
-                selectedCategory === cat.slug ? 'bg-plum text-cream' : 'bg-ivory text-plum ring-1 ring-sand hover:bg-blush/50',
+                'relative z-10 min-h-11 shrink-0 rounded-md px-4 py-2 text-sm font-semibold transition-colors',
+                selectedCategory === cat.slug ? 'bg-plum text-on-primary' : 'bg-ivory text-brand ring-1 ring-sand hover:bg-blush/50',
               )}
             >
               {cat.name}
@@ -222,19 +237,23 @@ export default function ShopClient({ initialProducts = [], initialCategories = [
           ))}
         </div>
 
+        <div className="studio-catalog-status" aria-live="polite" aria-atomic="true">
+          <h2 className="text-sm font-semibold text-ink">{query.trim() ? `Results for “${query.trim()}”` : selectedCategory === 'all' ? 'All handmade pieces' : categories.find((category) => category.slug === selectedCategory)?.name || 'Handmade pieces'}</h2>
+          <p className="text-xs text-muted">{loadingInitial ? 'Loading pieces…' : `${filtered.length} ${filtered.length === 1 ? 'piece' : 'pieces'}${hasMore && !query.trim() ? ' loaded' : ''}`}</p>
+        </div>
         {loadingInitial ? (
-          <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="studio-product-grid mt-8 lg:grid-cols-3">
             {Array.from({ length: 6 }).map((_, i) => (
               <SkeletonCard key={i} />
             ))}
           </div>
         ) : error ? (
           <div className="mt-12 text-center">
-            <h2 className="font-display text-2xl text-plum">Shelf is loading</h2>
+            <h2 className="font-display text-2xl text-brand">Shelf is loading</h2>
             <p className="mt-2 text-muted">{error}</p>
             <button
               onClick={() => window.location.reload()}
-              className="mt-4 rounded-full bg-plum px-6 py-2 text-sm font-semibold text-cream"
+              className="mt-4 rounded-full bg-plum px-6 py-2 text-sm font-semibold text-on-primary"
             >
               Refresh
             </button>
@@ -249,9 +268,9 @@ export default function ShopClient({ initialProducts = [], initialCategories = [
             />
           </div>
         ) : (
-          <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {filtered.map((product) => (
-              <ProductCard key={product.id} product={product} />
+          <div className="studio-product-grid mt-8 lg:grid-cols-3">
+            {filtered.map((product, index) => (
+              <ProductCard key={product.id} product={product} priority={index === 0} imageSizes="(max-width: 1023px) 50vw, 33vw" />
             ))}
           </div>
         )}

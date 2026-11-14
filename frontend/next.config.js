@@ -1,6 +1,12 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Keep review builds separate from an active development server.
+  distDir: process.env.CRAFTOPIA_BUILD_DIR || '.next',
+  // Deliver SEO and sharing metadata in <head> for every browser/crawler.
+  // Page content can still stream independently after metadata resolves.
+  htmlLimitedBots: /.*/,
   images: {
+    qualities: [72, 75, 80],
     remotePatterns: [
       {
         protocol: 'https',

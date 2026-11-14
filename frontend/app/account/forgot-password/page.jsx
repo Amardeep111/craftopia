@@ -82,7 +82,7 @@ function OtpInput({ value, onChange, error }) {
             }
           }}
           className={cn(
-            'h-14 w-11 rounded-2xl border-2 bg-cream text-center text-xl font-bold tracking-widest text-plum',
+            'h-14 w-11 rounded-2xl border-2 bg-cream text-center text-xl font-bold tracking-widest text-brand',
             'outline-none transition focus:ring-2 focus:ring-bloom/30',
             error ? 'border-bloom' : 'border-sand',
           )}
@@ -224,7 +224,7 @@ export default function ForgotPasswordPage() {
       <section className="paper-card w-full max-w-md p-8 sm:p-10">
         <Link
           href="/account/login"
-          className="mb-8 inline-flex items-center gap-2 text-sm font-semibold text-muted transition hover:text-plum"
+          className="mb-8 inline-flex items-center gap-2 text-sm font-semibold text-muted transition hover:text-brand"
         >
           <ArrowLeft className="h-4 w-4" aria-hidden="true" />
           Back to sign in
@@ -233,7 +233,7 @@ export default function ForgotPasswordPage() {
         {step === 'request' && (
           <>
             <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-blush/80">
-              <KeyRound className="h-6 w-6 text-bloom" />
+              <KeyRound className="h-6 w-6 text-accent" />
             </div>
             <h1 className="heading-display text-3xl">Forgot your password?</h1>
             <p className="mt-2 text-muted">
@@ -257,7 +257,7 @@ export default function ForgotPasswordPage() {
               />
 
               {errors.form && (
-                <p role="alert" className="text-sm font-medium text-bloom">
+                <p role="alert" className="text-sm font-medium text-accent">
                   {errors.form}
                 </p>
               )}
@@ -272,17 +272,17 @@ export default function ForgotPasswordPage() {
         {step === 'reset' && (
           <>
             <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-blush/80">
-              <FlowerBurst className="h-7 w-7 text-bloom" />
+              <FlowerBurst className="h-7 w-7 text-accent" />
             </div>
             <h1 className="heading-display text-3xl">Reset your password</h1>
             <p className="mt-2 text-muted">
               Enter the 6-digit code sent to{' '}
-              <span className="font-medium text-plum">{formatMasked(email)}</span> and choose a new password.
+              <span className="font-medium text-brand">{formatMasked(email)}</span> and choose a new password.
             </p>
 
             <form onSubmit={handleResetPassword} className="mt-8 space-y-5" noValidate>
               <div>
-                <label className="block text-sm font-medium text-plum mb-2 text-center">
+                <label className="block text-sm font-medium text-brand mb-2 text-center">
                   Verification code
                 </label>
                 <OtpInput
@@ -294,7 +294,7 @@ export default function ForgotPasswordPage() {
                   error={!!errors.otp}
                 />
                 {errors.otp && (
-                  <p role="alert" className="mt-2 text-center text-sm font-medium text-bloom">
+                  <p role="alert" className="mt-2 text-center text-sm font-medium text-accent">
                     {errors.otp}
                   </p>
                 )}
@@ -329,7 +329,7 @@ export default function ForgotPasswordPage() {
               />
 
               {errors.form && (
-                <p role="alert" className="text-sm font-medium text-bloom">
+                <p role="alert" className="text-sm font-medium text-accent">
                   {errors.form}
                 </p>
               )}
@@ -346,7 +346,7 @@ export default function ForgotPasswordPage() {
                     type="button"
                     onClick={handleResendCode}
                     disabled={resendLoading}
-                    className="text-sm font-semibold text-bloom underline underline-offset-4 disabled:opacity-50"
+                    className="text-sm font-semibold text-accent underline underline-offset-4 disabled:opacity-50"
                   >
                     {resendLoading ? 'Sending…' : 'Resend code'}
                   </button>
@@ -358,7 +358,7 @@ export default function ForgotPasswordPage() {
                     setOtp('')
                     setErrors({})
                   }}
-                  className="text-sm text-muted hover:text-plum transition"
+                  className="text-sm text-muted hover:text-brand transition"
                 >
                   Change email address
                 </button>

@@ -104,14 +104,14 @@ export default function AboutTab() {
     return (
       <div className="max-w-4xl space-y-6">
         <div className="h-8 w-60 rounded bg-sand/60 animate-pulse" />
-        <div className="h-64 rounded-2xl bg-cream animate-pulse ring-1 ring-sand" />
+        <div className="h-64 rounded-lg bg-surface animate-pulse ring-1 ring-sand" />
       </div>
     )
   }
 
   if (!form) {
     return (
-      <div className="max-w-4xl p-6 rounded-2xl bg-bloom/10 text-bloom">
+      <div className="max-w-4xl p-6 rounded-lg bg-bloom/10 text-accent">
         {error || 'Failed to load About page configuration.'}
       </div>
     )
@@ -122,8 +122,8 @@ export default function AboutTab() {
       {/* Tab Header & Action */}
       <div className="flex flex-wrap items-center justify-between gap-4 border-b border-sand pb-4">
         <div>
-          <h2 className="font-display text-2xl text-plum flex items-center gap-2.5">
-            <BookOpen className="h-6 w-6 text-bloom" /> About Page Content
+          <h2 className="font-display text-2xl text-brand flex items-center gap-2.5">
+            <BookOpen className="h-6 w-6 text-accent" /> About Page Content
           </h2>
           <p className="mt-1 text-xs sm:text-sm text-muted">
             Customize the brand story, upload photographs of the makers, and edit the craftsmanship journey.
@@ -133,32 +133,32 @@ export default function AboutTab() {
           href="/about"
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-1.5 rounded-full border border-plum/30 bg-white px-4 py-2 text-xs font-semibold text-plum shadow-soft hover:bg-blush/30 transition"
+          className="inline-flex items-center gap-1.5 rounded-full border border-plum/30 bg-surface px-4 py-2 text-xs font-semibold text-brand shadow-none hover:bg-blush/30 transition"
         >
           View live About page <ExternalLink className="h-3.5 w-3.5" />
         </Link>
       </div>
 
       {notice && (
-        <div className="rounded-xl bg-sage/20 border border-sage/40 p-4 text-sm font-semibold text-emerald-800 flex items-center gap-2">
+        <div className="rounded-xl bg-sage/20 border border-sage/40 p-4 text-sm font-semibold text-success flex items-center gap-2">
           <CheckCircle2 className="h-5 w-5 shrink-0" />
           <span>{notice}</span>
         </div>
       )}
 
       {error && (
-        <div className="rounded-xl bg-bloom/10 border border-bloom/30 p-4 text-sm font-semibold text-bloom">
+        <div className="rounded-xl bg-bloom/10 border border-bloom/30 p-4 text-sm font-semibold text-accent">
           {error}
         </div>
       )}
 
       <form onSubmit={handleSubmit} className="space-y-8">
         {/* SECTION 1: HERO HEADER */}
-        <div className="rounded-2xl bg-cream p-4 sm:p-6 shadow-soft ring-1 ring-sand space-y-4 min-w-0">
-          <h3 className="font-display text-lg text-plum border-b border-sand pb-2">Hero Banner</h3>
+        <div className="rounded-lg bg-surface p-4 sm:p-6 shadow-none ring-1 ring-sand space-y-4 min-w-0">
+          <h3 className="font-display text-lg text-brand border-b border-sand pb-2">Hero Banner</h3>
           <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-muted">
+              <label className="block text-xs font-semibold tracking-normal text-muted">
                 Eyebrow tag
               </label>
               <input
@@ -168,11 +168,11 @@ export default function AboutTab() {
                 onChange={(e) =>
                   setForm({ ...form, header: { ...form.header, eyebrow: e.target.value } })
                 }
-                className="mt-1.5 w-full min-w-0 rounded-xl border border-sand bg-white px-3.5 py-2.5 text-sm text-plum outline-none focus:border-bloom"
+                className="mt-1.5 w-full min-w-0 rounded-xl border border-sand bg-surface px-3.5 py-2.5 text-sm text-brand outline-none focus:border-bloom"
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-muted">
+              <label className="block text-xs font-semibold tracking-normal text-muted">
                 Page Title
               </label>
               <input
@@ -182,7 +182,7 @@ export default function AboutTab() {
                 onChange={(e) =>
                   setForm({ ...form, header: { ...form.header, title: e.target.value } })
                 }
-                className="mt-1.5 w-full min-w-0 rounded-xl border border-sand bg-white px-3.5 py-2.5 text-sm text-plum outline-none focus:border-bloom"
+                className="mt-1.5 w-full min-w-0 rounded-xl border border-sand bg-surface px-3.5 py-2.5 text-sm text-brand outline-none focus:border-bloom"
               />
             </div>
           </div>
@@ -199,8 +199,8 @@ export default function AboutTab() {
         </div>
 
         {/* SECTION 2: OUR STORY & STORY IMAGE */}
-        <div className="rounded-2xl bg-cream p-4 sm:p-6 shadow-soft ring-1 ring-sand space-y-5 min-w-0">
-          <h3 className="font-display text-lg text-plum border-b border-sand pb-2">
+        <div className="rounded-lg bg-surface p-4 sm:p-6 shadow-none ring-1 ring-sand space-y-5 min-w-0">
+          <h3 className="font-display text-lg text-brand border-b border-sand pb-2">
             Our Story & Craft Table
           </h3>
 
@@ -208,7 +208,7 @@ export default function AboutTab() {
             {/* Story Text Inputs */}
             <div className="space-y-4 min-w-0">
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-muted">
+                <label className="block text-xs font-semibold tracking-normal text-muted">
                   Story Section Title
                 </label>
                 <input
@@ -218,33 +218,33 @@ export default function AboutTab() {
                   onChange={(e) =>
                     setForm({ ...form, story: { ...form.story, title: e.target.value } })
                   }
-                  className="mt-1.5 w-full min-w-0 rounded-xl border border-sand bg-white px-3.5 py-2.5 text-sm text-plum outline-none focus:border-bloom"
+                  className="mt-1.5 w-full min-w-0 rounded-xl border border-sand bg-surface px-3.5 py-2.5 text-sm text-brand outline-none focus:border-bloom"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-muted">
+                <label className="block text-xs font-semibold tracking-normal text-muted">
                   Story Subtitle / Catchphrase
                 </label>
                 <MarkdownEditor id="about-story-description" label="Story Subtitle / Catchphrase" value={form.story?.description || ''} readOnly={!canManage} onChange={(value) => setForm({ ...form, story: { ...form.story, description: value } })} rows={2} />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-muted">
+                <label className="block text-xs font-semibold tracking-normal text-muted">
                   Paragraph 1
                 </label>
                 <MarkdownEditor id="about-story-paragraph-1" value={form.story?.paragraph1 || ''} readOnly={!canManage} onChange={(value) => setForm({ ...form, story: { ...form.story, paragraph1: value } })} rows={4} />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-muted">
+                <label className="block text-xs font-semibold tracking-normal text-muted">
                   Paragraph 2
                 </label>
                 <MarkdownEditor id="about-story-paragraph-2" value={form.story?.paragraph2 || ''} readOnly={!canManage} onChange={(value) => setForm({ ...form, story: { ...form.story, paragraph2: value } })} rows={4} />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-muted">
+                <label className="block text-xs font-semibold tracking-normal text-muted">
                   Highlight Quote Box
                 </label>
                 <MarkdownEditor id="about-story-quote" value={form.story?.quote || ''} readOnly={!canManage} onChange={(value) => setForm({ ...form, story: { ...form.story, quote: value } })} rows={4} />
@@ -252,8 +252,8 @@ export default function AboutTab() {
             </div>
 
             {/* Story Image & Preview */}
-            <div className="rounded-xl border border-sand bg-white/70 p-4 space-y-4 min-w-0">
-              <label className="block text-xs font-semibold uppercase tracking-wider text-plum">
+            <div className="rounded-xl border border-sand bg-surface/70 p-4 space-y-4 min-w-0">
+              <label className="block text-xs font-semibold tracking-normal text-brand">
                 Story Image / Photograph
               </label>
 
@@ -294,10 +294,10 @@ export default function AboutTab() {
                     onChange={(e) =>
                       setForm({ ...form, story: { ...form.story, image: e.target.value } })
                     }
-                    className="flex-1 min-w-0 rounded-xl border border-sand bg-white px-3 py-2 text-xs sm:text-sm text-plum outline-none focus:border-bloom"
+                    className="flex-1 min-w-0 rounded-xl border border-sand bg-surface px-3 py-2 text-xs sm:text-sm text-brand outline-none focus:border-bloom"
                   />
                   {canManage && (
-                    <label className="shrink-0 inline-flex cursor-pointer items-center gap-1.5 rounded-xl bg-plum px-3 py-2 text-xs font-semibold text-cream hover:bg-ink transition">
+                    <label className="shrink-0 inline-flex cursor-pointer items-center gap-1.5 rounded-xl bg-plum px-3 py-2 text-xs font-semibold text-on-primary hover:bg-overlay-ink transition">
                       <Upload className="h-3.5 w-3.5" />
                       <span>{uploadingField === 'story' ? 'Uploading...' : 'Upload'}</span>
                       <input
@@ -329,7 +329,7 @@ export default function AboutTab() {
                   onChange={(e) =>
                     setForm({ ...form, story: { ...form.story, visual: e.target.value } })
                   }
-                  className="mt-1 w-full rounded-xl border border-sand bg-white px-3 py-2 text-xs text-plum outline-none"
+                  className="mt-1 w-full rounded-xl border border-sand bg-surface px-3 py-2 text-xs text-brand outline-none"
                 >
                   {VISUAL_OPTIONS.map((opt) => (
                     <option key={opt.value} value={opt.value}>
@@ -343,10 +343,10 @@ export default function AboutTab() {
         </div>
 
         {/* SECTION 3: MEET THE MAKERS */}
-        <div className="rounded-2xl bg-cream p-4 sm:p-6 shadow-soft ring-1 ring-sand space-y-6 min-w-0">
+        <div className="rounded-lg bg-surface p-4 sm:p-6 shadow-none ring-1 ring-sand space-y-6 min-w-0">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-sand pb-3">
             <div>
-              <h3 className="font-display text-lg text-plum">Meet the Makers</h3>
+              <h3 className="font-display text-lg text-brand">Meet the Makers</h3>
               <p className="text-xs text-muted">Manage the creators, their photographs, roles, and bios.</p>
             </div>
             {canManage && (
@@ -364,7 +364,7 @@ export default function AboutTab() {
                   }
                   setForm({ ...form, makers: [...(form.makers || []), newMaker] })
                 }}
-                className="inline-flex items-center gap-1.5 rounded-full bg-plum px-4 py-1.5 text-xs font-semibold text-cream hover:bg-ink shadow-sm transition"
+                className="inline-flex items-center gap-1.5 rounded-lg bg-plum px-4 py-1.5 text-xs font-semibold text-on-primary hover:bg-overlay-ink shadow-sm transition"
               >
                 <Plus className="h-3.5 w-3.5" /> Add Maker
               </button>
@@ -373,7 +373,7 @@ export default function AboutTab() {
 
           <div className="grid gap-3 grid-cols-1 sm:grid-cols-2">
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-muted">
+              <label className="block text-xs font-semibold tracking-normal text-muted">
                 Makers Section Heading
               </label>
               <input
@@ -383,11 +383,11 @@ export default function AboutTab() {
                 onChange={(e) =>
                   setForm({ ...form, makersHeading: { ...form.makersHeading, title: e.target.value } })
                 }
-                className="mt-1 w-full min-w-0 rounded-xl border border-sand bg-white px-3 py-2 text-sm text-plum outline-none"
+                className="mt-1 w-full min-w-0 rounded-xl border border-sand bg-surface px-3 py-2 text-sm text-brand outline-none"
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-muted">
+              <label className="block text-xs font-semibold tracking-normal text-muted">
                 Makers Description / Subheading
               </label>
               <MarkdownEditor id="about-makers-description" value={form.makersHeading?.description || ''} readOnly={!canManage} onChange={(value) => setForm({ ...form, makersHeading: { ...form.makersHeading, description: value } })} rows={3} />
@@ -399,10 +399,10 @@ export default function AboutTab() {
             {(form.makers || []).map((maker, idx) => (
               <div
                 key={maker.id || idx}
-                className="rounded-2xl border border-sand bg-white/80 p-4 sm:p-5 shadow-sm space-y-4 min-w-0"
+                className="rounded-lg border border-sand bg-surface/80 p-4 sm:p-5 shadow-sm space-y-4 min-w-0"
               >
                 <div className="flex items-center justify-between border-b border-sand/60 pb-2">
-                  <h4 className="font-display text-base font-semibold text-plum truncate">
+                  <h4 className="font-display text-base font-semibold text-brand truncate">
                     {maker.name || `Maker #${idx + 1}`}
                   </h4>
                   {canManage && (form.makers || []).length > 1 && (
@@ -412,7 +412,7 @@ export default function AboutTab() {
                         const updated = form.makers.filter((_, i) => i !== idx)
                         setForm({ ...form, makers: updated })
                       }}
-                      className="text-xs text-bloom font-medium hover:underline inline-flex items-center gap-1 shrink-0"
+                      className="text-xs text-accent font-medium hover:underline inline-flex items-center gap-1 shrink-0"
                     >
                       <Trash2 className="h-3.5 w-3.5" /> Remove
                     </button>
@@ -457,7 +457,7 @@ export default function AboutTab() {
                         next[idx] = { ...next[idx], name: e.target.value }
                         setForm({ ...form, makers: next })
                       }}
-                      className="mt-1 w-full min-w-0 rounded-xl border border-sand bg-white px-3 py-1.5 text-sm text-plum outline-none"
+                      className="mt-1 w-full min-w-0 rounded-xl border border-sand bg-surface px-3 py-1.5 text-sm text-brand outline-none"
                     />
                   </div>
                   <div>
@@ -471,7 +471,7 @@ export default function AboutTab() {
                         next[idx] = { ...next[idx], role: e.target.value }
                         setForm({ ...form, makers: next })
                       }}
-                      className="mt-1 w-full min-w-0 rounded-xl border border-sand bg-white px-3 py-1.5 text-sm text-plum outline-none"
+                      className="mt-1 w-full min-w-0 rounded-xl border border-sand bg-surface px-3 py-1.5 text-sm text-brand outline-none"
                     />
                   </div>
                 </div>
@@ -490,10 +490,10 @@ export default function AboutTab() {
                         next[idx] = { ...next[idx], image: e.target.value }
                         setForm({ ...form, makers: next })
                       }}
-                      className="flex-1 min-w-0 rounded-xl border border-sand bg-white px-3 py-2 text-xs text-plum outline-none focus:border-bloom"
+                      className="flex-1 min-w-0 rounded-xl border border-sand bg-surface px-3 py-2 text-xs text-brand outline-none focus:border-bloom"
                     />
                     {canManage && (
-                      <label className="shrink-0 inline-flex cursor-pointer items-center gap-1 rounded-xl bg-plum px-3 py-2 text-xs font-semibold text-cream hover:bg-ink transition">
+                      <label className="shrink-0 inline-flex cursor-pointer items-center gap-1 rounded-xl bg-plum px-3 py-2 text-xs font-semibold text-on-primary hover:bg-overlay-ink transition">
                         <Upload className="h-3 w-3" />
                         <span>{uploadingField === `maker-${idx}` ? '...' : 'Upload'}</span>
                         <input
@@ -527,7 +527,7 @@ export default function AboutTab() {
                       next[idx] = { ...next[idx], visual: e.target.value }
                       setForm({ ...form, makers: next })
                     }}
-                    className="mt-1 w-full rounded-xl border border-sand bg-white px-3 py-1.5 text-xs text-plum outline-none"
+                    className="mt-1 w-full rounded-xl border border-sand bg-surface px-3 py-1.5 text-xs text-brand outline-none"
                   >
                     {VISUAL_OPTIONS.map((opt) => (
                       <option key={opt.value} value={opt.value}>
@@ -557,14 +557,14 @@ export default function AboutTab() {
         </div>
 
         {/* SECTION 4: WHAT WE HOLD CLOSE (VALUES) */}
-        <div className="rounded-2xl bg-cream p-4 sm:p-6 shadow-soft ring-1 ring-sand space-y-4 min-w-0">
-          <h3 className="font-display text-lg text-plum border-b border-sand pb-2">
+        <div className="rounded-lg bg-surface p-4 sm:p-6 shadow-none ring-1 ring-sand space-y-4 min-w-0">
+          <h3 className="font-display text-lg text-brand border-b border-sand pb-2">
             Values (What we hold close)
           </h3>
           <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
             {(form.values || []).map((val, idx) => (
-              <div key={idx} className="rounded-xl border border-sand bg-white p-4 space-y-3 min-w-0">
-                <span className="text-xs font-bold text-bloom">Value #{idx + 1}</span>
+              <div key={idx} className="rounded-xl border border-sand bg-surface p-4 space-y-3 min-w-0">
+                <span className="text-xs font-bold text-accent">Value #{idx + 1}</span>
                 <div>
                   <label className="block text-xs font-medium text-muted">Title</label>
                   <input
@@ -576,7 +576,7 @@ export default function AboutTab() {
                       next[idx] = { ...next[idx], title: e.target.value }
                       setForm({ ...form, values: next })
                     }}
-                    className="mt-1 w-full min-w-0 rounded-xl border border-sand bg-ivory/50 px-3 py-1.5 text-xs font-semibold text-plum outline-none"
+                    className="mt-1 w-full min-w-0 rounded-xl border border-sand bg-ivory/50 px-3 py-1.5 text-xs font-semibold text-brand outline-none"
                   />
                 </div>
                 <div>
@@ -599,14 +599,14 @@ export default function AboutTab() {
         </div>
 
         {/* SECTION 5: CRAFTING PROCESS */}
-        <div className="rounded-2xl bg-cream p-4 sm:p-6 shadow-soft ring-1 ring-sand space-y-4 min-w-0">
-          <h3 className="font-display text-lg text-plum border-b border-sand pb-2">
+        <div className="rounded-lg bg-surface p-4 sm:p-6 shadow-none ring-1 ring-sand space-y-4 min-w-0">
+          <h3 className="font-display text-lg text-brand border-b border-sand pb-2">
             How a Piece is Made (Process)
           </h3>
           <div className="grid gap-6 grid-cols-1 lg:grid-cols-2 items-start">
             <div className="space-y-4 min-w-0">
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-muted">
+                <label className="block text-xs font-semibold tracking-normal text-muted">
                   Section Title
                 </label>
                 <input
@@ -616,7 +616,7 @@ export default function AboutTab() {
                   onChange={(e) =>
                     setForm({ ...form, crafting: { ...form.crafting, title: e.target.value } })
                   }
-                  className="mt-1.5 w-full min-w-0 rounded-xl border border-sand bg-white px-3 py-2 text-sm text-plum outline-none"
+                  className="mt-1.5 w-full min-w-0 rounded-xl border border-sand bg-surface px-3 py-2 text-sm text-brand outline-none"
                 />
               </div>
 
@@ -629,7 +629,7 @@ export default function AboutTab() {
                   onChange={(e) =>
                     setForm({ ...form, crafting: { ...form.crafting, step1Title: e.target.value } })
                   }
-                  className="mt-1 w-full min-w-0 rounded-xl border border-sand bg-white px-3 py-1.5 text-xs font-semibold text-plum outline-none"
+                  className="mt-1 w-full min-w-0 rounded-xl border border-sand bg-surface px-3 py-1.5 text-xs font-semibold text-brand outline-none"
                 />
                 <MarkdownEditor id="about-crafting-step-1" value={form.crafting?.step1Text || ''} readOnly={!canManage} onChange={(value) => setForm({ ...form, crafting: { ...form.crafting, step1Text: value } })} rows={2} />
               </div>
@@ -643,7 +643,7 @@ export default function AboutTab() {
                   onChange={(e) =>
                     setForm({ ...form, crafting: { ...form.crafting, step2Title: e.target.value } })
                   }
-                  className="mt-1 w-full min-w-0 rounded-xl border border-sand bg-white px-3 py-1.5 text-xs font-semibold text-plum outline-none"
+                  className="mt-1 w-full min-w-0 rounded-xl border border-sand bg-surface px-3 py-1.5 text-xs font-semibold text-brand outline-none"
                 />
                 <MarkdownEditor id="about-crafting-step-2" value={form.crafting?.step2Text || ''} readOnly={!canManage} onChange={(value) => setForm({ ...form, crafting: { ...form.crafting, step2Text: value } })} rows={2} />
               </div>
@@ -657,15 +657,15 @@ export default function AboutTab() {
                   onChange={(e) =>
                     setForm({ ...form, crafting: { ...form.crafting, step3Title: e.target.value } })
                   }
-                  className="mt-1 w-full min-w-0 rounded-xl border border-sand bg-white px-3 py-1.5 text-xs font-semibold text-plum outline-none"
+                  className="mt-1 w-full min-w-0 rounded-xl border border-sand bg-surface px-3 py-1.5 text-xs font-semibold text-brand outline-none"
                 />
                 <MarkdownEditor id="about-crafting-step-3" value={form.crafting?.step3Text || ''} readOnly={!canManage} onChange={(value) => setForm({ ...form, crafting: { ...form.crafting, step3Text: value } })} rows={2} />
               </div>
             </div>
 
             {/* Crafting Image */}
-            <div className="rounded-xl border border-sand bg-white/70 p-4 space-y-4 min-w-0">
-              <label className="block text-xs font-semibold uppercase tracking-wider text-plum">
+            <div className="rounded-xl border border-sand bg-surface/70 p-4 space-y-4 min-w-0">
+              <label className="block text-xs font-semibold tracking-normal text-brand">
                 Crafting Image / Photograph
               </label>
 
@@ -705,10 +705,10 @@ export default function AboutTab() {
                     onChange={(e) =>
                       setForm({ ...form, crafting: { ...form.crafting, image: e.target.value } })
                     }
-                    className="flex-1 min-w-0 rounded-xl border border-sand bg-white px-3 py-2 text-xs sm:text-sm text-plum outline-none focus:border-bloom"
+                    className="flex-1 min-w-0 rounded-xl border border-sand bg-surface px-3 py-2 text-xs sm:text-sm text-brand outline-none focus:border-bloom"
                   />
                   {canManage && (
-                    <label className="shrink-0 inline-flex cursor-pointer items-center gap-1.5 rounded-xl bg-plum px-3 py-2 text-xs font-semibold text-cream hover:bg-ink transition">
+                    <label className="shrink-0 inline-flex cursor-pointer items-center gap-1.5 rounded-xl bg-plum px-3 py-2 text-xs font-semibold text-on-primary hover:bg-overlay-ink transition">
                       <Upload className="h-3.5 w-3.5" />
                       <span>{uploadingField === 'crafting' ? '...' : 'Upload'}</span>
                       <input
@@ -739,7 +739,7 @@ export default function AboutTab() {
             <button
               type="submit"
               disabled={saving}
-              className="inline-flex items-center gap-2 rounded-full bg-plum px-8 py-3 text-sm font-semibold tracking-wide text-cream shadow-lift transition hover:bg-ink disabled:opacity-50"
+              className="inline-flex items-center gap-2 rounded-lg bg-plum px-8 py-3 text-sm font-semibold tracking-normal text-on-primary shadow-sm transition hover:bg-overlay-ink disabled:opacity-50"
             >
               <Save className="h-4 w-4" />
               <span>{saving ? 'Saving changes...' : 'Save About Page'}</span>

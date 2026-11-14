@@ -151,13 +151,13 @@ export default async function ProductDetailsPage({ params }) {
       <div className="container-page py-20">
         <div className="paper-card mx-auto max-w-lg px-8 py-14 text-center">
           <Flower2 className="mx-auto h-10 w-10 text-petal" aria-hidden="true" />
-          <h2 className="mt-4 font-display text-3xl text-plum">This piece is not on the shelf</h2>
+          <h2 className="mt-4 font-display text-3xl text-brand">This piece is not on the shelf</h2>
           <p className="mt-3 text-muted">
             It may have been a mistyped link. Wander back to the shop to find something lovely.
           </p>
           <Link
             href="/shop"
-            className="mt-6 inline-flex items-center justify-center rounded-full bg-plum px-5 py-2.5 text-sm font-semibold text-cream shadow-soft transition hover:bg-ink hover:-translate-y-0.5 hover:shadow-lift active:translate-y-0"
+            className="mt-6 inline-flex items-center justify-center rounded-full bg-plum px-5 py-2.5 text-sm font-semibold text-on-primary shadow-soft transition hover:bg-overlay-ink hover:-translate-y-0.5 hover:shadow-lift active:translate-y-0"
           >
             Back to shop
           </Link>

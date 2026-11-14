@@ -1,0 +1,49 @@
+@layer components {
+  .studio-admin { background: var(--admin-bg); color: var(--text-primary); }
+  .studio-admin :where(h1, h2, h3) { font-weight: 600; letter-spacing: -.025em; }
+  .studio-admin :where(table) { width: 100%; border-collapse: collapse; font-size: 14px; }
+  .studio-admin :where(th) { background: var(--surface-subtle); color: var(--text-secondary); font-size: 12px; font-weight: 600; text-align: left; }
+  .studio-admin :where(th, td) { padding: 14px 16px; border-bottom: 1px solid var(--border-default); }
+  .studio-admin :where(input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="color"]), select, textarea) { border-radius: var(--radius-control); background: var(--input-bg); }
+  .studio-admin :where(button:not([role="switch"]), a[role="button"]) { transition-duration: var(--duration-fast); }
+  .studio-admin :where(input[type="checkbox"], input[type="radio"]) { accent-color: var(--action-primary); }
+  .studio-admin-header { isolation: isolate; }
+}
+
+/* Semantic form geometry takes precedence over legacy utility radii. */
+.studio-admin :where(input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="color"]), select, textarea) {
+  border-radius: var(--radius-control);
+  background: var(--input-bg);
+  color: var(--text-primary);
+}
+
+.studio-product-editor .studio-dialog-body { padding: 0; scroll-behavior: smooth; }
+.studio-product-sections { position: sticky; top: 0; z-index: 2; display: flex; gap: 4px; overflow-x: auto; padding: 12px 24px; border-bottom: 1px solid var(--border-default); background: var(--surface-card); }
+.studio-product-sections a { flex-shrink: 0; padding: 8px 10px; border-radius: 6px; font-size: 13px; font-weight: 600; color: var(--text-secondary); }
+.studio-product-sections a:hover, .studio-product-sections a:focus-visible { background: var(--surface-warm); color: var(--text-heading); }
+.studio-product-section { display: grid; gap: 16px; padding: 28px 24px; border-bottom: 1px solid var(--border-default); scroll-margin-top: 76px; }
+.studio-product-section h3 { font-size: 18px; color: var(--text-heading); }
+.studio-product-section :where(input, textarea, select) { color: var(--text-primary); }
+.studio-product-actions { position: sticky; bottom: 0; z-index: 3; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 24px; border-top: 1px solid var(--border-default); background: var(--surface-card); }
+.studio-product-actions button { border-radius: var(--radius-control); }
+@media (max-width: 639px) {
+  .studio-product-section { padding: 24px 16px; }
+  .studio-product-sections { padding-inline: 8px; }
+  .studio-product-actions { padding: 12px 16px; }
+  .studio-product-actions > div:last-child { flex-direction: row; width: 100%; }
+  .studio-product-actions > div:last-child > button { flex: 1; padding-inline: 12px; }
+}
+@media (prefers-reduced-motion: reduce) { .studio-product-editor .studio-dialog-body { scroll-behavior: auto; } }
+
+.studio-admin-catalog-item { display: grid; grid-template-columns: 72px minmax(0, 1fr); align-items: start; gap: 16px; padding: 16px; border: 1px solid var(--border-default); border-radius: var(--radius-surface); background: var(--surface-card); }
+.studio-admin-thumbnail { width: 72px; height: 80px; overflow: hidden; border-radius: 6px; background: var(--surface-subtle); }
+.studio-admin-catalog-actions { display: flex; grid-column: 1 / -1; align-items: center; gap: 8px; }
+.studio-admin-catalog-actions button { border-radius: var(--radius-control); box-shadow: none; }
+@media (min-width: 1280px) {
+  .studio-admin-catalog-item { grid-template-columns: 72px minmax(0, 1fr) auto; gap: 20px; }
+  .studio-admin-catalog-actions { grid-column: auto; align-self: center; }
+}
+@media (max-width: 479px) {
+  .studio-admin-catalog-item { grid-template-columns: 56px minmax(0, 1fr); gap: 12px; padding: 12px; }
+  .studio-admin-thumbnail { width: 56px; height: 64px; }
+}

@@ -1,0 +1,154 @@
+/* Three layers: raw palette → purpose → component. Keep legacy Tailwind names
+   mapped in globals.css so existing commerce and admin templates remain compatible. */
+:root {
+  /* Primitives: warm paper, rose yarn, cocoa ink. */
+  --palette-paper-50: hsl(30 100% 98%);
+  --palette-paper-100: hsl(27 43% 95%);
+  --palette-paper-200: hsl(29 35% 90%);
+  --palette-white: hsl(0 0% 100%);
+  --palette-rose-100: hsl(340 44% 94%);
+  --palette-rose-200: hsl(340 39% 87%);
+  --palette-rose-300: hsl(340 37% 76%);
+  --palette-berry-600: hsl(337 46% 38%);
+  --palette-berry-700: hsl(337 49% 30%);
+  --palette-berry-800: hsl(337 51% 24%);
+  --palette-cocoa-950: hsl(328 18% 19%);
+  --palette-cocoa-800: hsl(329 20% 24%);
+  --palette-cocoa-600: hsl(329 11% 43%);
+  --palette-cocoa-200: hsl(334 23% 88%);
+  --palette-clay-600: hsl(10 39% 42%);
+  --palette-apricot-200: hsl(28 60% 82%);
+  --palette-lilac-100: hsl(283 26% 93%);
+  --palette-lilac-300: hsl(283 22% 73%);
+  --palette-success-700: hsl(143 34% 30%);
+  --palette-success-100: hsl(143 22% 91%);
+  --space-2: .5rem;
+  --space-3: .75rem;
+  --space-4: 1rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-12: 3rem;
+  --space-20: 5rem;
+  --duration-fast: 180ms;
+  --duration-normal: 250ms;
+  --radius-control: .5rem;
+  --radius-surface: .75rem;
+
+  /* Semantics: status green is reserved for confirmation, never brand identity. */
+  --surface-page: var(--palette-paper-50);
+  --surface-card: var(--palette-white);
+  --surface-subtle: var(--palette-paper-100);
+  --surface-warm: var(--palette-paper-200);
+  --surface-accent: var(--palette-rose-100);
+  --surface-accent-strong: var(--palette-rose-200);
+  --text-primary: var(--palette-cocoa-950);
+  --text-heading: var(--palette-cocoa-800);
+  --text-secondary: var(--palette-cocoa-600);
+  --text-accent: var(--palette-berry-600);
+  --text-editorial: var(--palette-clay-600);
+  --action-primary: var(--palette-berry-600);
+  --action-hover: var(--palette-berry-700);
+  --action-active: var(--palette-berry-800);
+  --action-foreground: var(--palette-white);
+  --accent-editorial: var(--palette-clay-600);
+  --border-default: var(--palette-cocoa-200);
+  --focus-ring: var(--palette-berry-600);
+  --status-success: var(--palette-success-700);
+  --status-success-surface: var(--palette-success-100);
+  --status-danger: hsl(350 57% 39%);
+  --status-danger-surface: hsl(350 65% 96%);
+  --status-warning: hsl(35 76% 28%);
+  --status-warning-surface: hsl(42 85% 94%);
+  --status-info: hsl(211 62% 32%);
+  --status-info-surface: hsl(211 70% 96%);
+  --spacing-section: var(--space-20);
+
+  /* Components: shared controls, imagery, and storefront regions. */
+  --button-bg: var(--action-primary);
+  --button-fg: var(--action-foreground);
+  --button-hover-bg: var(--action-hover);
+  --button-active-bg: var(--action-active);
+  --button-secondary-bg: var(--surface-accent);
+  --button-secondary-fg: var(--text-heading);
+  --button-secondary-hover-bg: var(--surface-accent-strong);
+  --input-bg: var(--surface-card);
+  --input-border: var(--border-default);
+  --input-focus-ring: var(--focus-ring);
+  --card-bg: var(--surface-card);
+  --card-border: var(--border-default);
+  --hero-image-main-bg: var(--surface-warm);
+  --hero-image-secondary-bg: var(--surface-accent);
+  --hero-image-tertiary-bg: var(--palette-apricot-200);
+  --banner-bg: var(--action-hover);
+  --banner-fg: var(--action-foreground);
+  --footer-bg: var(--surface-subtle);
+  --dialog-bg: var(--surface-card);
+  --dialog-border: var(--border-default);
+  --dialog-overlay-bg: color-mix(in srgb, var(--text-primary) 45%, transparent);
+  --dialog-shadow: 0 16px 48px rgb(0 0 0 / .16);
+  --dialog-radius: var(--radius-surface);
+  --admin-bg: var(--surface-subtle);
+  --art-primary: var(--palette-rose-300);
+  --art-secondary: var(--palette-apricot-200);
+  --art-ink: var(--text-heading);
+}
+
+/* One brand, two intentional colour treatments. Foregrounds and actions are
+   independent: a dark-mode link can be pale rose without making buttons pale. */
+:root { color-scheme: light; }
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --surface-page: hsl(300 12% 9%);
+  --surface-card: hsl(310 12% 13%);
+  --surface-subtle: hsl(305 12% 11%);
+  --surface-warm: hsl(320 13% 18%);
+  --surface-accent: hsl(328 23% 19%);
+  --surface-accent-strong: hsl(330 26% 27%);
+  --text-primary: hsl(330 20% 91%);
+  --text-heading: hsl(330 35% 95%);
+  --text-secondary: hsl(325 13% 72%);
+  --text-accent: hsl(335 54% 78%);
+  --text-editorial: hsl(22 56% 73%);
+  --action-primary: hsl(335 47% 44%);
+  --action-hover: hsl(335 47% 39%);
+  --action-active: hsl(335 47% 34%);
+  --action-foreground: var(--palette-white);
+  --border-default: hsl(315 12% 29%);
+  --focus-ring: hsl(335 66% 78%);
+  --status-success: hsl(146 35% 72%);
+  --status-success-surface: hsl(146 20% 17%);
+  --status-danger: hsl(350 72% 79%);
+  --status-danger-surface: hsl(350 28% 18%);
+  --status-warning: hsl(40 69% 75%);
+  --status-warning-surface: hsl(40 26% 17%);
+  --status-info: hsl(211 60% 77%);
+  --status-info-surface: hsl(211 27% 17%);
+  --hero-image-tertiary-bg: hsl(25 22% 22%);
+  --dialog-overlay-bg: rgb(0 0 0 / .65);
+}
+
+@media print {
+  :root, :root[data-theme="dark"] {
+    color-scheme: light;
+    --surface-page: var(--palette-white);
+    --surface-card: var(--palette-white);
+    --surface-subtle: var(--palette-paper-100);
+    --surface-accent: var(--palette-rose-100);
+    --surface-accent-strong: var(--palette-rose-200);
+    --text-primary: var(--palette-cocoa-950);
+    --text-heading: var(--palette-cocoa-800);
+    --text-secondary: var(--palette-cocoa-600);
+    --text-accent: var(--palette-berry-600);
+    --text-editorial: var(--palette-clay-600);
+    --action-primary: var(--palette-berry-600);
+    --border-default: var(--palette-cocoa-200);
+    --status-success: var(--palette-success-700);
+    --status-success-surface: var(--palette-success-100);
+    --status-danger: hsl(350 57% 39%);
+    --status-danger-surface: hsl(350 65% 96%);
+    --status-warning: hsl(35 76% 28%);
+    --status-warning-surface: hsl(42 85% 94%);
+    --status-info: hsl(211 62% 32%);
+    --status-info-surface: hsl(211 70% 96%);
+  }
+}

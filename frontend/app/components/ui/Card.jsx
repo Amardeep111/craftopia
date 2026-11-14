@@ -7,8 +7,8 @@ export default function Card({
   className = '',
   ...props
 }) {
-  const baseClasses = 'paper-card rounded-3xl border border-sand/80 bg-ivory/80 shadow-soft'
-  const hoverClasses = hoverable ? 'transition duration-300 ease-out hover:-translate-y-1 hover:shadow-lift' : ''
+  const baseClasses = 'paper-card'
+  const hoverClasses = hoverable ? 'transition-colors duration-200' : ''
 
   return (
     <div

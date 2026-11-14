@@ -50,7 +50,7 @@ export default async function About() {
             <MarkdownContent>{story?.paragraph1 || "Jamae's Craftopia began as a home-grown handmade business in Siliguri, India. Two sisters, a shared craft table, and a love of turning yarn into something someone can hold."}</MarkdownContent>
             <MarkdownContent>{story?.paragraph2 || "The work is slow on purpose: amigurumi friends, flowers that do not wilt, initial keychains, hair pieces, and gifts that carry a name. Nothing here is meant to feel factory-made."}</MarkdownContent>
             {story?.quote && (
-              <div className="rounded-2xl bg-ivory px-4 py-3 text-sm italic text-plum">
+              <div className="rounded-2xl bg-ivory px-4 py-3 text-sm italic text-brand">
                 <MarkdownContent>
                 {story.quote}
                 </MarkdownContent>
@@ -81,10 +81,10 @@ export default async function About() {
                   />
                 </div>
                 <div className="p-6">
-                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-bloom">
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-accent">
                     {person.role || 'Maker'}
                   </p>
-                  <h3 className="mt-1 font-display text-3xl text-plum">{person.name}</h3>
+                  <h3 className="mt-1 font-display text-3xl text-brand">{person.name}</h3>
                   <MarkdownContent className="mt-2 text-muted">{person.bio}</MarkdownContent>
                 </div>
               </article>
@@ -101,8 +101,8 @@ export default async function About() {
             return (
               <ScrollReveal key={v.title || i} delay={i * 0.06}>
                 <article className="paper-card h-full p-6">
-                  <IconComponent className="h-6 w-6 text-bloom" aria-hidden="true" />
-                  <h3 className="mt-4 font-display text-2xl text-plum">{v.title}</h3>
+                  <IconComponent className="h-6 w-6 text-accent" aria-hidden="true" />
+                  <h3 className="mt-4 font-display text-2xl text-brand">{v.title}</h3>
                   <MarkdownContent className="mt-2 text-muted">{v.text}</MarkdownContent>
                 </article>
               </ScrollReveal>
@@ -119,15 +119,15 @@ export default async function About() {
             </h2>
             <ol className="mt-6 space-y-4 text-muted">
               <li>
-                <strong className="text-plum">{crafting?.step1Title || '1. Yarn and a quiet idea.'}</strong>
+                <strong className="text-brand">{crafting?.step1Title || '1. Yarn and a quiet idea.'}</strong>
                 <MarkdownContent>{crafting?.step1Text || 'Colours are chosen to match a mood, a dress, or a memory.'}</MarkdownContent>
               </li>
               <li>
-                <strong className="text-plum">{crafting?.step2Title || '2. Stitch by stitch.'}</strong>
+                <strong className="text-brand">{crafting?.step2Title || '2. Stitch by stitch.'}</strong>
                 <MarkdownContent>{crafting?.step2Text || 'Toys, petals, and letters take shape on the hook — never rushed.'}</MarkdownContent>
               </li>
               <li>
-                <strong className="text-plum">{crafting?.step3Title || '3. The small finishing.'}</strong>
+                <strong className="text-brand">{crafting?.step3Title || '3. The small finishing.'}</strong>
                 <MarkdownContent>{crafting?.step3Text || 'Embroidered faces, ribbons, wrapping, and a last look before it leaves the table.'}</MarkdownContent>
               </li>
             </ol>

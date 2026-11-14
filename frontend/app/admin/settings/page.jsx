@@ -68,10 +68,10 @@ function ImageField({
   }
 
   return (
-    <div className="flex flex-col h-full rounded-2xl border border-sand/80 bg-white p-3.5 sm:p-4 shadow-sm transition hover:shadow-soft min-w-0 w-full overflow-hidden">
+    <div className="flex flex-col h-full rounded-lg border border-sand/80 bg-surface p-3.5 sm:p-4 shadow-sm transition hover:shadow-none min-w-0 w-full overflow-hidden">
       {/* Header */}
       <div className="mb-2 min-w-0">
-        <label className="block text-xs font-bold text-plum uppercase tracking-wider truncate" title={label}>
+        <label className="block text-xs font-bold text-brand tracking-normal truncate" title={label}>
           {label}
         </label>
         {description && (
@@ -82,7 +82,7 @@ function ImageField({
       </div>
 
       {/* Visual / Image Preview Area */}
-      <div className="relative w-full aspect-[16/10] sm:aspect-video overflow-hidden rounded-xl border border-sand bg-ivory/60 flex items-center justify-center mb-3 group shrink-0">
+      <div className="relative w-full aspect-[16/10] sm:aspect-video overflow-hidden rounded-xl border border-sand bg-surface flex items-center justify-center mb-3 group shrink-0">
         {value ? (
           <>
             <img src={value} alt={label} className="h-full w-full object-cover transition group-hover:scale-105 duration-300" />
@@ -91,7 +91,7 @@ function ImageField({
                 type="button"
                 disabled={disabled || uploading}
                 onClick={() => fileInputRef.current?.click()}
-                className="rounded-full bg-white/95 px-3 py-1.5 text-[11px] font-semibold text-plum shadow-md hover:bg-white"
+                className="rounded-full bg-surface/95 px-3 py-1.5 text-[11px] font-semibold text-brand shadow-md hover:bg-surface"
               >
                 Change photo
               </button>
@@ -99,19 +99,19 @@ function ImageField({
           </>
         ) : (
           <div className="flex flex-col items-center justify-center text-muted/70 text-xs text-center p-3">
-            <div className="h-8 w-8 rounded-full bg-plum/5 flex items-center justify-center mb-1 text-bloom">
+            <div className="mb-1 text-muted">
               <ImageIcon className="h-4 w-4" />
             </div>
-            <span className="font-medium text-[11px] text-plum/70">Default Brand Art</span>
-            <span className="text-[10px] text-muted mt-0.5">Will display brand SVG</span>
+            <span className="font-medium text-[11px] text-brand/70">Default imagery</span>
+            <span className="text-[10px] text-muted mt-0.5">Uses the storefront’s fallback image</span>
           </div>
         )}
 
         {/* Uploading overlay */}
         {uploading && (
-          <div className="absolute inset-0 bg-plum/70 backdrop-blur-xs flex items-center justify-center z-10">
-            <div className="flex items-center gap-2 text-cream text-xs font-semibold">
-              <div className="h-4 w-4 border-2 border-cream/30 border-t-cream rounded-full animate-spin" />
+          <div className="absolute inset-0 bg-plum/70  flex items-center justify-center z-10">
+            <div className="flex items-center gap-2 text-on-primary text-xs font-semibold">
+              <div className="h-4 w-4 border-2 border-on-primary/30 border-t-cream rounded-full animate-spin" />
               <span>Uploading…</span>
             </div>
           </div>
@@ -134,9 +134,9 @@ function ImageField({
             type="button"
             disabled={disabled || uploading}
             onClick={() => fileInputRef.current?.click()}
-            className="flex-1 min-w-0 inline-flex items-center justify-center gap-1.5 rounded-xl bg-plum/10 hover:bg-plum/20 px-3 py-2 text-xs font-semibold text-plum transition disabled:opacity-50"
+            className="flex-1 min-w-0 inline-flex items-center justify-center gap-1.5 rounded-xl bg-plum/10 hover:bg-plum/20 px-3 py-2 text-xs font-semibold text-brand transition disabled:opacity-50"
           >
-            <Upload className="h-3.5 w-3.5 text-bloom shrink-0" />
+            <Upload className="h-3.5 w-3.5 text-accent shrink-0" />
             <span className="truncate">{uploading ? 'Uploading…' : value ? 'Replace Photo' : 'Upload Photo'}</span>
           </button>
 
@@ -145,7 +145,7 @@ function ImageField({
               type="button"
               disabled={disabled}
               onClick={() => onChange('')}
-              className="shrink-0 rounded-xl border border-sand bg-white px-2.5 py-2 text-xs font-semibold text-muted hover:text-bloom hover:bg-blush/40 transition"
+              className="shrink-0 rounded-xl border border-sand bg-surface px-2.5 py-2 text-xs font-semibold text-muted hover:text-accent hover:bg-blush/40 transition"
               title="Reset to default illustration"
             >
               Clear
@@ -161,11 +161,11 @@ function ImageField({
             value={value || ''}
             onChange={(e) => onChange(e.target.value)}
             placeholder="Or paste direct image URL (https://…)"
-            className="w-full min-w-0 rounded-xl border border-sand/80 bg-sand/20 px-2.5 py-1.5 text-[11px] text-plum placeholder:text-muted/60 read-only:bg-ink/5 focus:border-bloom focus:bg-white focus:outline-none transition"
+            className="w-full min-w-0 rounded-xl border border-sand/80 bg-sand/20 px-2.5 py-1.5 text-[11px] text-brand placeholder:text-muted/60 read-only:bg-overlay-ink/5 focus:border-bloom focus:bg-surface focus:outline-none transition"
           />
         </div>
 
-        {uploadError && <p className="text-[11px] text-bloom font-medium break-words">{uploadError}</p>}
+        {uploadError && <p className="text-[11px] text-accent font-medium break-words">{uploadError}</p>}
       </div>
     </div>
   )
@@ -355,7 +355,7 @@ export default function AdminSettings() {
       {/* Header */}
       <header className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="font-display text-3xl text-plum">Store & Settings</h1>
+          <h1 className="font-display text-3xl font-semibold text-ink">Store & Settings</h1>
           <p className="mt-1 text-sm text-muted">
             Manage contact information, social channels, About page story & makers, storefront visuals, and payment destinations.
           </p>
@@ -369,8 +369,8 @@ export default function AdminSettings() {
           onClick={() => handleTabChange('contact')}
           className={`inline-flex items-center gap-2 border-b-2 px-3 sm:px-4 py-3 text-xs sm:text-sm font-semibold transition shrink-0 ${
             activeTab === 'contact'
-              ? 'border-plum text-plum'
-              : 'border-transparent text-muted hover:text-plum'
+              ? 'border-plum text-brand'
+              : 'border-transparent text-muted hover:text-brand'
           }`}
         >
           <Store className="h-4 w-4" />
@@ -381,8 +381,8 @@ export default function AdminSettings() {
           onClick={() => handleTabChange('about')}
           className={`inline-flex items-center gap-2 border-b-2 px-3 sm:px-4 py-3 text-xs sm:text-sm font-semibold transition shrink-0 ${
             activeTab === 'about'
-              ? 'border-plum text-plum'
-              : 'border-transparent text-muted hover:text-plum'
+              ? 'border-plum text-brand'
+              : 'border-transparent text-muted hover:text-brand'
           }`}
         >
           <BookOpen className="h-4 w-4" />
@@ -393,8 +393,8 @@ export default function AdminSettings() {
           onClick={() => handleTabChange('images')}
           className={`inline-flex items-center gap-2 border-b-2 px-3 sm:px-4 py-3 text-xs sm:text-sm font-semibold transition shrink-0 ${
             activeTab === 'images'
-              ? 'border-plum text-plum'
-              : 'border-transparent text-muted hover:text-plum'
+              ? 'border-plum text-brand'
+              : 'border-transparent text-muted hover:text-brand'
           }`}
         >
           <ImageLucide className="h-4 w-4" />
@@ -405,8 +405,8 @@ export default function AdminSettings() {
           onClick={() => handleTabChange('payment')}
           className={`inline-flex items-center gap-2 border-b-2 px-3 sm:px-4 py-3 text-xs sm:text-sm font-semibold transition shrink-0 ${
             activeTab === 'payment'
-              ? 'border-plum text-plum'
-              : 'border-transparent text-muted hover:text-plum'
+              ? 'border-plum text-brand'
+              : 'border-transparent text-muted hover:text-brand'
           }`}
         >
           <CreditCard className="h-4 w-4" />
@@ -416,12 +416,12 @@ export default function AdminSettings() {
 
       {/* Notifications */}
       {error && (
-        <div role="alert" className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+        <div role="alert" className="rounded-lg border border-red-200 bg-danger-surface p-4 text-sm text-danger">
           {error}
         </div>
       )}
       {notice && (
-        <div role="status" className="rounded-2xl border border-moss/20 bg-moss/10 p-4 text-sm text-moss font-medium">
+        <div role="status" className="rounded-lg border border-moss/20 bg-moss/10 p-4 text-sm text-moss font-medium">
           {notice}
         </div>
       )}
@@ -434,15 +434,15 @@ export default function AdminSettings() {
             {siteLoading ? (
               <p role="status" className="text-sm text-muted">Loading store settings…</p>
             ) : (
-              <form onSubmit={saveSite} className="space-y-6 rounded-3xl bg-cream p-6 shadow-soft ring-1 ring-sand">
+              <form onSubmit={saveSite} className="space-y-6 rounded-xl bg-surface p-6 shadow-none ring-1 ring-sand">
                 {/* Store Identity */}
                 <div className="space-y-4">
-                  <h2 className="font-display text-lg text-plum flex items-center gap-2">
-                    <Sparkles className="h-4 w-4 text-bloom" />
+                  <h2 className="font-display text-lg text-brand flex items-center gap-2">
+                    <Sparkles className="h-4 w-4 text-accent" />
                     Store Identity
                   </h2>
                   <div>
-                    <label className="block text-xs font-semibold uppercase tracking-wider text-muted">
+                    <label className="block text-xs font-semibold tracking-normal text-muted">
                       Store Name
                     </label>
                     <input
@@ -452,7 +452,7 @@ export default function AdminSettings() {
                       value={siteForm.name}
                       onChange={(e) => setSiteForm({ ...siteForm, name: e.target.value })}
                       placeholder="Jamae's Craftopia"
-                      className="mt-1.5 w-full rounded-xl border border-sand bg-white px-4 py-2.5 text-sm text-plum read-only:bg-ink/5 focus:border-bloom focus:outline-none focus:ring-2 focus:ring-bloom/20"
+                      className="mt-1.5 w-full rounded-xl border border-sand bg-surface px-4 py-2.5 text-sm text-brand read-only:bg-overlay-ink/5 focus:border-bloom focus:outline-none focus:ring-2 focus:ring-bloom/20"
                     />
                   </div>
                   <div>
@@ -472,13 +472,13 @@ export default function AdminSettings() {
 
                 {/* Location & Contact */}
                 <div className="space-y-4">
-                  <h2 className="font-display text-lg text-plum flex items-center gap-2">
-                    <MapPin className="h-4 w-4 text-bloom" />
+                  <h2 className="font-display text-lg text-brand flex items-center gap-2">
+                    <MapPin className="h-4 w-4 text-accent" />
                     Location & Direct Reach
                   </h2>
                   <div>
                     <div className="flex items-center justify-between">
-                      <label className="block text-xs font-semibold uppercase tracking-wider text-muted">
+                      <label className="block text-xs font-semibold tracking-normal text-muted">
                         Workshop Location / City
                       </label>
                       <VisibilityBadge
@@ -499,14 +499,14 @@ export default function AdminSettings() {
                       value={siteForm.location}
                       onChange={(e) => setSiteForm({ ...siteForm, location: e.target.value })}
                       placeholder="Siliguri, West Bengal, India"
-                      className="mt-1.5 w-full rounded-xl border border-sand bg-white px-4 py-2.5 text-sm text-plum read-only:bg-ink/5 focus:border-bloom focus:outline-none focus:ring-2 focus:ring-bloom/20"
+                      className="mt-1.5 w-full rounded-xl border border-sand bg-surface px-4 py-2.5 text-sm text-brand read-only:bg-overlay-ink/5 focus:border-bloom focus:outline-none focus:ring-2 focus:ring-bloom/20"
                     />
                     <p className="mt-1 text-xs text-muted">Displayed in the Footer, Contact page, and About page.</p>
                   </div>
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div>
                       <div className="flex items-center justify-between">
-                        <label className="block text-xs font-semibold uppercase tracking-wider text-muted">
+                        <label className="block text-xs font-semibold tracking-normal text-muted">
                           Mobile / Phone Number
                         </label>
                         <VisibilityBadge
@@ -526,12 +526,12 @@ export default function AdminSettings() {
                         value={siteForm.phone}
                         onChange={(e) => setSiteForm({ ...siteForm, phone: e.target.value })}
                         placeholder="+91 98XXX XXXXX"
-                        className="mt-1.5 w-full rounded-xl border border-sand bg-white px-4 py-2.5 text-sm text-plum read-only:bg-ink/5 focus:border-bloom focus:outline-none focus:ring-2 focus:ring-bloom/20"
+                        className="mt-1.5 w-full rounded-xl border border-sand bg-surface px-4 py-2.5 text-sm text-brand read-only:bg-overlay-ink/5 focus:border-bloom focus:outline-none focus:ring-2 focus:ring-bloom/20"
                       />
                     </div>
                     <div>
                       <div className="flex items-center justify-between">
-                        <label className="block text-xs font-semibold uppercase tracking-wider text-muted">
+                        <label className="block text-xs font-semibold tracking-normal text-muted">
                           Contact Email
                         </label>
                         <VisibilityBadge
@@ -551,13 +551,13 @@ export default function AdminSettings() {
                         value={siteForm.email}
                         onChange={(e) => setSiteForm({ ...siteForm, email: e.target.value })}
                         placeholder="hello@jamaescraftopia.com"
-                        className="mt-1.5 w-full rounded-xl border border-sand bg-white px-4 py-2.5 text-sm text-plum read-only:bg-ink/5 focus:border-bloom focus:outline-none focus:ring-2 focus:ring-bloom/20"
+                        className="mt-1.5 w-full rounded-xl border border-sand bg-surface px-4 py-2.5 text-sm text-brand read-only:bg-overlay-ink/5 focus:border-bloom focus:outline-none focus:ring-2 focus:ring-bloom/20"
                       />
                     </div>
                   </div>
                   <div>
                     <div className="flex items-center justify-between">
-                      <label className="block text-xs font-semibold uppercase tracking-wider text-muted">
+                      <label className="block text-xs font-semibold tracking-normal text-muted">
                         WhatsApp Chat Link or Number
                       </label>
                       <VisibilityBadge
@@ -577,7 +577,7 @@ export default function AdminSettings() {
                       value={siteForm.whatsapp}
                       onChange={(e) => setSiteForm({ ...siteForm, whatsapp: e.target.value })}
                       placeholder="https://wa.me/919876543210 or 919876543210"
-                      className="mt-1.5 w-full rounded-xl border border-sand bg-white px-4 py-2.5 text-sm text-plum read-only:bg-ink/5 focus:border-bloom focus:outline-none focus:ring-2 focus:ring-bloom/20"
+                      className="mt-1.5 w-full rounded-xl border border-sand bg-surface px-4 py-2.5 text-sm text-brand read-only:bg-overlay-ink/5 focus:border-bloom focus:outline-none focus:ring-2 focus:ring-bloom/20"
                     />
                     <p className="mt-1 text-xs text-muted">Used for the WhatsApp quick chat button on the Contact page.</p>
                   </div>
@@ -587,14 +587,14 @@ export default function AdminSettings() {
 
                 {/* Social Media Links */}
                 <div className="space-y-4">
-                  <h2 className="font-display text-lg text-plum flex items-center gap-2">
-                    <Globe className="h-4 w-4 text-bloom" />
+                  <h2 className="font-display text-lg text-brand flex items-center gap-2">
+                    <Globe className="h-4 w-4 text-accent" />
                     Social Media Channels
                   </h2>
                   <div>
                     <div className="flex items-center justify-between">
-                      <label className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted">
-                        <InstagramIcon className="h-3.5 w-3.5 text-bloom" />
+                      <label className="flex items-center gap-2 text-xs font-semibold tracking-normal text-muted">
+                        <InstagramIcon className="h-3.5 w-3.5 text-accent" />
                         Instagram Profile URL
                       </label>
                       <VisibilityBadge
@@ -620,14 +620,14 @@ export default function AdminSettings() {
                           })
                         }
                         placeholder="https://instagram.com/jamaescraftopia"
-                        className="flex-1 rounded-xl border border-sand bg-white px-4 py-2.5 text-sm text-plum read-only:bg-ink/5 focus:border-bloom focus:outline-none focus:ring-2 focus:ring-bloom/20"
+                        className="flex-1 rounded-xl border border-sand bg-surface px-4 py-2.5 text-sm text-brand read-only:bg-overlay-ink/5 focus:border-bloom focus:outline-none focus:ring-2 focus:ring-bloom/20"
                       />
                       {siteForm.social?.instagram && (
                         <a
                           href={siteForm.social.instagram}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 rounded-xl border border-sand bg-white px-3 py-2 text-xs font-semibold text-plum hover:bg-blush"
+                          className="inline-flex items-center gap-1 rounded-xl border border-sand bg-surface px-3 py-2 text-xs font-semibold text-brand hover:bg-blush"
                         >
                           <ExternalLink className="h-3.5 w-3.5" />
                           <span>Test</span>
@@ -638,8 +638,8 @@ export default function AdminSettings() {
 
                   <div>
                     <div className="flex items-center justify-between">
-                      <label className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted">
-                        <FacebookIcon className="h-3.5 w-3.5 text-bloom" />
+                      <label className="flex items-center gap-2 text-xs font-semibold tracking-normal text-muted">
+                        <FacebookIcon className="h-3.5 w-3.5 text-accent" />
                         Facebook Page URL
                       </label>
                       <VisibilityBadge
@@ -665,14 +665,14 @@ export default function AdminSettings() {
                           })
                         }
                         placeholder="https://facebook.com/jamaescraftopia"
-                        className="flex-1 rounded-xl border border-sand bg-white px-4 py-2.5 text-sm text-plum read-only:bg-ink/5 focus:border-bloom focus:outline-none focus:ring-2 focus:ring-bloom/20"
+                        className="flex-1 rounded-xl border border-sand bg-surface px-4 py-2.5 text-sm text-brand read-only:bg-overlay-ink/5 focus:border-bloom focus:outline-none focus:ring-2 focus:ring-bloom/20"
                       />
                       {siteForm.social?.facebook && (
                         <a
                           href={siteForm.social.facebook}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 rounded-xl border border-sand bg-white px-3 py-2 text-xs font-semibold text-plum hover:bg-blush"
+                          className="inline-flex items-center gap-1 rounded-xl border border-sand bg-surface px-3 py-2 text-xs font-semibold text-brand hover:bg-blush"
                         >
                           <ExternalLink className="h-3.5 w-3.5" />
                           <span>Test</span>
@@ -687,7 +687,7 @@ export default function AdminSettings() {
                     <button
                       type="submit"
                       disabled={siteSaving}
-                      className="rounded-full bg-plum px-6 py-3 font-semibold text-cream shadow-soft transition hover:bg-ink disabled:opacity-60"
+                      className="rounded-lg bg-plum px-6 py-3 font-semibold text-on-primary shadow-none transition hover:bg-overlay-ink disabled:opacity-60"
                     >
                       {siteSaving ? 'Saving changes…' : 'Save store & contact details'}
                     </button>
@@ -699,21 +699,21 @@ export default function AdminSettings() {
 
           {/* Live Preview Sidebar */}
           <div className="lg:col-span-2 space-y-4">
-            <h2 className="text-xs font-semibold uppercase tracking-widest text-muted">
+            <h2 className="text-xs font-semibold tracking-normal text-muted">
               Live Storefront Preview
             </h2>
 
             {/* Footer "Find us" Card Preview */}
-            <div className="rounded-3xl border border-sand bg-ivory/80 p-5 shadow-soft">
-              <span className="text-[11px] font-semibold uppercase tracking-wider text-bloom">
+            <div className="rounded-xl border border-sand bg-surface p-5 shadow-none">
+              <span className="text-[11px] font-semibold tracking-normal text-accent">
                 Footer Widget Preview
               </span>
-              <h3 className="mt-2 text-sm font-semibold uppercase tracking-[0.18em] text-plum">
+              <h3 className="mt-2 text-sm font-semibold tracking-[0.18em] text-brand">
                 Find us
               </h3>
               {siteForm.visibility?.location !== false && siteForm.location ? (
                 <p className="mt-3 flex items-start gap-2 text-xs text-muted">
-                  <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-bloom" />
+                  <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-accent" />
                   <span>{siteForm.location}</span>
                 </p>
               ) : siteForm.location ? (
@@ -731,17 +731,17 @@ export default function AdminSettings() {
               ) : null}
               <div className="mt-3 flex gap-2">
                 {siteForm.visibility?.instagram !== false && siteForm.social?.instagram && (
-                  <span className="rounded-full bg-cream p-1.5 text-plum ring-1 ring-sand/40" title="Instagram visible">
+                  <span className="rounded-full bg-surface p-1.5 text-brand ring-1 ring-sand/40" title="Instagram visible">
                     <InstagramIcon className="h-4 w-4" />
                   </span>
                 )}
                 {siteForm.visibility?.facebook !== false && siteForm.social?.facebook && (
-                  <span className="rounded-full bg-cream p-1.5 text-plum ring-1 ring-sand/40" title="Facebook visible">
+                  <span className="rounded-full bg-surface p-1.5 text-brand ring-1 ring-sand/40" title="Facebook visible">
                     <FacebookIcon className="h-4 w-4" />
                   </span>
                 )}
                 {siteForm.visibility?.whatsapp !== false && siteForm.whatsapp && (
-                  <span className="rounded-full bg-cream p-1.5 text-plum ring-1 ring-sand/40" title="WhatsApp visible">
+                  <span className="rounded-full bg-surface p-1.5 text-brand ring-1 ring-sand/40" title="WhatsApp visible">
                     <MessageCircle className="h-4 w-4" />
                   </span>
                 )}
@@ -749,40 +749,40 @@ export default function AdminSettings() {
             </div>
 
             {/* Contact Page Aside Card Preview */}
-            <div className="rounded-3xl border border-sand bg-white p-5 shadow-soft">
-              <span className="text-[11px] font-semibold uppercase tracking-wider text-bloom">
+            <div className="rounded-xl border border-sand bg-surface p-5 shadow-none">
+              <span className="text-[11px] font-semibold tracking-normal text-accent">
                 Contact Page Preview
               </span>
               <div className="mt-3 space-y-2 text-xs text-muted">
                 {siteForm.visibility?.location !== false && siteForm.location && (
-                  <div className="flex items-center gap-2 font-medium text-plum">
-                    <MapPin className="h-3.5 w-3.5 text-bloom" />
+                  <div className="flex items-center gap-2 font-medium text-brand">
+                    <MapPin className="h-3.5 w-3.5 text-accent" />
                     <span>{siteForm.location}</span>
                   </div>
                 )}
                 {siteForm.visibility?.email !== false && siteForm.email && (
                   <div className="flex items-center gap-2">
-                    <Mail className="h-3.5 w-3.5 text-bloom" />
+                    <Mail className="h-3.5 w-3.5 text-accent" />
                     <span>{siteForm.email}</span>
                   </div>
                 )}
                 {siteForm.visibility?.phone !== false && siteForm.phone && (
                   <div className="flex items-center gap-2">
-                    <Phone className="h-3.5 w-3.5 text-bloom" />
+                    <Phone className="h-3.5 w-3.5 text-accent" />
                     <span>{siteForm.phone}</span>
                   </div>
                 )}
                 {siteForm.visibility?.whatsapp !== false && siteForm.whatsapp && (
                   <div className="flex items-center gap-2">
-                    <MessageCircle className="h-3.5 w-3.5 text-bloom" />
+                    <MessageCircle className="h-3.5 w-3.5 text-accent" />
                     <span>WhatsApp: {siteForm.whatsapp}</span>
                   </div>
                 )}
               </div>
             </div>
 
-            <div className="rounded-2xl border border-sand/60 bg-cream/50 p-4 text-xs text-muted">
-              💡 <strong>Instant effect:</strong> Changes saved here immediately update the website footer, contact cards, and customer links without redeploying code.
+            <div className="rounded-lg border border-sand/60 bg-surface/50 p-4 text-xs text-muted">
+              <strong>Instant effect:</strong> Changes saved here immediately update the website footer, contact cards, and customer links without redeploying code.
             </div>
           </div>
         </div>
@@ -801,10 +801,10 @@ export default function AdminSettings() {
           ) : (
             <>
               {/* Section 1: Hero Top Collage */}
-              <section className="rounded-3xl border border-sand bg-ivory/60 p-4 sm:p-6 space-y-4 min-w-0 overflow-hidden">
+              <section className="rounded-xl border border-sand bg-surface p-4 sm:p-6 space-y-4 min-w-0 overflow-hidden">
                 <div>
-                  <span className="text-[11px] font-semibold uppercase tracking-wider text-bloom">Home Page Hero</span>
-                  <h2 className="font-display text-xl text-plum mt-0.5">
+                  <span className="text-[11px] font-semibold tracking-normal text-accent">Home Page Hero</span>
+                  <h2 className="font-display text-xl text-brand mt-0.5">
                     Beside "Handmade with love, created especially for you"
                   </h2>
                   <p className="text-xs text-muted mt-1">
@@ -848,10 +848,10 @@ export default function AdminSettings() {
               </section>
 
               {/* Section 2: Why Jamae's Craftopia */}
-              <section className="rounded-3xl border border-sand bg-ivory/60 p-4 sm:p-6 space-y-4 min-w-0 overflow-hidden">
+              <section className="rounded-xl border border-sand bg-surface p-4 sm:p-6 space-y-4 min-w-0 overflow-hidden">
                 <div>
-                  <span className="text-[11px] font-semibold uppercase tracking-wider text-bloom">Home Page · Brand Story</span>
-                  <h2 className="font-display text-xl text-plum mt-0.5">
+                  <span className="text-[11px] font-semibold tracking-normal text-accent">Home Page · Brand Story</span>
+                  <h2 className="font-display text-xl text-brand mt-0.5">
                     "Why Jamae's Craftopia" Section Images
                   </h2>
                   <p className="text-xs text-muted mt-1">
@@ -893,10 +893,10 @@ export default function AdminSettings() {
               </section>
 
               {/* Section 3: Made to fit your style */}
-              <section className="rounded-3xl border border-sand bg-ivory/60 p-4 sm:p-6 space-y-4 min-w-0 overflow-hidden">
+              <section className="rounded-xl border border-sand bg-surface p-4 sm:p-6 space-y-4 min-w-0 overflow-hidden">
                 <div>
-                  <span className="text-[11px] font-semibold uppercase tracking-wider text-bloom">Home Page · Custom Order CTA</span>
-                  <h2 className="font-display text-xl text-plum mt-0.5">
+                  <span className="text-[11px] font-semibold tracking-normal text-accent">Home Page · Custom Order CTA</span>
+                  <h2 className="font-display text-xl text-brand mt-0.5">
                     "Made to fit your style" Section Image
                   </h2>
                   <p className="text-xs text-muted mt-1">
@@ -918,10 +918,10 @@ export default function AdminSettings() {
               </section>
 
               {/* Section 4: From the craft table */}
-              <section className="rounded-3xl border border-sand bg-ivory/60 p-4 sm:p-6 space-y-4 min-w-0 overflow-hidden">
+              <section className="rounded-xl border border-sand bg-surface p-4 sm:p-6 space-y-4 min-w-0 overflow-hidden">
                 <div>
-                  <span className="text-[11px] font-semibold uppercase tracking-wider text-bloom">Home Page · Behind the scenes</span>
-                  <h2 className="font-display text-xl text-plum mt-0.5">
+                  <span className="text-[11px] font-semibold tracking-normal text-accent">Home Page · Behind the scenes</span>
+                  <h2 className="font-display text-xl text-brand mt-0.5">
                     "From the craft table" Gallery Photos
                   </h2>
                   <p className="text-xs text-muted mt-1">
@@ -950,10 +950,10 @@ export default function AdminSettings() {
               </section>
 
               {/* Section 5: Custom Orders Page Showcase */}
-              <section className="rounded-3xl border border-sand bg-ivory/60 p-4 sm:p-6 space-y-4 min-w-0 overflow-hidden">
+              <section className="rounded-xl border border-sand bg-surface p-4 sm:p-6 space-y-4 min-w-0 overflow-hidden">
                 <div>
-                  <span className="text-[11px] font-semibold uppercase tracking-wider text-bloom">Custom Orders Page</span>
-                  <h2 className="font-display text-xl text-plum mt-0.5">
+                  <span className="text-[11px] font-semibold tracking-normal text-accent">Custom Orders Page</span>
+                  <h2 className="font-display text-xl text-brand mt-0.5">
                     Custom Order Page Showcase Cards
                   </h2>
                   <p className="text-xs text-muted mt-1">
@@ -999,7 +999,7 @@ export default function AdminSettings() {
                   <button
                     type="submit"
                     disabled={siteSaving}
-                    className="rounded-full bg-plum px-8 py-3.5 font-semibold text-cream shadow-lift transition hover:bg-ink disabled:opacity-60 text-sm"
+                    className="rounded-lg bg-plum px-8 py-3.5 font-semibold text-on-primary shadow-sm transition hover:bg-overlay-ink disabled:opacity-60 text-sm"
                   >
                     {siteSaving ? 'Saving images…' : 'Save all storefront images'}
                   </button>
@@ -1016,15 +1016,15 @@ export default function AdminSettings() {
           {paymentLoading ? (
             <p role="status" className="text-sm text-muted">Loading payment settings…</p>
           ) : (
-            <form onSubmit={savePayment} className="space-y-4 rounded-3xl bg-cream p-6 shadow-soft ring-1 ring-sand">
+            <form onSubmit={savePayment} className="space-y-4 rounded-xl bg-surface p-6 shadow-none ring-1 ring-sand">
               <header className="mb-2">
-                <h2 className="font-display text-xl text-plum">Payment destination</h2>
+                <h2 className="font-display text-xl text-brand">Payment destination</h2>
                 <p className="mt-1 text-xs text-muted">
                   Configure the recipient UPI ID and verification destination used during customer checkout.
                 </p>
               </header>
 
-              <label className="block text-sm font-medium text-plum">
+              <label className="block text-sm font-medium text-brand">
                 Merchant UPI ID
                 <input
                   required
@@ -1032,32 +1032,32 @@ export default function AdminSettings() {
                   value={paymentForm.merchantVpa}
                   onChange={(e) => setPaymentForm({ ...paymentForm, merchantVpa: e.target.value.trim() })}
                   placeholder="business@bank"
-                  className="mt-1.5 w-full rounded-xl border border-sand bg-white px-4 py-3 read-only:bg-ink/5 focus:border-bloom focus:outline-none focus:ring-2 focus:ring-bloom/20"
+                  className="mt-1.5 w-full rounded-xl border border-sand bg-surface px-4 py-3 read-only:bg-overlay-ink/5 focus:border-bloom focus:outline-none focus:ring-2 focus:ring-bloom/20"
                 />
               </label>
               <p className="-mt-2 text-xs text-muted">
                 Destination account that receives customer payments via QR code.
               </p>
 
-              <label className="block text-sm font-medium text-plum">
+              <label className="block text-sm font-medium text-brand">
                 Merchant name
                 <input
                   required
                   readOnly={!canManage}
                   value={paymentForm.merchantName}
                   onChange={(e) => setPaymentForm({ ...paymentForm, merchantName: e.target.value })}
-                  className="mt-1.5 w-full rounded-xl border border-sand bg-white px-4 py-3 read-only:bg-ink/5 focus:border-bloom focus:outline-none focus:ring-2 focus:ring-bloom/20"
+                  className="mt-1.5 w-full rounded-xl border border-sand bg-surface px-4 py-3 read-only:bg-overlay-ink/5 focus:border-bloom focus:outline-none focus:ring-2 focus:ring-bloom/20"
                 />
               </label>
 
-              <label className="block text-sm font-medium text-plum">
+              <label className="block text-sm font-medium text-brand">
                 WhatsApp number for payment screenshot confirmation
                 <input
                   readOnly={!canManage}
                   value={paymentForm.whatsappNumber}
                   onChange={(e) => setPaymentForm({ ...paymentForm, whatsappNumber: e.target.value })}
                   placeholder="919876543210"
-                  className="mt-1.5 w-full rounded-xl border border-sand bg-white px-4 py-3 read-only:bg-ink/5 focus:border-bloom focus:outline-none focus:ring-2 focus:ring-bloom/20"
+                  className="mt-1.5 w-full rounded-xl border border-sand bg-surface px-4 py-3 read-only:bg-overlay-ink/5 focus:border-bloom focus:outline-none focus:ring-2 focus:ring-bloom/20"
                 />
               </label>
 
@@ -1066,7 +1066,7 @@ export default function AdminSettings() {
                   <button
                     type="submit"
                     disabled={paymentSaving}
-                    className="rounded-full bg-plum px-6 py-3 font-semibold text-cream shadow-soft transition hover:bg-ink disabled:opacity-60"
+                    className="rounded-lg bg-plum px-6 py-3 font-semibold text-on-primary shadow-none transition hover:bg-overlay-ink disabled:opacity-60"
                   >
                     {paymentSaving ? 'Saving…' : 'Save payment settings'}
                   </button>

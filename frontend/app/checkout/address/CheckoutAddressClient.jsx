@@ -128,9 +128,9 @@ export default function CheckoutAddressClient({ initialUser, initialAddresses = 
     return (
       <main className="container-page pb-24 pt-8 md:pt-12 text-center">
         <div className="mx-auto max-w-md rounded-3xl bg-ivory/60 p-10">
-          <h2 className="font-display text-2xl text-plum">Sign in to checkout</h2>
+          <h2 className="font-display text-2xl text-brand">Sign in to checkout</h2>
           <p className="mt-2 text-sm text-muted">Please log in or create an account to place your order.</p>
-          <Link href="/account/login?redirect=/checkout/address" className="mt-5 inline-block rounded-full bg-plum px-5 py-2.5 text-sm font-semibold text-cream">Sign in</Link>
+          <Link href="/account/login?redirect=/checkout/address" className="mt-5 inline-block rounded-full bg-plum px-5 py-2.5 text-sm font-semibold text-on-primary">Sign in</Link>
         </div>
       </main>
     )
@@ -153,23 +153,23 @@ export default function CheckoutAddressClient({ initialUser, initialAddresses = 
       <CheckoutProgress current="address" />
 
       <div className="mt-6 mb-2 flex items-center gap-3">
-        <Link href="/cart" className="inline-flex items-center gap-1 text-sm font-semibold text-muted transition hover:text-plum">
+        <Link href="/cart" className="inline-flex items-center gap-1 text-sm font-semibold text-muted transition hover:text-brand">
           <ArrowLeft className="h-4 w-4" /> Back to bag
         </Link>
         <span aria-hidden="true">/</span>
-        <h1 className="font-display text-3xl text-plum">Select Address</h1>
+        <h1 className="font-display text-3xl text-brand">Select Address</h1>
       </div>
       <p className="text-sm text-muted">Where should we deliver your handmade pieces?</p>
-      {addressError ? <p role="alert" className="mt-4 rounded-xl bg-bloom/10 p-3 text-sm text-bloom">{addressError}</p> : null}
+      {addressError ? <p role="alert" className="mt-4 rounded-xl bg-bloom/10 p-3 text-sm text-accent">{addressError}</p> : null}
 
       <div className="mt-8 grid gap-8 lg:grid-cols-[1fr_22rem] lg:items-start">
         {/* LEFT: Address management */}
         <section aria-label="Address selection" className="space-y-6">
           {/* Auth / continuity notice */}
           <div className="flex items-start gap-3 rounded-2xl bg-ivory/60 p-4 ring-1 ring-sand">
-            <Info className="h-5 w-5 text-bloom shrink-0 mt-0.5" aria-hidden="true" />
+            <Info className="h-5 w-5 text-accent shrink-0 mt-0.5" aria-hidden="true" />
             <div>
-              <h2 className="font-display text-base text-plum">Save across sessions</h2>
+              <h2 className="font-display text-base text-brand">Save across sessions</h2>
               <p className="text-sm text-muted mt-0.5 leading-relaxed">
                 Saved addresses are linked to your account and will be available when you sign in on another device.
               </p>
@@ -180,9 +180,9 @@ export default function CheckoutAddressClient({ initialUser, initialAddresses = 
           {empty && (
             <div className="rounded-3xl bg-ivory/60 border border-dashed border-sand p-10 text-center">
               <div className="mx-auto h-14 w-14 rounded-full bg-blush/40 flex items-center justify-center">
-                <MapPin className="h-7 w-7 text-bloom" aria-hidden="true" />
+                <MapPin className="h-7 w-7 text-accent" aria-hidden="true" />
               </div>
-              <h3 className="mt-4 font-display text-xl text-plum">No saved addresses yet</h3>
+              <h3 className="mt-4 font-display text-xl text-brand">No saved addresses yet</h3>
               <p className="mt-2 text-sm text-muted">Add your first address to continue to order summary.</p>
               <Button
                 onClick={() => { setEditingAddress(null); setShowForm(true) }}
@@ -198,7 +198,7 @@ export default function CheckoutAddressClient({ initialUser, initialAddresses = 
           {!empty && (
             <>
               <div className="flex items-center justify-between gap-3">
-                <h2 className="font-display text-xl text-plum">Your saved addresses</h2>
+                <h2 className="font-display text-xl text-brand">Your saved addresses</h2>
                 <Button
                   onClick={() => { setEditingAddress(null); setShowForm(true) }}
                   variant="secondary"
@@ -227,11 +227,11 @@ export default function CheckoutAddressClient({ initialUser, initialAddresses = 
           {/* Selected address banner (visible once selected) */}
           {selectedAddr && (
             <div className="rounded-2xl bg-bloom/5 border border-bloom/20 p-4 flex items-start gap-3">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-bloom text-cream">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-bloom text-on-primary">
                 <Sparkles className="h-4 w-4" aria-hidden="true" />
               </div>
               <div>
-                <p className="font-display text-base text-plum">Deliver to <span className="font-semibold">{selectedAddr.fullName}</span></p>
+                <p className="font-display text-base text-brand">Deliver to <span className="font-semibold">{selectedAddr.fullName}</span></p>
                 <p className="text-sm text-muted">
                   {selectedAddr.houseFlatBuilding}, {selectedAddr.areaStreet}, {selectedAddr.city}, {selectedAddr.state} — {selectedAddr.pinCode}
                 </p>
@@ -247,7 +247,7 @@ export default function CheckoutAddressClient({ initialUser, initialAddresses = 
                   <button
                     type="button"
                     onClick={() => setShowForm(true)}
-                    className="rounded-full px-4 py-2.5 text-sm font-semibold text-plum ring-1 ring-sand hover:ring-bloom/40 transition bg-cream"
+                    className="rounded-full px-4 py-2.5 text-sm font-semibold text-brand ring-1 ring-sand hover:ring-bloom/40 transition bg-cream"
                   >
                     Add another address
                   </button>
@@ -258,7 +258,7 @@ export default function CheckoutAddressClient({ initialUser, initialAddresses = 
 
           {/* Just-added feedback */}
           {justAdded && (
-            <div className="rounded-2xl bg-sage/15 border border-sage/30 p-4 text-sm text-plum font-medium" role="status" aria-live="polite">
+            <div className="rounded-2xl bg-sage/15 border border-sage/30 p-4 text-sm text-brand font-medium" role="status" aria-live="polite">
               Address saved. Select it above to continue.
             </div>
           )}

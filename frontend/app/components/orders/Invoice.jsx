@@ -371,7 +371,7 @@ export default function Invoice({ order, showActions = true, onDownload }) {
 
   return (
     <article
-      className="invoice-card mx-auto max-w-3xl rounded-3xl border border-sand bg-white p-6 sm:p-10 shadow-lift text-plum print:border-none print:shadow-none print:p-0"
+      className="invoice-card mx-auto max-w-3xl rounded-3xl border border-sand bg-surface p-6 sm:p-10 shadow-lift text-brand print:border-none print:shadow-none print:p-0"
       aria-label={`Invoice for order ${order.orderNumber}`}
     >
       {/* Top Action Bar (hidden when printing) */}
@@ -379,7 +379,7 @@ export default function Invoice({ order, showActions = true, onDownload }) {
         <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b border-sand pb-4 print:hidden">
           <div className="flex items-center gap-2">
             <span className="text-xs font-bold uppercase tracking-wider text-muted">Invoice Preview</span>
-            <span className="rounded-full bg-sand/40 px-2.5 py-0.5 font-mono text-xs font-semibold text-plum">
+            <span className="rounded-full bg-sand/40 px-2.5 py-0.5 font-mono text-xs font-semibold text-brand">
               #{order.orderNumber}
             </span>
           </div>
@@ -387,7 +387,7 @@ export default function Invoice({ order, showActions = true, onDownload }) {
             <button
               type="button"
               onClick={handleDownloadClick}
-              className="inline-flex items-center gap-1.5 rounded-full bg-plum px-4 py-2 text-xs font-semibold text-cream shadow-soft transition hover:bg-ink hover:-translate-y-0.5 hover:shadow-lift active:translate-y-0"
+              className="inline-flex items-center gap-1.5 rounded-full bg-plum px-4 py-2 text-xs font-semibold text-on-primary shadow-soft transition hover:bg-overlay-ink hover:-translate-y-0.5 hover:shadow-lift active:translate-y-0"
             >
               <Printer className="h-3.5 w-3.5" aria-hidden="true" />
               Print / Save as PDF
@@ -401,7 +401,7 @@ export default function Invoice({ order, showActions = true, onDownload }) {
         <div>
           <div className="flex items-center gap-2">
             <span className="h-3 w-3 rounded-full bg-bloom" />
-            <h1 className="font-display text-2xl sm:text-3xl font-bold tracking-tight text-plum">
+            <h1 className="font-display text-2xl sm:text-3xl font-bold tracking-tight text-brand">
               {STORE_DETAILS.name}
             </h1>
           </div>
@@ -409,23 +409,23 @@ export default function Invoice({ order, showActions = true, onDownload }) {
             {STORE_DETAILS.tagline}
           </p>
           <p className="mt-2 text-xs text-muted">
-            {STORE_DETAILS.address} &bull; <a href={`mailto:${STORE_DETAILS.email}`} className="text-bloom underline underline-offset-2">{STORE_DETAILS.email}</a>
+            {STORE_DETAILS.address} &bull; <a href={`mailto:${STORE_DETAILS.email}`} className="text-accent underline underline-offset-2">{STORE_DETAILS.email}</a>
           </p>
         </div>
 
         <div className="sm:text-right">
-          <span className="inline-block rounded-full bg-bloom/10 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-bloom">
+          <span className="inline-block rounded-full bg-bloom/10 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-accent">
             Retail Tax Invoice
           </span>
-          <p className="mt-2 font-mono text-base font-bold text-plum">INV-{order.orderNumber}</p>
+          <p className="mt-2 font-mono text-base font-bold text-brand">INV-{order.orderNumber}</p>
           <dl className="mt-1 text-xs text-muted space-y-0.5">
             <div className="flex sm:justify-end gap-2">
               <dt>Date:</dt>
-              <dd className="font-medium text-plum">{fmtDate(order.createdAt)}</dd>
+              <dd className="font-medium text-brand">{fmtDate(order.createdAt)}</dd>
             </div>
             <div className="flex sm:justify-end gap-2">
               <dt>Status:</dt>
-              <dd className="font-semibold text-bloom">{statusMeta.label}</dd>
+              <dd className="font-semibold text-accent">{statusMeta.label}</dd>
             </div>
           </dl>
         </div>
@@ -434,8 +434,8 @@ export default function Invoice({ order, showActions = true, onDownload }) {
       {/* Bill To & Ship To Cards */}
       <section className="mt-6 grid gap-4 sm:grid-cols-2">
         <div className="rounded-2xl border border-sand/70 bg-ivory/50 p-4">
-          <p className="text-[11px] font-bold uppercase tracking-wider text-bloom">Billed To</p>
-          <p className="mt-1 font-semibold text-plum">{order.customerName || addr?.fullName || 'Customer'}</p>
+          <p className="text-[11px] font-bold uppercase tracking-wider text-accent">Billed To</p>
+          <p className="mt-1 font-semibold text-brand">{order.customerName || addr?.fullName || 'Customer'}</p>
           {(order.customerEmail || addr?.email) && (
             <p className="text-xs text-muted mt-0.5">{order.customerEmail || addr?.email}</p>
           )}
@@ -445,9 +445,9 @@ export default function Invoice({ order, showActions = true, onDownload }) {
         </div>
 
         <div className="rounded-2xl border border-sand/70 bg-ivory/50 p-4">
-          <p className="text-[11px] font-bold uppercase tracking-wider text-bloom">Shipped To</p>
+          <p className="text-[11px] font-bold uppercase tracking-wider text-accent">Shipped To</p>
           {addr ? (
-            <div className="mt-1 text-xs leading-relaxed text-plum">
+            <div className="mt-1 text-xs leading-relaxed text-brand">
               <p className="font-semibold">{addr.fullName}</p>
               <p className="text-muted mt-0.5">
                 {[addr.houseFlatBuilding, addr.areaStreet, addr.landmark].filter(Boolean).join(', ')}
@@ -466,15 +466,15 @@ export default function Invoice({ order, showActions = true, onDownload }) {
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-cream px-4 py-3 text-xs">
         <div className="flex items-center gap-2">
           <span className="font-semibold text-muted">Payment:</span>
-          <span className="font-semibold text-plum">{order.paymentMethod || 'UPI'}</span>
-          <span className={['rounded-full px-2.5 py-0.5 font-bold', isPaid ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-900'].join(' ')}>
+          <span className="font-semibold text-brand">{order.paymentMethod || 'UPI'}</span>
+          <span className={['rounded-full px-2.5 py-0.5 font-bold', isPaid ? 'bg-success-surface text-success' : 'bg-warning-surface text-warning'].join(' ')}>
             {isPaid ? '✓ Paid' : paymentMeta.label}
           </span>
         </div>
         {order.paymentReference && (
           <div className="flex items-center gap-1.5 font-mono text-muted text-[11px]">
             <span>Ref:</span>
-            <span className="text-plum font-semibold">{order.paymentReference}</span>
+            <span className="text-brand font-semibold">{order.paymentReference}</span>
           </div>
         )}
       </div>
@@ -493,15 +493,15 @@ export default function Invoice({ order, showActions = true, onDownload }) {
           <tbody className="divide-y divide-sand/50">
             {items.map((it) => (
               <tr key={it.id}>
-                <td className="py-3 pl-1 text-plum">
+                <td className="py-3 pl-1 text-brand">
                   <p className="font-semibold">{it.productName}</p>
                   {it.productId && (
                     <p className="text-[10px] font-mono text-muted">SKU: {it.productId}</p>
                   )}
                 </td>
-                <td className="py-3 text-center text-plum font-medium">{it.quantity}</td>
-                <td className="py-3 text-right text-plum">{formatPrice(it.unitPrice)}</td>
-                <td className="py-3 text-right pr-1 font-semibold text-plum">{formatPrice(it.lineTotal)}</td>
+                <td className="py-3 text-center text-brand font-medium">{it.quantity}</td>
+                <td className="py-3 text-right text-brand">{formatPrice(it.unitPrice)}</td>
+                <td className="py-3 text-right pr-1 font-semibold text-brand">{formatPrice(it.lineTotal)}</td>
               </tr>
             ))}
           </tbody>
@@ -513,40 +513,40 @@ export default function Invoice({ order, showActions = true, onDownload }) {
         <dl className="w-full max-w-xs space-y-1.5 rounded-2xl border border-sand/70 bg-ivory/40 p-4 text-xs sm:text-sm">
           <div className="flex justify-between gap-3 text-muted">
             <dt>Subtotal</dt>
-            <dd className="font-semibold text-plum">
+            <dd className="font-semibold text-brand">
               {formatPrice(order.subtotal ?? (order.totalAmount + (order.discount || 0) - (order.shipping || 0) - (order.fee || 0)))}
             </dd>
           </div>
           {order.discount > 0 && (
-            <div className="flex justify-between gap-3 text-emerald-800">
+            <div className="flex justify-between gap-3 text-success">
               <dt>Discount {order.couponCode ? `(${order.couponCode})` : ''}</dt>
               <dd className="font-semibold">−{formatPrice(order.discount)}</dd>
             </div>
           )}
           <div className="flex justify-between gap-3 text-muted">
             <dt>Shipping</dt>
-            <dd className="font-semibold text-plum">
+            <dd className="font-semibold text-brand">
               {order.shipping > 0 ? formatPrice(order.shipping) : 'FREE'}
             </dd>
           </div>
           {order.fee > 0 && (
             <div className="flex justify-between gap-3 text-muted">
               <dt>COD Fee</dt>
-              <dd className="font-semibold text-plum">{formatPrice(order.fee)}</dd>
+              <dd className="font-semibold text-brand">{formatPrice(order.fee)}</dd>
             </div>
           )}
-          <div className="flex justify-between gap-3 border-t border-sand pt-2 font-display text-base font-bold text-plum">
+          <div className="flex justify-between gap-3 border-t border-sand pt-2 font-display text-base font-bold text-brand">
             <dt>Total Amount</dt>
-            <dd className="text-bloom text-lg">{formatPrice(order.totalAmount)}</dd>
+            <dd className="text-accent text-lg">{formatPrice(order.totalAmount)}</dd>
           </div>
         </dl>
       </section>
 
       {/* Footer */}
       <footer className="mt-10 border-t border-sand pt-5 text-center text-xs text-muted">
-        <p className="font-semibold text-plum">Thank you for supporting handcrafted artistry!</p>
+        <p className="font-semibold text-brand">Thank you for supporting handcrafted artistry!</p>
         <p className="mt-1">
-          For any questions or custom requests, email us at <a href={`mailto:${STORE_DETAILS.email}`} className="text-bloom underline underline-offset-2">{STORE_DETAILS.email}</a>.
+          For any questions or custom requests, email us at <a href={`mailto:${STORE_DETAILS.email}`} className="text-accent underline underline-offset-2">{STORE_DETAILS.email}</a>.
         </p>
         <p className="mt-2 text-[10px] text-muted/70">
           This is an official computer-generated receipt from Jamae's Craftopia.

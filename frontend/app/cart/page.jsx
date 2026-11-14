@@ -45,10 +45,10 @@ export default function CartPage() {
     return (
       <div className="container-page pb-20 pt-10 text-center">
         <div className="mx-auto max-w-md rounded-3xl bg-ivory/60 p-10 shadow-sm">
-          <ShoppingBag className="mx-auto h-14 w-14 text-bloom" />
+          <ShoppingBag className="mx-auto h-14 w-14 text-accent" />
           <h1 className="heading-display mt-6 text-3xl">Your bag is empty</h1>
           <p className="mt-3 text-muted">Handmade pieces are waiting for you in the shop.</p>
-          <Link href="/shop" className="mt-6 inline-flex rounded-full bg-plum px-5 py-2.5 text-sm font-semibold tracking-wide text-cream shadow-soft transition hover:bg-ink hover:-translate-y-0.5 hover:shadow-lift active:translate-y-0">
+          <Link href="/shop" className="mt-6 inline-flex rounded-full bg-plum px-5 py-2.5 text-sm font-semibold tracking-wide text-on-primary shadow-soft transition hover:bg-overlay-ink hover:-translate-y-0.5 hover:shadow-lift active:translate-y-0">
             Continue Shopping
           </Link>
         </div>
@@ -60,12 +60,12 @@ export default function CartPage() {
     <div className="container-page pb-20 pt-10">
       {/* Page header */}
       <div className="mb-8 flex items-center gap-3">
-        <Link href="/shop" className="inline-flex items-center gap-1 text-sm font-semibold text-muted transition hover:text-plum">
+        <Link href="/shop" className="inline-flex items-center gap-1 text-sm font-semibold text-muted transition hover:text-brand">
           <ArrowLeft className="h-4 w-4" /> Shop
         </Link>
         <span aria-hidden="true">/</span>
         <h1 className="heading-display text-3xl">Your Bag</h1>
-        <span className="ml-auto rounded-full bg-plum px-3 py-1 text-sm font-semibold text-cream">{itemCount} item{itemCount !== 1 ? 's' : ''}</span>
+        <span className="ml-auto rounded-full bg-plum px-3 py-1 text-sm font-semibold text-on-primary">{itemCount} item{itemCount !== 1 ? 's' : ''}</span>
       </div>
 
       <div className="grid gap-10 lg:grid-cols-3">
@@ -101,14 +101,14 @@ export default function CartPage() {
               <div className="min-w-0 flex-1">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <h3 className="font-display text-xl text-plum">{item.name}</h3>
-                    <p className="mt-0.5 flex flex-wrap items-center gap-2 text-sm font-semibold text-bloom"><span>{formatPrice(item.price)} each</span>{item.discountPercent > 0 && <><span className="font-normal text-muted line-through">{formatPrice(item.originalPrice)}</span><span className="text-xs text-moss">{item.discountPercent}% off</span></>}</p>
+                    <h3 className="font-display text-xl text-brand">{item.name}</h3>
+                    <p className="mt-0.5 flex flex-wrap items-center gap-2 text-sm font-semibold text-accent"><span>{formatPrice(item.price)} each</span>{item.discountPercent > 0 && <><span className="font-normal text-muted line-through">{formatPrice(item.originalPrice)}</span><span className="text-xs text-moss">{item.discountPercent}% off</span></>}</p>
                   </div>
                   <button
                     type="button"
                     onClick={() => removeItem(item.id)}
                     aria-label={`Remove ${item.name} from bag`}
-                    className="rounded-full p-2 text-muted transition hover:text-bloom hover:bg-sand"
+                    className="rounded-full p-2 text-muted transition hover:text-accent hover:bg-sand"
                     title="Remove"
                   >
                     <Trash2 className="h-4 w-4" />
@@ -128,7 +128,7 @@ export default function CartPage() {
                           updateQuantity(item.id, item.quantity - 1)
                         }
                       }}
-                      className="p-2 text-plum transition hover:text-bloom"
+                      className="p-2 text-brand transition hover:text-accent"
                     >
                       <Minus className="h-3.5 w-3.5" />
                     </button>
@@ -139,7 +139,7 @@ export default function CartPage() {
                       type="button"
                       aria-label={`Increase quantity of ${item.name}`}
                       onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                      className="p-2 text-plum transition hover:text-bloom"
+                      className="p-2 text-brand transition hover:text-accent"
                     >
                       <Plus className="h-3.5 w-3.5" />
                     </button>
@@ -148,7 +148,7 @@ export default function CartPage() {
                   {/* Item subtotal */}
                   <span className="text-sm text-muted">
                     Subtotal:{' '}
-                    <span className="font-semibold text-plum">{formatPrice(item.price * item.quantity)}</span>
+                    <span className="font-semibold text-brand">{formatPrice(item.price * item.quantity)}</span>
                   </span>
                 </div>
               </div>
@@ -157,7 +157,7 @@ export default function CartPage() {
 
           {/* Continue Shopping */}
           <div className="pt-2">
-            <Link href="/shop" className="inline-flex items-center gap-1.5 rounded-full bg-ivory px-5 py-2.5 text-sm font-semibold text-plum shadow-soft ring-1 ring-blush/80 transition hover:bg-blush/60 hover:-translate-y-0.5 active:translate-y-0">
+            <Link href="/shop" className="inline-flex items-center gap-1.5 rounded-full bg-ivory px-5 py-2.5 text-sm font-semibold text-brand shadow-soft ring-1 ring-blush/80 transition hover:bg-blush/60 hover:-translate-y-0.5 active:translate-y-0">
               <ArrowLeft className="h-4 w-4" /> Continue Shopping
             </Link>
           </div>
@@ -166,34 +166,34 @@ export default function CartPage() {
         {/* Order summary */}
         <aside className="lg:col-span-1">
           <div className="paper-card p-6">
-            <h2 className="font-display text-2xl text-plum">Order Summary</h2>
+            <h2 className="font-display text-2xl text-brand">Order Summary</h2>
 
             <div className="mt-4 space-y-2 text-sm">
               <div className="flex justify-between">
                 <span className="text-muted">Subtotal</span>
-                <span className="font-semibold text-plum">{formatPrice(subtotal)}</span>
+                <span className="font-semibold text-brand">{formatPrice(subtotal)}</span>
               </div>
 
-              {gstTotal > 0 && <div className="flex justify-between"><span className="text-muted">GST</span><span className="font-semibold text-plum">+{formatPrice(gstTotal)}</span></div>}
-              {otherChargeTotal > 0 && <div className="flex justify-between"><span className="text-muted">Other product charges</span><span className="font-semibold text-plum">+{formatPrice(otherChargeTotal)}</span></div>}
-              {codFeeTotal > 0 && <div className="flex justify-between"><span className="text-muted">COD fees (if selected)</span><span className="font-semibold text-plum">+{formatPrice(codFeeTotal)}</span></div>}
+              {gstTotal > 0 && <div className="flex justify-between"><span className="text-muted">GST</span><span className="font-semibold text-brand">+{formatPrice(gstTotal)}</span></div>}
+              {otherChargeTotal > 0 && <div className="flex justify-between"><span className="text-muted">Other product charges</span><span className="font-semibold text-brand">+{formatPrice(otherChargeTotal)}</span></div>}
+              {codFeeTotal > 0 && <div className="flex justify-between"><span className="text-muted">COD fees (if selected)</span><span className="font-semibold text-brand">+{formatPrice(codFeeTotal)}</span></div>}
 
               <div className="flex justify-between">
                 <span className="text-muted">Shipping</span>
-                <span className="font-semibold text-plum">Calculated at checkout</span>
+                <span className="font-semibold text-brand">Calculated at checkout</span>
               </div>
 
               <div className="border-t border-sand pt-2 mt-2 flex justify-between">
-                <span className="font-medium text-plum">Estimated Total</span>
-                <span className="font-display text-xl text-plum">{formatPrice(total)}</span>
+                <span className="font-medium text-brand">Estimated Total</span>
+                <span className="font-display text-xl text-brand">{formatPrice(total)}</span>
               </div>
             </div>
 
             {/* Note: Coupon is applied in Order Summary */}
             <div className="mt-5 rounded-2xl bg-ivory/80 p-3.5 ring-1 ring-sand/60 text-xs text-muted flex items-start gap-2.5">
-              <Tag className="h-4 w-4 text-bloom shrink-0 mt-0.5" />
+              <Tag className="h-4 w-4 text-accent shrink-0 mt-0.5" />
               <div>
-                <p className="font-semibold text-plum">Coupons & Offers</p>
+                <p className="font-semibold text-brand">Coupons & Offers</p>
                 <p className="mt-0.5 leading-relaxed">You can apply and choose your coupons during the Order Summary step.</p>
               </div>
             </div>
@@ -201,7 +201,7 @@ export default function CartPage() {
             <Link
               href="/checkout/address"
               onClick={() => clearBuyNow?.()}
-              className="mt-5 flex w-full items-center justify-center rounded-full bg-plum px-5 py-2.5 text-sm font-semibold tracking-wide text-cream shadow-soft transition hover:bg-ink hover:-translate-y-0.5 hover:shadow-lift active:translate-y-0"
+              className="mt-5 flex w-full items-center justify-center rounded-full bg-plum px-5 py-2.5 text-sm font-semibold tracking-wide text-on-primary shadow-soft transition hover:bg-overlay-ink hover:-translate-y-0.5 hover:shadow-lift active:translate-y-0"
             >
               Proceed to Checkout
             </Link>

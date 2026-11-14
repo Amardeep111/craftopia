@@ -1,39 +1,12 @@
 import Link from 'next/link'
+import { ArrowUpRight } from 'lucide-react'
 import ProductImage from './ProductImage'
 import { cn } from '@/lib/cn'
-
-const visualByCategory = {
-  'crochet-toys': 'teddy',
-  flowers: 'bouquet',
-  personalized: 'gift',
-  accessories: 'bandana',
-  keychains: 'keychain',
-  custom: 'yarn',
-}
-
+const visualByCategory = { 'crochet-toys': 'teddy', flowers: 'bouquet', personalized: 'gift', accessories: 'bandana', keychains: 'keychain', custom: 'yarn' }
 export default function CategoryCard({ category, className }) {
-  return (
-    <Link
-      href={`/shop?category=${category.slug}`}
-      className={cn(
-        'group relative block overflow-hidden rounded-3xl shadow-soft transition duration-300 hover:-translate-y-1 hover:shadow-lift',
-        className,
-      )}
-    >
-      <div className="aspect-[4/5] sm:aspect-[5/6]">
-        <ProductImage
-          src={category.image}
-          alt=""
-          visual={visualByCategory[category.id] || 'yarn'}
-          fit="cover"
-          className="h-full w-full"
-        />
-      </div>
-      <div className="absolute inset-0 bg-gradient-to-t from-plum/70 via-plum/10 to-transparent" />
-      <div className="absolute inset-x-0 bottom-0 p-5">
-        <h3 className="font-display text-2xl text-cream">{category.name}</h3>
-        <p className="mt-1 text-sm text-cream/85">{category.description}</p>
-      </div>
-    </Link>
-  )
+  return <Link href={`/shop?category=${category.slug}`} className={cn('studio-category group', className)}>
+    <div className="studio-category-image"><ProductImage src={category.image} alt="" visual={visualByCategory[category.id] || 'yarn'} fit="cover" className="h-full w-full" /></div>
+    <div className="mt-4 flex items-center justify-between gap-3"><h3 className="text-lg font-semibold text-brand">{category.name}</h3><ArrowUpRight className="h-4 w-4 shrink-0 text-brand" aria-hidden="true" /></div>
+    <p className="mt-1 text-sm leading-relaxed text-muted">{category.description}</p>
+  </Link>
 }

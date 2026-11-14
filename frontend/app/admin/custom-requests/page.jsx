@@ -1,5 +1,6 @@
 'use client'
 
+import Modal from '@/components/ui/Modal'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { ExternalLink, Image as ImageIcon, PackageCheck, CheckCircle2, X, MapPin, Calculator } from 'lucide-react'
@@ -234,14 +235,14 @@ export default function AdminCustomRequests() {
   return (
     <section className="space-y-5">
       <header>
-        <h1 className="font-display text-3xl text-plum">Custom requests</h1>
+        <h1 className="font-display text-3xl font-semibold text-ink">Custom requests</h1>
         <p className="mt-1 text-sm text-muted">
           Review customer ideas, reference photos, accept quotes with GST, and create orders for seamless management.
         </p>
       </header>
 
-      {error && <p role="alert" className="rounded-xl bg-bloom/10 p-3 text-sm text-bloom">{error}</p>}
-      {notice && <p role="status" className="rounded-xl bg-sage/20 p-3 text-sm text-plum">{notice}</p>}
+      {error && <p role="alert" className="rounded-xl bg-bloom/10 p-3 text-sm text-accent">{error}</p>}
+      {notice && <p role="status" className="rounded-xl bg-sage/20 p-3 text-sm text-brand">{notice}</p>}
 
       <label className="block max-w-lg text-sm text-muted">
         Search requests
@@ -249,15 +250,15 @@ export default function AdminCustomRequests() {
           value={query}
           onChange={(event) => { setPage(1); setQuery(event.target.value) }}
           placeholder="Name, contact, idea, or status"
-          className="mt-1.5 min-h-11 w-full rounded-xl border border-sand bg-white px-3 text-sm text-plum"
+          className="mt-1.5 min-h-11 w-full rounded-xl border border-sand bg-surface px-3 text-sm text-brand"
         />
       </label>
 
       {loading ? (
         <p role="status">Loading custom requests…</p>
       ) : requests.length === 0 ? (
-        <div className="rounded-2xl bg-cream p-8 text-center shadow-soft ring-1 ring-sand">
-          <h2 className="font-display text-xl text-plum">
+        <div className="rounded-lg bg-surface p-8 text-center shadow-none ring-1 ring-sand">
+          <h2 className="font-display text-xl text-brand">
             {total ? 'No requests on this page' : query.trim() ? 'No requests match' : 'No custom requests yet'}
           </h2>
           <p className="mt-2 text-sm text-muted">New custom order ideas will appear here.</p>
@@ -269,16 +270,16 @@ export default function AdminCustomRequests() {
             const isTerminal = ['COMPLETED', 'DECLINED'].includes(item.status)
 
             return (
-              <article key={item.id} className="min-w-0 space-y-4 rounded-2xl bg-cream p-4 shadow-soft ring-1 ring-sand sm:p-6">
+              <article key={item.id} className="min-w-0 space-y-4 rounded-lg bg-surface p-4 shadow-none ring-1 ring-sand sm:p-6">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <h2 className="break-words font-display text-xl text-plum">{item.idea}</h2>
+                    <h2 className="break-words font-display text-xl text-brand">{item.idea}</h2>
                     <p className="mt-1 text-xs text-muted">
                       Received {new Date(item.createdAt).toLocaleString()} · {item.category || 'No category'}
                       {item.quotedPrice ? ` · Quoted total ₹${Number(item.quotedPrice).toLocaleString('en-IN')}` : ''}
                     </p>
                   </div>
-                  <span className="rounded-full bg-plum/10 px-3 py-1 text-xs font-semibold text-plum">
+                  <span className="rounded-full bg-plum/10 px-3 py-1 text-xs font-semibold text-brand">
                     {statuses.find((status) => status.value === item.status)?.label || item.status}
                   </span>
                 </div>
@@ -287,8 +288,8 @@ export default function AdminCustomRequests() {
                 {orderInfo && (
                   <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-sage/40 bg-sage/10 p-3 text-xs">
                     <div>
-                      <p className="font-semibold text-emerald-900">✓ Linked Order: {orderInfo.orderNumber}</p>
-                      <p className="text-emerald-800/80">Manage payment verification and fulfillment in the Orders panel.</p>
+                      <p className="font-semibold text-success">✓ Linked Order: {orderInfo.orderNumber}</p>
+                      <p className="text-success/80">Manage payment verification and fulfillment in the Orders panel.</p>
                     </div>
                     <Link
                       href={`/admin/orders/${orderInfo.orderId}`}
@@ -302,11 +303,11 @@ export default function AdminCustomRequests() {
                 <dl className="grid gap-3 border-y border-sand py-4 text-sm sm:grid-cols-2">
                   <div>
                     <dt className="text-xs text-muted">Customer</dt>
-                    <dd className="font-medium text-plum">{item.name}</dd>
+                    <dd className="font-medium text-brand">{item.name}</dd>
                   </div>
                   <div>
                     <dt className="text-xs text-muted">Reply to</dt>
-                    <dd className="break-all font-medium text-plum">{item.contact}</dd>
+                    <dd className="break-all font-medium text-brand">{item.contact}</dd>
                   </div>
                   <div>
                     <dt className="text-xs text-muted">Colours</dt>
@@ -324,7 +325,7 @@ export default function AdminCustomRequests() {
 
                 {item.referenceImages?.length > 0 ? (
                   <div>
-                    <h3 className="flex items-center gap-2 text-sm font-semibold text-plum">
+                    <h3 className="flex items-center gap-2 text-sm font-semibold text-brand">
                       <ImageIcon className="h-4 w-4" /> Reference photos
                     </h3>
                     <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
@@ -334,14 +335,14 @@ export default function AdminCustomRequests() {
                           href={url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="group relative block aspect-square overflow-hidden rounded-xl border border-sand bg-white"
+                          className="group relative block aspect-square overflow-hidden rounded-xl border border-sand bg-surface"
                         >
                           <img
                             src={url}
                             alt={`Customer reference ${index + 1}`}
                             className="h-full w-full object-cover transition group-hover:scale-105"
                           />
-                          <span className="absolute bottom-2 right-2 rounded-full bg-white/95 p-2 text-plum shadow">
+                          <span className="absolute bottom-2 right-2 rounded-full bg-surface/95 p-2 text-brand shadow">
                             <ExternalLink className="h-3.5 w-3.5" />
                           </span>
                         </a>
@@ -383,7 +384,7 @@ export default function AdminCustomRequests() {
                           }}
                         />
                       </div>
-                      <label className="block text-sm font-medium text-plum">
+                      <label className="block text-sm font-medium text-brand">
                         Quoted Price (₹)
                         <input
                           type="number"
@@ -397,10 +398,10 @@ export default function AdminCustomRequests() {
                             })
                           }
                           placeholder="Price in ₹"
-                          className="mt-1.5 min-h-11 w-full rounded-xl border border-sand bg-white px-3 text-sm"
+                          className="mt-1.5 min-h-11 w-full rounded-xl border border-sand bg-surface px-3 text-sm"
                         />
                       </label>
-                      <label className="block text-sm font-medium text-plum">
+                      <label className="block text-sm font-medium text-brand">
                         Internal notes
                         <textarea
                           maxLength={2000}
@@ -408,14 +409,14 @@ export default function AdminCustomRequests() {
                           value={item.adminNotes || ''}
                           onChange={(event) => update(item.id, { adminNotes: event.target.value })}
                           placeholder="Private follow-up notes"
-                          className="mt-1.5 w-full rounded-xl border border-sand bg-white px-3 py-2 text-sm"
+                          className="mt-1.5 w-full rounded-xl border border-sand bg-surface px-3 py-2 text-sm"
                         />
                       </label>
                       <button
                         type="button"
                         disabled={savingId === item.id}
                         onClick={() => save(item)}
-                        className="min-h-11 rounded-full bg-plum px-5 text-sm font-semibold text-cream disabled:opacity-60"
+                        className="min-h-11 rounded-lg bg-plum px-5 text-sm font-semibold text-on-primary disabled:opacity-60"
                       >
                         {savingId === item.id ? 'Saving…' : 'Save update'}
                       </button>
@@ -434,41 +435,9 @@ export default function AdminCustomRequests() {
 
       {/* ── ACCEPT CUSTOM REQUEST & CREATE ORDER MODAL ── */}
       {acceptItem && (
-        <div className="fixed inset-0 z-[80] flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
-          <button
-            type="button"
-            className="fixed inset-0 bg-plum/40 backdrop-blur-[2px] transition-opacity"
-            aria-label="Close dialog"
-            onClick={() => setAcceptItem(null)}
-          />
-
-          <div
-            role="dialog"
-            aria-modal="true"
-            className="relative z-10 w-full max-w-3xl rounded-3xl bg-cream p-5 shadow-lift sm:p-7 max-h-[92vh] overflow-y-auto"
-          >
-            <div className="flex items-start justify-between gap-4 border-b border-sand pb-4">
-              <div>
-                <div className="flex items-center gap-2">
-                  <PackageCheck className="h-5 w-5 text-emerald-700" />
-                  <h2 className="font-display text-2xl text-plum">Accept Request & Create Order</h2>
-                </div>
-                <p className="mt-1 text-xs text-muted">
-                  For: <strong className="text-plum">{acceptItem.name}</strong> · Idea: “{acceptItem.idea}”
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setAcceptItem(null)}
-                className="rounded-full p-2 text-plum transition hover:bg-sand/40"
-                aria-label="Close"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
+        <Modal open={Boolean(acceptItem)} title="Accept request and create order" description={`For ${acceptItem.name}: ${acceptItem.idea}`} onClose={() => setAcceptItem(null)} dismissible={!modalSubmitting} maxWidth="max-w-3xl">
             {modalError && (
-              <p role="alert" className="mt-4 rounded-xl bg-bloom/10 p-3 text-sm text-bloom">
+              <p role="alert" className="mt-4 rounded-xl bg-bloom/10 p-3 text-sm text-accent">
                 {modalError}
               </p>
             )}
@@ -476,12 +445,12 @@ export default function AdminCustomRequests() {
             <form onSubmit={handleAcceptSubmit} className="mt-5 space-y-6">
               {/* SECTION 1: PRICING & GST BREAKDOWN */}
               <div>
-                <h3 className="flex items-center gap-2 text-sm font-semibold text-plum mb-3">
+                <h3 className="flex items-center gap-2 text-sm font-semibold text-brand mb-3">
                   <Calculator className="h-4 w-4" /> Pricing & GST Breakdown
                 </h3>
                 <div className="grid gap-3 sm:grid-cols-4">
                   <div>
-                    <label className="block text-xs font-medium text-plum">
+                    <label className="block text-xs font-medium text-brand">
                       Base Item Price (₹)*
                       <input
                         type="number"
@@ -491,18 +460,18 @@ export default function AdminCustomRequests() {
                         value={modalForm.basePrice}
                         onChange={(e) => setModalForm({ ...modalForm, basePrice: e.target.value })}
                         placeholder="e.g. 1500"
-                        className="mt-1 min-h-10 w-full rounded-xl border border-sand bg-white px-3 text-sm text-plum font-semibold"
+                        className="mt-1 min-h-10 w-full rounded-xl border border-sand bg-surface px-3 text-sm text-brand font-semibold"
                       />
                     </label>
                   </div>
 
                   <div>
-                    <label className="block text-xs font-medium text-plum">
+                    <label className="block text-xs font-medium text-brand">
                       GST Rate (%)
                       <select
                         value={modalForm.gstPercent}
                         onChange={(e) => setModalForm({ ...modalForm, gstPercent: Number(e.target.value) })}
-                        className="mt-1 min-h-10 w-full rounded-xl border border-sand bg-white px-3 text-sm text-plum"
+                        className="mt-1 min-h-10 w-full rounded-xl border border-sand bg-surface px-3 text-sm text-brand"
                       >
                         {GST_RATES.map((rate) => (
                           <option key={rate.value} value={rate.value}>
@@ -514,7 +483,7 @@ export default function AdminCustomRequests() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-medium text-plum">
+                    <label className="block text-xs font-medium text-brand">
                       Shipping Fee (₹)
                       <input
                         type="number"
@@ -523,13 +492,13 @@ export default function AdminCustomRequests() {
                         value={modalForm.shippingFee}
                         onChange={(e) => setModalForm({ ...modalForm, shippingFee: e.target.value })}
                         placeholder="0"
-                        className="mt-1 min-h-10 w-full rounded-xl border border-sand bg-white px-3 text-sm text-plum"
+                        className="mt-1 min-h-10 w-full rounded-xl border border-sand bg-surface px-3 text-sm text-brand"
                       />
                     </label>
                   </div>
 
                   <div>
-                    <label className="block text-xs font-medium text-plum">
+                    <label className="block text-xs font-medium text-brand">
                       Packaging / Other (₹)
                       <input
                         type="number"
@@ -538,14 +507,14 @@ export default function AdminCustomRequests() {
                         value={modalForm.otherCharge}
                         onChange={(e) => setModalForm({ ...modalForm, otherCharge: e.target.value })}
                         placeholder="0"
-                        className="mt-1 min-h-10 w-full rounded-xl border border-sand bg-white px-3 text-sm text-plum"
+                        className="mt-1 min-h-10 w-full rounded-xl border border-sand bg-surface px-3 text-sm text-brand"
                       />
                     </label>
                   </div>
                 </div>
 
                 {/* Live Calculated Totals Card */}
-                <div className="mt-3 rounded-2xl border border-sand/80 bg-white/80 p-3.5 text-xs text-plum">
+                <div className="mt-3 rounded-lg border border-sand/80 bg-surface/80 p-3.5 text-xs text-brand">
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                     <div>
                       <span className="text-muted block">Base Price:</span>
@@ -560,8 +529,8 @@ export default function AdminCustomRequests() {
                       <strong className="text-sm">₹{(modalShipping + modalOther).toLocaleString('en-IN')}</strong>
                     </div>
                     <div className="border-l border-sand/80 pl-3">
-                      <span className="text-emerald-800 font-medium block">Total Payable:</span>
-                      <strong className="text-base text-emerald-900">₹{modalTotal.toLocaleString('en-IN')}</strong>
+                      <span className="text-success font-medium block">Total Payable:</span>
+                      <strong className="text-base text-success">₹{modalTotal.toLocaleString('en-IN')}</strong>
                     </div>
                   </div>
                 </div>
@@ -569,74 +538,74 @@ export default function AdminCustomRequests() {
 
               {/* SECTION 2: CUSTOMER CONTACT & DELIVERY */}
               <div className="border-t border-sand pt-4">
-                <h3 className="flex items-center gap-2 text-sm font-semibold text-plum mb-3">
+                <h3 className="flex items-center gap-2 text-sm font-semibold text-brand mb-3">
                   <MapPin className="h-4 w-4" /> Customer & Delivery Details
                 </h3>
                 <div className="grid gap-3 sm:grid-cols-3">
                   <div>
-                    <label className="block text-xs font-medium text-plum">
+                    <label className="block text-xs font-medium text-brand">
                       Customer Full Name*
                       <input
                         type="text"
                         required
                         value={modalForm.customerName}
                         onChange={(e) => setModalForm({ ...modalForm, customerName: e.target.value })}
-                        className="mt-1 min-h-10 w-full rounded-xl border border-sand bg-white px-3 text-sm text-plum"
+                        className="mt-1 min-h-10 w-full rounded-xl border border-sand bg-surface px-3 text-sm text-brand"
                       />
                     </label>
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-plum">
+                    <label className="block text-xs font-medium text-brand">
                       Email Address*
                       <input
                         type="email"
                         required
                         value={modalForm.customerEmail}
                         onChange={(e) => setModalForm({ ...modalForm, customerEmail: e.target.value })}
-                        className="mt-1 min-h-10 w-full rounded-xl border border-sand bg-white px-3 text-sm text-plum"
+                        className="mt-1 min-h-10 w-full rounded-xl border border-sand bg-surface px-3 text-sm text-brand"
                       />
                     </label>
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-plum">
+                    <label className="block text-xs font-medium text-brand">
                       Mobile Number
                       <input
                         type="tel"
                         value={modalForm.customerPhone}
                         onChange={(e) => setModalForm({ ...modalForm, customerPhone: e.target.value })}
                         placeholder="10-digit number"
-                        className="mt-1 min-h-10 w-full rounded-xl border border-sand bg-white px-3 text-sm text-plum"
+                        className="mt-1 min-h-10 w-full rounded-xl border border-sand bg-surface px-3 text-sm text-brand"
                       />
                     </label>
                   </div>
 
                   <div className="sm:col-span-2">
-                    <label className="block text-xs font-medium text-plum">
+                    <label className="block text-xs font-medium text-brand">
                       House / Flat / Building
                       <input
                         type="text"
                         value={modalForm.houseFlatBuilding}
                         onChange={(e) => setModalForm({ ...modalForm, houseFlatBuilding: e.target.value })}
                         placeholder="e.g. Flat 302, Green Villa"
-                        className="mt-1 min-h-10 w-full rounded-xl border border-sand bg-white px-3 text-sm text-plum"
+                        className="mt-1 min-h-10 w-full rounded-xl border border-sand bg-surface px-3 text-sm text-brand"
                       />
                     </label>
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-plum">
+                    <label className="block text-xs font-medium text-brand">
                       Area / Street
                       <input
                         type="text"
                         value={modalForm.areaStreet}
                         onChange={(e) => setModalForm({ ...modalForm, areaStreet: e.target.value })}
                         placeholder="e.g. 5th Cross Road"
-                        className="mt-1 min-h-10 w-full rounded-xl border border-sand bg-white px-3 text-sm text-plum"
+                        className="mt-1 min-h-10 w-full rounded-xl border border-sand bg-surface px-3 text-sm text-brand"
                       />
                     </label>
                   </div>
 
                   <div>
-                    <label className="block text-xs font-medium text-plum">
+                    <label className="block text-xs font-medium text-brand">
                       PIN Code
                       <input
                         type="text"
@@ -644,28 +613,28 @@ export default function AdminCustomRequests() {
                         value={modalForm.pinCode}
                         onChange={(e) => handleModalPinChange(e.target.value)}
                         placeholder="6-digit PIN"
-                        className="mt-1 min-h-10 w-full rounded-xl border border-sand bg-white px-3 text-sm text-plum"
+                        className="mt-1 min-h-10 w-full rounded-xl border border-sand bg-surface px-3 text-sm text-brand"
                       />
                     </label>
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-plum">
+                    <label className="block text-xs font-medium text-brand">
                       City
                       <input
                         type="text"
                         value={modalForm.city}
                         onChange={(e) => setModalForm({ ...modalForm, city: e.target.value })}
-                        className="mt-1 min-h-10 w-full rounded-xl border border-sand bg-white px-3 text-sm text-plum"
+                        className="mt-1 min-h-10 w-full rounded-xl border border-sand bg-surface px-3 text-sm text-brand"
                       />
                     </label>
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-plum">
+                    <label className="block text-xs font-medium text-brand">
                       State
                       <select
                         value={modalForm.state}
                         onChange={(e) => setModalForm({ ...modalForm, state: e.target.value })}
-                        className="mt-1 min-h-10 w-full rounded-xl border border-sand bg-white px-3 text-sm text-plum"
+                        className="mt-1 min-h-10 w-full rounded-xl border border-sand bg-surface px-3 text-sm text-brand"
                       >
                         <option value="">Select state</option>
                         {STATE_OPTIONS.map((st) => (
@@ -683,12 +652,12 @@ export default function AdminCustomRequests() {
               <div className="border-t border-sand pt-4">
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div>
-                    <label className="block text-xs font-medium text-plum">
+                    <label className="block text-xs font-medium text-brand">
                       Payment Method
                       <select
                         value={modalForm.paymentMethod}
                         onChange={(e) => setModalForm({ ...modalForm, paymentMethod: e.target.value })}
-                        className="mt-1 min-h-10 w-full rounded-xl border border-sand bg-white px-3 text-sm text-plum"
+                        className="mt-1 min-h-10 w-full rounded-xl border border-sand bg-surface px-3 text-sm text-brand"
                       >
                         <option value="UPI">UPI (Customer pays via UPI link)</option>
                         <option value="Cash on Delivery">Cash on Delivery</option>
@@ -696,19 +665,19 @@ export default function AdminCustomRequests() {
                     </label>
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-plum">
+                    <label className="block text-xs font-medium text-brand">
                       Estimated Crafting & Delivery
                       <input
                         type="text"
                         value={modalForm.estimatedDelivery}
                         onChange={(e) => setModalForm({ ...modalForm, estimatedDelivery: e.target.value })}
                         placeholder="e.g. 7–10 business days"
-                        className="mt-1 min-h-10 w-full rounded-xl border border-sand bg-white px-3 text-sm text-plum"
+                        className="mt-1 min-h-10 w-full rounded-xl border border-sand bg-surface px-3 text-sm text-brand"
                       />
                     </label>
                   </div>
                   <div className="sm:col-span-2">
-                    <label className="block text-xs font-medium text-plum">
+                    <label className="block text-xs font-medium text-brand">
                       Internal Notes
                       <textarea
                         rows={2}
@@ -716,7 +685,7 @@ export default function AdminCustomRequests() {
                         value={modalForm.adminNotes}
                         onChange={(e) => setModalForm({ ...modalForm, adminNotes: e.target.value })}
                         placeholder="Special artisan instructions, yarn colours, or customer preferences"
-                        className="mt-1 w-full rounded-xl border border-sand bg-white px-3 py-2 text-sm text-plum"
+                        className="mt-1 w-full rounded-xl border border-sand bg-surface px-3 py-2 text-sm text-brand"
                       />
                     </label>
                   </div>
@@ -729,22 +698,21 @@ export default function AdminCustomRequests() {
                   type="button"
                   disabled={modalSubmitting}
                   onClick={() => setAcceptItem(null)}
-                  className="w-full sm:w-auto min-h-11 rounded-full border border-sand px-5 text-sm font-semibold text-plum hover:bg-sand/30 transition"
+                  className="w-full sm:w-auto min-h-11 rounded-full border border-sand px-5 text-sm font-semibold text-brand hover:bg-sand/30 transition"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={modalSubmitting}
-                  className="w-full sm:w-auto min-h-11 rounded-full bg-emerald-700 hover:bg-emerald-800 text-white px-6 text-sm font-semibold transition disabled:opacity-60 shadow-sm flex items-center justify-center gap-2"
+                  className="w-full sm:w-auto min-h-11 rounded-lg bg-plum hover:bg-overlay-ink text-white px-6 text-sm font-semibold transition disabled:opacity-60 shadow-sm flex items-center justify-center gap-2"
                 >
                   <CheckCircle2 className="h-4 w-4" />
                   {modalSubmitting ? 'Creating Order…' : `Accept & Create Order (₹${modalTotal.toLocaleString('en-IN')})`}
                 </button>
               </div>
             </form>
-          </div>
-        </div>
+        </Modal>
       )}
     </section>
   )

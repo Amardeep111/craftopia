@@ -21,7 +21,7 @@ const steps = [
 
 export default function HowItWorks() {
   return (
-    <section className="container-page mt-20 sm:mt-28">
+    <section className="container-page studio-section">
       <SectionHeading
         eyebrow="Simple, honest, and kind"
         title="How it works"
@@ -30,9 +30,9 @@ export default function HowItWorks() {
       <div className="mt-10 grid gap-6 md:grid-cols-3">
         {steps.map((step, i) => (
           <ScrollReveal key={step.number} delay={i * 0.08}>
-            <div className="paper-card p-6 text-center">
-              <p className="font-display text-5xl text-petal">{step.number}</p>
-              <h3 className="mt-3 font-display text-2xl text-plum">{step.title}</h3>
+            <div className="studio-step">
+              <p className="text-sm font-semibold text-accent">{step.number}</p>
+              <h3 className="mt-3 font-display text-xl font-semibold text-brand">{step.title}</h3>
               <p className="mt-2 text-muted">{step.text}</p>
             </div>
           </ScrollReveal>

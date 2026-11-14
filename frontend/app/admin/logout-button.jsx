@@ -19,7 +19,7 @@ export default function AdminLogoutButton() {
     }
   }
 
-  return <button type="button" onClick={logout} disabled={busy} className="inline-flex items-center gap-2 rounded-xl border border-cream/30 px-3 py-2 text-sm text-cream hover:bg-cream/10 disabled:opacity-60" aria-label="Log out of admin account">
+  return <button type="button" onClick={logout} disabled={busy} className="inline-flex items-center gap-2 rounded-lg border border-sand px-3 py-2 text-sm text-brand hover:bg-ivory disabled:opacity-60" aria-label="Log out of admin account">
     <LogOut className="h-4 w-4" aria-hidden="true" />
     <span>{busy ? 'Signing out…' : 'Log out'}</span>
   </button>

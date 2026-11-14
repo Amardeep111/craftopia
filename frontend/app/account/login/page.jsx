@@ -92,7 +92,7 @@ function OtpInput({ value, onChange, error }) {
             }
           }}
           className={cn(
-            'h-14 w-11 rounded-2xl border-2 bg-cream text-center text-xl font-bold tracking-widest text-plum',
+            'h-14 w-11 rounded-2xl border-2 bg-cream text-center text-xl font-bold tracking-widest text-brand',
             'outline-none transition focus:ring-2 focus:ring-bloom/30',
             error ? 'border-bloom' : 'border-sand',
           )}
@@ -185,11 +185,11 @@ function LoginStep({ onSwitchToSignup, onVerified, onRequireVerify }) {
       </div>
       <Input label="Password" type="password" autoComplete="current-password" placeholder="Enter your password" value={password} onChange={(e) => { setPassword(e.target.value); setErrors((prev) => ({ ...prev, password: '', form: '' })) }} error={errors.password} className="text-base" />
       <div className="-mt-2 text-right">
-        <Link href="/account/forgot-password" className="text-sm font-semibold text-plum underline underline-offset-4 decoration-bloom/40 hover:decoration-bloom transition">
+        <Link href="/account/forgot-password" className="text-sm font-semibold text-brand underline underline-offset-4 decoration-bloom/40 hover:decoration-bloom transition">
           Forgot password?
         </Link>
       </div>
-      {errors.form ? <p role="alert" className="text-sm text-bloom">{errors.form}</p> : null}
+      {errors.form ? <p role="alert" className="text-sm text-accent">{errors.form}</p> : null}
       <Button type="submit" className="w-full" disabled={loading}>
         {loading ? 'Signing in…' : 'Sign in'}
       </Button>
@@ -198,7 +198,7 @@ function LoginStep({ onSwitchToSignup, onVerified, onRequireVerify }) {
         <button
           type="button"
           onClick={onSwitchToSignup}
-          className="mt-1 inline-block text-sm font-semibold text-plum underline underline-offset-4 decoration-bloom/40 hover:decoration-bloom transition"
+          className="mt-1 inline-block text-sm font-semibold text-brand underline underline-offset-4 decoration-bloom/40 hover:decoration-bloom transition"
         >
           Create an account
         </button>
@@ -365,7 +365,7 @@ function SignupStep({ onSwitchToLogin, onVerified }) {
         />
       </div>
       {errors._form && (
-        <p role="alert" className="text-sm font-medium text-bloom">{errors._form}</p>
+        <p role="alert" className="text-sm font-medium text-accent">{errors._form}</p>
       )}
       <Button type="submit" className="w-full" disabled={loading}>
         {loading ? 'Creating...' : 'Create Account'}
@@ -375,7 +375,7 @@ function SignupStep({ onSwitchToLogin, onVerified }) {
         <button
           type="button"
           onClick={onSwitchToLogin}
-          className="mt-1 inline-block text-sm font-semibold text-plum underline underline-offset-4 decoration-bloom/40 hover:decoration-bloom transition"
+          className="mt-1 inline-block text-sm font-semibold text-brand underline underline-offset-4 decoration-bloom/40 hover:decoration-bloom transition"
         >
           Log in
         </button>
@@ -458,18 +458,18 @@ function VerifyStep({ challengeId, email, isSignup, notice, onBack, onVerified }
   return (
     <form onSubmit={handleVerify} className="space-y-6" noValidate>
       {notice && (
-        <div role="alert" className="rounded-2xl border border-bloom/30 bg-bloom/10 p-4 text-sm font-medium text-bloom">
+        <div role="alert" className="rounded-2xl border border-bloom/30 bg-bloom/10 p-4 text-sm font-medium text-accent">
           {notice}
         </div>
       )}
       <p className="text-muted">
         Enter the verification code sent to{' '}
-        <span className="font-medium text-plum">{formatMasked(email)}</span>.
+        <span className="font-medium text-brand">{formatMasked(email)}</span>.
       </p>
       <div>
         <OtpInput value={otp} onChange={setOtp} error={!!error} />
         {error && (
-          <p role="alert" className="mt-3 text-center text-sm font-medium text-bloom">{error}</p>
+          <p role="alert" className="mt-3 text-center text-sm font-medium text-accent">{error}</p>
         )}
       </div>
       <Button type="submit" className="w-full" disabled={loading}>
@@ -483,7 +483,7 @@ function VerifyStep({ challengeId, email, isSignup, notice, onBack, onVerified }
             type="button"
             onClick={handleResend}
             disabled={resendLoading}
-            className="text-sm font-semibold text-bloom underline underline-offset-4 disabled:opacity-50"
+            className="text-sm font-semibold text-accent underline underline-offset-4 disabled:opacity-50"
           >
             {resendLoading ? 'Sending…' : 'Resend code'}
           </button>
@@ -491,7 +491,7 @@ function VerifyStep({ challengeId, email, isSignup, notice, onBack, onVerified }
         <button
           type="button"
           onClick={onBack}
-          className="text-sm text-muted hover:text-plum transition"
+          className="text-sm text-muted hover:text-brand transition"
         >
           Use a different email
         </button>
@@ -589,9 +589,9 @@ export default function LoginPage() {
       <div className="w-full max-w-md">
         {/* Brand */}
         <div className="mb-8 flex flex-col items-center gap-3 text-center">
-          <Link href="/" className="flex items-center gap-2.5 text-plum transition hover:opacity-80" aria-label="Jamae&apos;s Craftopia home">
+          <Link href="/" className="flex items-center gap-2.5 text-brand transition hover:opacity-80" aria-label="Jamae&apos;s Craftopia home">
             <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-blush/80">
-              <FlowerBurst className="h-6 w-6 text-bloom" />
+              <FlowerBurst className="h-6 w-6 text-accent" />
             </span>
             <span className="leading-tight">
               <span className="block font-display text-lg">Jamae&apos;s</span>
@@ -608,7 +608,7 @@ export default function LoginPage() {
             <button
               type="button"
               onClick={handleVerifyBack}
-              className="mb-6 inline-flex items-center gap-1.5 text-sm font-semibold text-muted transition hover:text-plum"
+              className="mb-6 inline-flex items-center gap-1.5 text-sm font-semibold text-muted transition hover:text-brand"
             >
               <ArrowLeft className="h-4 w-4" />
               Back
